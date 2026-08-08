@@ -5738,12 +5738,11 @@ function ProBowlBracket({ data }) {
           <GSlot x={X.center} y={67} w={BW} h={70} label="Trophy" src={PRO_BOWL_TROPHY} />
           <div style={{
             position: "absolute", left: X.center, top: 145, width: BW, height: 14,
-            background: C.gold, textAlign: "center", fontSize: 10, fontWeight: 700,
+            background: "#ffcc00", textAlign: "center", fontSize: 10, fontWeight: 700,
             lineHeight: "14px", color: C.ink,
-          }}>W</div>
+          }}>{(cp[(g("FINAL") || {}).winner && g("FINAL").winner.rosterId] || {}).cp ?? 20} CP</div>
           <GBox
             x={X.center} y={159} team="Champion"
-            score={`${(cp[(g("FINAL") || {}).winner && g("FINAL").winner.rosterId] || {}).cp ?? 20} CP`}
             colors={{ Champion: ["#ffcc00", C.ink] }}
           />
           <GSlot x={X.center} y={208} w={BW} h={40} label="PFA" src={PFA_MARK} />
