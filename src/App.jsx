@@ -5609,7 +5609,7 @@ function TournamentBracket({ data }) {
             colors={{ Champion: [C.gold, C.ink] }}
           />
           <div style={{ position: "absolute", left: X.center - 15, top: 245, display: "flex", flexDirection: "column", gap: 4 }}>
-            {cpRow("2nd", `${(cp[(g("FINAL") || {}).loser && g("FINAL").loser.rosterId] || {}).cp ?? 10} CP`, "#B4B2A9", "#2C2C2A")}
+            {cpRow("2nd", `${(cp[(g("FINAL") || {}).loser && g("FINAL").loser.rosterId] || {}).cp ?? 10} CP`, "#c0c0c0", "#2C2C2A")}
             {cpRow("QF loser", "5 CP", "#cc9054", "#2A1200")}
             {cpRow("Win", "2 CP", "#006400", "#0E3A1B")}
           </div>
@@ -5669,7 +5669,7 @@ const PRO_BOWL_PATHS = [
 const PRO_BOWL_USFL_CLR = ["#2E6DA4", C.chalk];
 const PRO_BOWL_XFL_CLR = ["#4F7A22", C.chalk];
 function proBowlColorsMap(seeds) {
-  const map = { TBD: ["#22314A", "#ff6f0d"] };
+  const map = { TBD: ["#22314A", "#838996"] };
   (seeds || []).forEach((s) => {
     map[tourneyName(s)] = s.tierKey === "USFL" ? PRO_BOWL_USFL_CLR : PRO_BOWL_XFL_CLR;
   });
@@ -5748,7 +5748,7 @@ function ProBowlBracket({ data }) {
           />
           <GSlot x={X.center} y={208} w={BW} h={40} label="PFA" src={PFA_MARK} />
           <div style={{ position: "absolute", left: X.center - 15, top: 262, display: "flex", flexDirection: "column", gap: 4 }}>
-            {cpRow("2nd", `${(cp[(g("FINAL") || {}).loser && g("FINAL").loser.rosterId] || {}).cp ?? 10} CP`, "#B4B2A9", "#2C2C2A")}
+            {cpRow("2nd", `${(cp[(g("FINAL") || {}).loser && g("FINAL").loser.rosterId] || {}).cp ?? 10} CP`, "#c0c0c0", "#2C2C2A")}
             {cpRow("QF loser", "5 CP", "#cc9054", "#2A1200")}
           </div>
           </div>
