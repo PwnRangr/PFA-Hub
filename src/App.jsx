@@ -2458,21 +2458,35 @@ function GBox({ x, y, team, score, win, colors, scoreBg, scoreBorder, nameBorder
   // 38px slot the next box starts at, opening a small gap between the two
   // teams without moving a single x/y coordinate anywhere else in the file.
   const rowH = BH - 2;
+  // When nameBorder is explicitly passed (Fall-iday/Pro Bowl matchup boxes),
+  // draw ONE outline around the whole box (name+score together) on the
+  // outer wrapper instead of bordering each row separately — her explicit
+  // request 2026-08-08 ("one outline around both boxes"), since two
+  // separately-bordered rows risked a doubled/misaligned line at the shared
+  // edge depending on how a given browser rendered it. Every other GBox
+  // caller (12 other tiers, Champion/legend boxes on both brackets) never
+  // passes nameBorder, so boxOutline stays undefined and the score row
+  // keeps its original standalone `scoreBorder || BR_LINE` look exactly as
+  // before — zero visual change anywhere nameBorder isn't explicitly set.
+  const boxOutline = nameBorder;
   return (
-    <div style={{ position: "absolute", left: x, top: y, width: BW }}>
+    <div style={{
+      position: "absolute", left: x, top: y, width: BW, boxSizing: "border-box",
+      border: boxOutline ? `1px solid ${boxOutline}` : "none",
+    }}>
       <div style={{
         height: rowH, display: "flex", alignItems: "center", justifyContent: "center",
         fontSize: 11, fontWeight: 700, padding: "0 3px",
         background: clr[0], color: clr[1], whiteSpace: "nowrap", overflow: "hidden",
         textOverflow: "ellipsis", boxSizing: "border-box",
-        border: nameBorder ? `1px solid ${nameBorder}` : "none",
       }}>{team}</div>
       {score != null && (
         <div style={{
           height: rowH, display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 11, fontFamily: "'IBM Plex Mono', monospace",
           background: scoreBg || "rgba(255,255,255,0.03)", boxSizing: "border-box",
-          border: `1px solid ${scoreBorder || BR_LINE}`, borderTop: "none",
+          border: boxOutline ? "none" : `1px solid ${scoreBorder || BR_LINE}`,
+          borderTop: "none",
           color: win ? C.turf : C.slate, fontWeight: win ? 700 : 400,
         }}>{score}</div>
       )}
