@@ -9770,12 +9770,14 @@ export default function App() {
                   <>
                     <div style={{ position: "relative", height: 16, marginBottom: 4 }}>
                       <div style={{ position: "absolute", left: 16, right: 16, top: 0, height: "100%" }}>
-                        {TOURNEY_WEEK_COLS.map((c, i) => (
-                          <div key={i} style={{
-                            position: "absolute", left: c.left, width: c.width, textAlign: "center",
-                            fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.slate,
-                          }}>{c.label}</div>
-                        ))}
+                        <div style={{ position: "relative", maxWidth: TOURNEY_GRID_W, margin: "0 auto", height: "100%" }}>
+                          {TOURNEY_WEEK_COLS.map((c, i) => (
+                            <div key={i} style={{
+                              position: "absolute", left: c.left, width: c.width, textAlign: "center",
+                              fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.slate,
+                            }}>{c.label}</div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                     <div className="rounded-sm overflow-hidden mb-6" style={{ background: "#041404", border: "1px solid #9a031e", padding: 16 }}>
@@ -9837,12 +9839,14 @@ export default function App() {
                   <>
                     <div style={{ position: "relative", height: 16, marginBottom: 4 }}>
                       <div style={{ position: "absolute", left: 16, right: 16, top: 0, height: "100%" }}>
-                        {PRO_BOWL_WEEK_COLS.map((c, i) => (
-                          <div key={i} style={{
-                            position: "absolute", left: c.left, width: c.width, textAlign: "center",
-                            fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.slate,
-                          }}>{c.label}</div>
-                        ))}
+                        <div style={{ position: "relative", maxWidth: PRO_BOWL_GRID_W, margin: "0 auto", height: "100%" }}>
+                          {PRO_BOWL_WEEK_COLS.map((c, i) => (
+                            <div key={i} style={{
+                              position: "absolute", left: c.left, width: c.width, textAlign: "center",
+                              fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.slate,
+                            }}>{c.label}</div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                     <div className="rounded-sm overflow-hidden mb-6" style={{ background: "#0C1A2E", border: `1px solid ${C.line}`, padding: 16 }}>
