@@ -2648,10 +2648,10 @@ function GridBracket({ data }) {
             <div style={{ position: "relative", width: GRID_W, height: s.h, marginTop: HEADER_GAP }}>
               <GPaths h={s.h} d={s.paths} />
               {(s.slots || []).map((sl, i) => <GSlot key={`s${i}`} x={sl[0]} y={sl[1]} w={sl[2]} h={sl[3]} label={sl[4]} src={sl[5]} />)}
-              {s.boxes.map((b, i) => <GBox key={i} x={b[0]} y={b[1]} team={b[2]} score={b[3]} win={b[4]} colors={data.colors} />)}
+              {s.boxes.map((b, i) => <GBox key={i} x={b[0]} y={b[1]} team={b[2]} score={b[3]} win={b[4]} colors={data.colors} nameBorder={BR_LINE} />)}
               {(s.winners || []).map((b, i) => (
                 <div key={`w${i}`} style={{ position: "absolute", left: b[0], top: b[1], width: BW }}>
-                  <GBox x={0} y={0} team={b[2]} colors={data.colors} />
+                  <GBox x={0} y={0} team={b[2]} colors={data.colors} nameBorder={BR_LINE} />
                 </div>
               ))}
               {(s.series || []).map((v, i) => <GSeries key={`v${i}`} x={v[0]} y={v[1]} cum={v[2]} label={v[3]} score={v[4]} win={v[5]} />)}
