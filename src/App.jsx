@@ -5455,7 +5455,7 @@ function tourneyColorsMap(seeds) {
   // bracket's own fallback untouched while giving just this one its own
   // fall palette (her request 2026-08-08, updated to the new scheme
   // 2026-08-08: plum for empty boxes, matching the new score/panel colors).
-  const map = { TBD: ["#38011e", "#ff6f0d"] };
+  const map = { TBD: ["#2e0020", "#ff6f0d"] };
   (seeds || []).forEach((s) => {
     const cfg = TIER_COLOR_CFG[s.tierKey];
     if (!cfg) return;
@@ -5478,7 +5478,7 @@ function tourneyName(team) {
 // since the Fall-iday colors were always specific to that theme, not a
 // shared site convention (her correction 2026-08-08, after they leaked
 // into Pro Bowl by simply reusing this component unchanged).
-function TourneyPair({ x, y, g, colors, scoreBgPlayed = "#fdfcd1", scoreBgUnplayed = "#38011e", scoreBorder = "#9a031e" }) {
+function TourneyPair({ x, y, g, colors, scoreBgPlayed = "#fdfcd1", scoreBgUnplayed = "#2e0020", scoreBorder = "#9a031e" }) {
   if (!g) return null;
   const played = g.played;
   // Empty (not-yet-played) score cells match the TBD box color rather than
@@ -5606,7 +5606,7 @@ function TournamentBracket({ data }) {
           <GBox
             x={X.center} y={140} team="Champion"
             score={`${(cp[(g("FINAL") || {}).winner && g("FINAL").winner.rosterId] || {}).cp ?? 20} CP`}
-            colors={{ Champion: [C.gold, C.ink] }}
+            colors={{ Champion: ["#ffcc00", C.ink] }}
           />
           <div style={{ position: "absolute", left: X.center - 15, top: 245, display: "flex", flexDirection: "column", gap: 4 }}>
             {cpRow("2nd", `${(cp[(g("FINAL") || {}).loser && g("FINAL").loser.rosterId] || {}).cp ?? 10} CP`, "#c0c0c0", "#2C2C2A")}
@@ -5744,7 +5744,7 @@ function ProBowlBracket({ data }) {
           <GBox
             x={X.center} y={159} team="Champion"
             score={`${(cp[(g("FINAL") || {}).winner && g("FINAL").winner.rosterId] || {}).cp ?? 20} CP`}
-            colors={{ Champion: [C.gold, C.ink] }}
+            colors={{ Champion: ["#ffcc00", C.ink] }}
           />
           <GSlot x={X.center} y={208} w={BW} h={40} label="PFA" src={PFA_MARK} />
           <div style={{ position: "absolute", left: X.center - 15, top: 262, display: "flex", flexDirection: "column", gap: 4 }}>
