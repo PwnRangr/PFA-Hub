@@ -5611,7 +5611,7 @@ function TournamentBracket({ data }) {
           <div style={{ position: "absolute", left: X.center - 15, top: 245, display: "flex", flexDirection: "column", gap: 4 }}>
             {cpRow("2nd", `${(cp[(g("FINAL") || {}).loser && g("FINAL").loser.rosterId] || {}).cp ?? 10} CP`, "#c0c0c0", "#2C2C2A")}
             {cpRow("QF loser", "5 CP", "#cc9054", "#2A1200")}
-            {cpRow("Win", "2 CP", "#006400", "#0E3A1B")}
+            {cpRow("Win", "2 CP", "#006400", "#ffcc00")}
           </div>
           <GSlot x={X.center} y={370} w={BW} h={90} label="" src={TOURNEY_DECOR_CENTER} />
           </div>
@@ -5720,15 +5720,15 @@ function ProBowlBracket({ data }) {
             <GPaths h={PRO_BOWL_H} w={PRO_BOWL_GRID_W} color="#2E6DA4" d={PRO_BOWL_PATHS} />
 
           {/* --- LEFT half --- */}
-          <TourneyPair x={X.qf} y={0} g={g("LQ1")} colors={colors} scoreBgPlayed="#FFFFFF" scoreBgUnplayed="#FFFFFF" scoreBorder={BR_LINE} />
-          <TourneyPair x={X.qf} y={280} g={g("LQ2")} colors={colors} scoreBgPlayed="#FFFFFF" scoreBgUnplayed="#FFFFFF" scoreBorder={BR_LINE} />
+          <TourneyPair x={X.qf} y={0} g={g("LQ1")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} />
+          <TourneyPair x={X.qf} y={280} g={g("LQ2")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} />
           <TourneySolo x={X.sf} y={19} team={(g("LQ1") || {}).winner} colors={colors} />
           <TourneySolo x={X.sf} y={299} team={(g("LQ2") || {}).winner} colors={colors} />
           <TourneySolo x={X.finalEntrant} y={159} team={(g("LSF") || {}).winner} colors={colors} />
 
           {/* --- RIGHT half (mirrored) --- */}
-          <TourneyPair x={proBowlMirrorX(X.qf) - BW} y={0} g={g("RQ1")} colors={colors} scoreBgPlayed="#FFFFFF" scoreBgUnplayed="#FFFFFF" scoreBorder={BR_LINE} />
-          <TourneyPair x={proBowlMirrorX(X.qf) - BW} y={280} g={g("RQ2")} colors={colors} scoreBgPlayed="#FFFFFF" scoreBgUnplayed="#FFFFFF" scoreBorder={BR_LINE} />
+          <TourneyPair x={proBowlMirrorX(X.qf) - BW} y={0} g={g("RQ1")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} />
+          <TourneyPair x={proBowlMirrorX(X.qf) - BW} y={280} g={g("RQ2")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} />
           <TourneySolo x={proBowlMirrorX(X.sf) - BW} y={19} team={(g("RQ1") || {}).winner} colors={colors} />
           <TourneySolo x={proBowlMirrorX(X.sf) - BW} y={299} team={(g("RQ2") || {}).winner} colors={colors} />
           <TourneySolo x={proBowlMirrorX(X.finalEntrant) - BW} y={159} team={(g("RSF") || {}).winner} colors={colors} />
