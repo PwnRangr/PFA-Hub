@@ -2461,15 +2461,17 @@ function GBox({ x, y, team, score, win, colors, scoreBg, scoreBorder, nameBorder
   return (
     <div style={{ position: "absolute", left: x, top: y, width: BW }}>
       <div style={{
-        height: rowH, lineHeight: `${rowH}px`, fontSize: 11, fontWeight: 700, padding: "0 3px",
+        height: rowH, display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 11, fontWeight: 700, padding: "0 3px",
         background: clr[0], color: clr[1], whiteSpace: "nowrap", overflow: "hidden",
-        textOverflow: "ellipsis", boxSizing: "border-box", textAlign: "center",
+        textOverflow: "ellipsis", boxSizing: "border-box",
         border: nameBorder ? `1px solid ${nameBorder}` : "none",
       }}>{team}</div>
       {score != null && (
         <div style={{
-          height: rowH, lineHeight: `${rowH}px`, fontSize: 11, fontFamily: "'IBM Plex Mono', monospace",
-          background: scoreBg || "rgba(255,255,255,0.03)", boxSizing: "border-box", textAlign: "center",
+          height: rowH, display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 11, fontFamily: "'IBM Plex Mono', monospace",
+          background: scoreBg || "rgba(255,255,255,0.03)", boxSizing: "border-box",
           border: `1px solid ${scoreBorder || BR_LINE}`, borderTop: "none",
           color: win ? C.turf : C.slate, fontWeight: win ? 700 : 400,
         }}>{score}</div>
@@ -5496,8 +5498,15 @@ function TourneyPair({ x, y, g, colors, scoreBgPlayed = "#fdfcd1", scoreBgUnplay
 }
 // A single-entrant slot (a team waiting on its next game, or a bye that
 // hasn't played yet) -- just the name, no score/win flag to show.
-function TourneySolo({ x, y, team, colors, nameBorder = "#eb5009" }) {
-  return <GBox x={x} y={y} team={tourneyName(team)} colors={colors} nameBorder={nameBorder} />;
+function TourneySolo({ x, y, team, colors, nameBorder = "#eb5009", showScorePlaceholder = true }) {
+  return (
+    <GBox
+      x={x} y={y} team={tourneyName(team)} colors={colors} nameBorder={nameBorder}
+      score={showScorePlaceholder ? "" : undefined}
+      scoreBg={showScorePlaceholder ? "#2e0020" : undefined}
+      scoreBorder={showScorePlaceholder ? "#eb5009" : undefined}
+    />
+  );
 }
 
 // data: { seeds (frozen 20), games (resolveTourneyBracket result), cp
@@ -5544,7 +5553,11 @@ function TournamentBracket({ data }) {
       <div style={{ width: TOURNEY_GRID_W * scale, height: TOURNEY_H * scale }}>
         <div style={{ width: TOURNEY_GRID_W, transformOrigin: "top left", transform: `scale(${scale})` }}>
           <div style={{ position: "relative", width: TOURNEY_GRID_W, height: TOURNEY_H }}>
-            <GPaths h={TOURNEY_H} w={TOURNEY_GRID_W} color="#eb5009" d={[...TOURNEY_PLAYIN_PATHS, ...TOURNEY_MAIN_PATHS]} />
+            {/* Connector lines removed per her request 2026-08-08 -- the
+                outlined boxes alone (nameBorder/scoreBorder, both #eb5009)
+                now carry the bracket shape; GPaths/TOURNEY_PLAYIN_PATHS/
+                TOURNEY_MAIN_PATHS stay defined above, just unused here, in
+                case lines come back later. */}
 
           {/* --- LEFT half --- */}
           <TourneyPair x={X.playin} y={19} g={g("L1")} colors={colors} />
@@ -5723,16 +5736,16 @@ function ProBowlBracket({ data }) {
           {/* --- LEFT half --- */}
           <TourneyPair x={X.qf} y={0} g={g("LQ1")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} nameBorder={BR_LINE} />
           <TourneyPair x={X.qf} y={280} g={g("LQ2")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} nameBorder={BR_LINE} />
-          <TourneySolo x={X.sf} y={19} team={(g("LQ1") || {}).winner} colors={colors} nameBorder={BR_LINE} />
-          <TourneySolo x={X.sf} y={299} team={(g("LQ2") || {}).winner} colors={colors} nameBorder={BR_LINE} />
-          <TourneySolo x={X.finalEntrant} y={159} team={(g("LSF") || {}).winner} colors={colors} nameBorder={BR_LINE} />
+          <TourneySolo x={X.sf} y={19} team={(g("LQ1") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
+          <TourneySolo x={X.sf} y={299} team={(g("LQ2") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
+          <TourneySolo x={X.finalEntrant} y={159} team={(g("LSF") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
 
           {/* --- RIGHT half (mirrored) --- */}
           <TourneyPair x={proBowlMirrorX(X.qf) - BW} y={0} g={g("RQ1")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} nameBorder={BR_LINE} />
           <TourneyPair x={proBowlMirrorX(X.qf) - BW} y={280} g={g("RQ2")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} nameBorder={BR_LINE} />
-          <TourneySolo x={proBowlMirrorX(X.sf) - BW} y={19} team={(g("RQ1") || {}).winner} colors={colors} nameBorder={BR_LINE} />
-          <TourneySolo x={proBowlMirrorX(X.sf) - BW} y={299} team={(g("RQ2") || {}).winner} colors={colors} nameBorder={BR_LINE} />
-          <TourneySolo x={proBowlMirrorX(X.finalEntrant) - BW} y={159} team={(g("RSF") || {}).winner} colors={colors} nameBorder={BR_LINE} />
+          <TourneySolo x={proBowlMirrorX(X.sf) - BW} y={19} team={(g("RQ1") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
+          <TourneySolo x={proBowlMirrorX(X.sf) - BW} y={299} team={(g("RQ2") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
+          <TourneySolo x={proBowlMirrorX(X.finalEntrant) - BW} y={159} team={(g("RSF") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
 
           {/* --- Center: logo, trophy, Champion, PFA mark, legend --- */}
           <GSlot x={X.center + 18} y={21} w={BW - 36} h={34} label="UFL" src={PRO_BOWL_LOGO} />
