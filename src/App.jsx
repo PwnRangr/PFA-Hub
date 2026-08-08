@@ -5610,8 +5610,8 @@ function TournamentBracket({ data }) {
           />
           <div style={{ position: "absolute", left: X.center - 15, top: 245, display: "flex", flexDirection: "column", gap: 4 }}>
             {cpRow("2nd", `${(cp[(g("FINAL") || {}).loser && g("FINAL").loser.rosterId] || {}).cp ?? 10} CP`, "#B4B2A9", "#2C2C2A")}
-            {cpRow("QF loser", "5 CP", "#D9711C", "#2A1200")}
-            {cpRow("Win", "2 CP", C.turf, "#0E3A1B")}
+            {cpRow("QF loser", "5 CP", "#cc9054", "#2A1200")}
+            {cpRow("Win", "2 CP", "#006400", "#0E3A1B")}
           </div>
           <GSlot x={X.center} y={370} w={BW} h={90} label="" src={TOURNEY_DECOR_CENTER} />
           </div>
@@ -5749,7 +5749,7 @@ function ProBowlBracket({ data }) {
           <GSlot x={X.center} y={208} w={BW} h={40} label="PFA" src={PFA_MARK} />
           <div style={{ position: "absolute", left: X.center - 15, top: 262, display: "flex", flexDirection: "column", gap: 4 }}>
             {cpRow("2nd", `${(cp[(g("FINAL") || {}).loser && g("FINAL").loser.rosterId] || {}).cp ?? 10} CP`, "#B4B2A9", "#2C2C2A")}
-            {cpRow("QF loser", "5 CP", "#D9711C", "#2A1200")}
+            {cpRow("QF loser", "5 CP", "#cc9054", "#2A1200")}
           </div>
           </div>
         </div>
