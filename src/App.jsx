@@ -5455,7 +5455,7 @@ function tourneyColorsMap(seeds) {
   // bracket's own fallback untouched while giving just this one its own
   // fall palette (her request 2026-08-08, updated to the new scheme
   // 2026-08-08: plum for empty boxes, matching the new score/panel colors).
-  const map = { TBD: ["#38011e", C.chalk] };
+  const map = { TBD: ["#38011e", "#ff6f0d"] };
   (seeds || []).forEach((s) => {
     const cfg = TIER_COLOR_CFG[s.tierKey];
     if (!cfg) return;
@@ -5669,7 +5669,7 @@ const PRO_BOWL_PATHS = [
 const PRO_BOWL_USFL_CLR = ["#2E6DA4", C.chalk];
 const PRO_BOWL_XFL_CLR = ["#4F7A22", C.chalk];
 function proBowlColorsMap(seeds) {
-  const map = { TBD: ["#22314A", C.slate] };
+  const map = { TBD: ["#22314A", "#ff6f0d"] };
   (seeds || []).forEach((s) => {
     map[tourneyName(s)] = s.tierKey === "USFL" ? PRO_BOWL_USFL_CLR : PRO_BOWL_XFL_CLR;
   });
