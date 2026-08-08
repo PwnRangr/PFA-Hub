@@ -5455,7 +5455,7 @@ function tourneyColorsMap(seeds) {
   // bracket's own fallback untouched while giving just this one its own
   // fall palette (her request 2026-08-08, updated to the new scheme
   // 2026-08-08: plum for empty boxes, matching the new score/panel colors).
-  const map = { TBD: ["#4a0128", C.chalk] };
+  const map = { TBD: ["#38011e", C.chalk] };
   (seeds || []).forEach((s) => {
     const cfg = TIER_COLOR_CFG[s.tierKey];
     if (!cfg) return;
@@ -5478,7 +5478,7 @@ function tourneyName(team) {
 // since the Fall-iday colors were always specific to that theme, not a
 // shared site convention (her correction 2026-08-08, after they leaked
 // into Pro Bowl by simply reusing this component unchanged).
-function TourneyPair({ x, y, g, colors, scoreBgPlayed = "#fdfcd1", scoreBgUnplayed = "#4a0128", scoreBorder = "#9a031e" }) {
+function TourneyPair({ x, y, g, colors, scoreBgPlayed = "#fdfcd1", scoreBgUnplayed = "#38011e", scoreBorder = "#9a031e" }) {
   if (!g) return null;
   const played = g.played;
   // Empty (not-yet-played) score cells match the TBD box color rather than
@@ -5635,6 +5635,19 @@ const PRO_BOWL_GRID_W = 772;
 const PRO_BOWL_H = 364;
 const proBowlMirrorX = (x) => PRO_BOWL_GRID_W - x;
 const PRO_BOWL_X = { qf: 0, sf: 112, finalEntrant: 224, center: 336 };
+// Week-number header row, same percentage-of-grid-width technique as the
+// main Tournament's TOURNEY_WEEK_COLS -- her original template's center
+// column header cell was blank (no "Week 13"-style label), so unlike the
+// main Tournament this only has 6 entries, not 7 -- no entry for the
+// center/results column.
+const PRO_BOWL_WEEK_COLS = [
+  { label: "Week 10", left: "0.000%", width: "12.953%" },
+  { label: "Week 11", left: "14.508%", width: "12.953%" },
+  { label: "Week 12", left: "29.016%", width: "12.953%" },
+  { label: "Week 12", left: "58.031%", width: "12.953%" },
+  { label: "Week 11", left: "72.539%", width: "12.953%" },
+  { label: "Week 10", left: "87.047%", width: "12.953%" },
+];
 
 const PRO_BOWL_PATHS = [
   "M100 17 L106 17 L106 36 L112 36", "M100 55 L106 55 L106 36 L112 36",
@@ -5721,7 +5734,7 @@ function ProBowlBracket({ data }) {
           <TourneySolo x={proBowlMirrorX(X.finalEntrant) - BW} y={159} team={(g("RSF") || {}).winner} colors={colors} />
 
           {/* --- Center: logo, trophy, Champion, PFA mark, legend --- */}
-          <GSlot x={X.center + 10} y={13} w={BW - 20} h={42} label="UFL" src={PRO_BOWL_LOGO} />
+          <GSlot x={X.center + 18} y={21} w={BW - 36} h={34} label="UFL" src={PRO_BOWL_LOGO} />
           <GSlot x={X.center} y={67} w={BW} h={70} label="Trophy" src={PRO_BOWL_TROPHY} />
           <div style={{
             position: "absolute", left: X.center, top: 145, width: BW, height: 14,
@@ -9822,6 +9835,16 @@ export default function App() {
                   </div>
                 ) : (
                   <>
+                    <div style={{ position: "relative", height: 16, marginBottom: 4 }}>
+                      <div style={{ position: "absolute", left: 16, right: 16, top: 0, height: "100%" }}>
+                        {PRO_BOWL_WEEK_COLS.map((c, i) => (
+                          <div key={i} style={{
+                            position: "absolute", left: c.left, width: c.width, textAlign: "center",
+                            fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.slate,
+                          }}>{c.label}</div>
+                        ))}
+                      </div>
+                    </div>
                     <div className="rounded-sm overflow-hidden mb-6" style={{ background: "#0C1A2E", border: `1px solid ${C.line}`, padding: 16 }}>
                       <ProBowlBracket data={{ seeds: proBowlDisplaySeeds, games: proBowlDisplayGames, cp: proBowlDisplayCP }} />
                     </div>
