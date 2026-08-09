@@ -2822,8 +2822,8 @@ const BR_MAIN_PATHS = [
 // live/future season, so one consistent top-slot assumption is used
 // throughout, same principle as the rest of this live template.
 const BR_W15_FEEDERS = [
-  "M212 289 L218 289 L218 346 L224 346", "M212 403 L218 403 L218 384 L224 384",
-  "M884 289 L878 289 L878 346 L872 346", "M884 403 L878 403 L878 384 L872 384",
+  "M212 308 L218 308 L218 365 L224 365", "M212 422 L218 422 L218 403 L224 403",
+  "M884 308 L878 308 L878 365 L872 365", "M884 422 L878 422 L878 403 L872 403",
 ];
 
 // --- 2025 NFL, ranks 1-16 (championship half) ------------------------------
@@ -2899,19 +2899,23 @@ function brMainSide(conf, side) {
 //13th/15th). 3rd place needs no within-conference game — only one candidate
 // per side already exists (the conf-championship loser) — so it isn't built
 // here; it's a cross-conference game assembled directly in brChampHalf.
-// Y-positions shifted up 38px (one row) from their original values 2026-08-09
-// — her request, so each qualifying pair sits closer to the box that shows
-// its winner continuing in the next round, matching the same treatment the
-// 16-team R3 leagues already had. Confirmed with her this cascades: when a
-// later round (lr2w/lr2l) moves up, the earlier round feeding it (lr1) has
-// to move up by the same amount too, or the two rounds visually collide —
-// they share this same x-column (112) even though they're different rounds.
+// Y-positions solved precisely 2026-08-09 (her exact spec: "the space
+// between the matchup boxes in week16 should align with the center of the
+// team/score box in week17") — for a stacked pair spanning y to y+72, the
+// midpoint between its two boxes is y+36, so y is solved directly from each
+// destination box's own center (destY+17): r2lose from 5th's box (y=143,
+// center=160) -> y=124; lr2w from 9th's box (y=367,center=384) -> y=348;
+// lr2l from 13th's box (y=559,center=576) -> y=540. `lr1` (feeds both
+// lr2w and lr2l) shifted by the same +19 delta lr2w needed, keeping her
+// other instruction ("keep week15 boxes relative to week16") — lr2l's own
+// exact solve only needed +18, a 1px difference from lr2w's, invisible at
+// this scale, not worth giving lr1 two different positions over.
 function brLadderSide(conf, side) {
   const [x0, x1] = side === "east" ? [112, 224] : [784, 672];
   return [
-    ...brSplit(x1, 112, x1, 150, conf.r2lose),
-    ...brSplit(x0, 272, x0, 310, conf.lr1[0]), ...brSplit(x0, 386, x0, 424, conf.lr1[1]),
-    ...brSplit(x1, 329, x1, 367, conf.lr2w), ...brSplit(x1, 522, x1, 560, conf.lr2l),
+    ...brSplit(x1, 124, x1, 162, conf.r2lose),
+    ...brSplit(x0, 291, x0, 329, conf.lr1[0]), ...brSplit(x0, 405, x0, 443, conf.lr1[1]),
+    ...brSplit(x1, 348, x1, 386, conf.lr2w), ...brSplit(x1, 540, x1, 578, conf.lr2l),
   ];
 }
 
@@ -2990,11 +2994,11 @@ const NFL_2025_PLAYOFFS = brChampHalf({
   champSlots: [[448, 16, 100, 150, "Trophy", NFL_TROPHY], [448, 334, 100, 100, "PFA", PFA_MARK]],
   ladderH: 690,
   ladderPaths: [
-    "M324 129 L330 129 L330 162 L336 162", "M672 167 L666 167 L666 162 L660 162",
-    "M212 327 L218 327 L218 346 L224 346", "M212 403 L218 403 L218 384 L224 384",
-    "M884 327 L878 327 L878 346 L872 346", "M884 403 L878 403 L878 384 L872 384",
-    "M324 346 L330 346 L330 386 L336 386", "M672 384 L666 384 L666 386 L660 386",
-    "M324 539 L330 539 L330 578 L336 578", "M672 539 L666 539 L666 578 L660 578",
+    "M324 141 L330 141 L330 160 L336 160", "M672 179 L666 179 L666 160 L660 160",
+    "M212 346 L218 346 L218 365 L224 365", "M212 422 L218 422 L218 403 L224 403",
+    "M884 346 L878 346 L878 365 L872 365", "M884 422 L878 422 L878 403 L872 403",
+    "M324 365 L330 365 L330 384 L336 384", "M672 403 L666 403 L666 384 L660 384",
+    "M324 557 L330 557 L330 576 L336 576", "M672 557 L666 557 L666 576 L660 576",
   ],
   places: [
     [448, 33, "29th pick", "3rd place"], [448, 143, "25th pick", "5th place"],
@@ -3041,11 +3045,11 @@ const NFL_2025_CONSOLATION = brChampHalf({
   champSlots: [[448, 324, 100, 110, "PFA", PFA_MARK]],
   ladderH: 730,
   ladderPaths: [
-    "M324 167 L330 167 L330 162 L336 162", "M672 129 L666 129 L666 162 L660 162",
-    "M212 289 L218 289 L218 346 L224 346", "M212 441 L218 441 L218 384 L224 384",
-    "M884 327 L878 327 L878 346 L872 346", "M884 403 L878 403 L878 384 L872 384",
-    "M324 384 L330 384 L330 386 L336 386", "M672 384 L666 384 L666 386 L660 386",
-    "M324 577 L330 577 L330 578 L336 578", "M672 577 L666 577 L666 578 L660 578",
+    "M324 179 L330 179 L330 160 L336 160", "M672 141 L666 141 L666 160 L660 160",
+    "M212 308 L218 308 L218 365 L224 365", "M212 460 L218 460 L218 403 L224 403",
+    "M884 346 L878 346 L878 365 L872 365", "M884 422 L878 422 L878 403 L872 403",
+    "M324 403 L330 403 L330 384 L336 384", "M672 403 L666 403 L666 384 L660 384",
+    "M324 595 L330 595 L330 576 L336 576", "M672 595 L666 595 L666 576 L660 576",
   ],
   places: [
     [448, 33, "11th pick", "19th place"], [448, 143, "13th pick", "21st place"],
@@ -4949,10 +4953,10 @@ const BR_CONSO_PLACES = [
 // real winner to check against yet, this keeps one consistent assumption
 // rather than guessing differently per game.
 const BR_LADDER_PATHS_LIVE = [
-  "M324 129 L330 129 L330 162 L336 162", "M672 167 L666 167 L666 162 L660 162",
+  "M324 141 L330 141 L330 160 L336 160", "M672 179 L666 179 L666 160 L660 160",
   ...BR_W15_FEEDERS,
-  "M324 384 L330 384 L330 386 L336 386", "M672 384 L666 384 L666 386 L660 386",
-  "M324 577 L330 577 L330 578 L336 578", "M672 577 L666 577 L666 578 L660 578",
+  "M324 403 L330 403 L330 384 L336 384", "M672 403 L666 403 L666 384 L660 384",
+  "M324 595 L330 595 L330 576 L336 576", "M672 595 L666 595 L666 576 L660 576",
 ];
 
 const BR_LIVE = {
