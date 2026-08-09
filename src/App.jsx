@@ -2899,23 +2899,21 @@ function brMainSide(conf, side) {
 //13th/15th). 3rd place needs no within-conference game — only one candidate
 // per side already exists (the conf-championship loser) — so it isn't built
 // here; it's a cross-conference game assembled directly in brChampHalf.
-// Y-positions solved precisely 2026-08-09 (her exact spec: "the space
-// between the matchup boxes in week16 should align with the center of the
-// team/score box in week17") — for a stacked pair spanning y to y+72, the
-// midpoint between its two boxes is y+36, so y is solved directly from each
-// destination box's own center (destY+17): r2lose from 5th's box (y=143,
-// center=160) -> y=124; lr2w from 9th's box (y=367,center=384) -> y=348;
-// lr2l from 13th's box (y=559,center=576) -> y=540. `lr1` (feeds both
-// lr2w and lr2l) shifted by the same +19 delta lr2w needed, keeping her
-// other instruction ("keep week15 boxes relative to week16") — lr2l's own
-// exact solve only needed +18, a 1px difference from lr2w's, invisible at
-// this scale, not worth giving lr1 two different positions over.
+// Y-positions re-solved 2026-08-09 to track the team/place rows now being
+// evenly spaced (see brChampHalf) — same alignment formula as last round
+// (`y = destY - 19`, since a stacked pair's own midpoint is destY+36 and a
+// destination box's center is destY+17): r2lose from 5th's new y=133 -> 114;
+// lr2w from 9th's new y=333 -> 314; lr2l from 13th's new y=533 -> 514.
+// `lr1` (feeds both lr2w and lr2l) shifted by lr2w's own delta from its
+// prior position (-34), same "keep week15 relative to week16" principle
+// confirmed with her last round — lr2l's own exact solve would want a
+// different, smaller delta, not worth giving lr1 two positions over.
 function brLadderSide(conf, side) {
   const [x0, x1] = side === "east" ? [112, 224] : [784, 672];
   return [
-    ...brSplit(x1, 124, x1, 162, conf.r2lose),
-    ...brSplit(x0, 291, x0, 329, conf.lr1[0]), ...brSplit(x0, 405, x0, 443, conf.lr1[1]),
-    ...brSplit(x1, 348, x1, 386, conf.lr2w), ...brSplit(x1, 540, x1, 578, conf.lr2l),
+    ...brSplit(x1, 114, x1, 152, conf.r2lose),
+    ...brSplit(x0, 257, x0, 295, conf.lr1[0]), ...brSplit(x0, 371, x0, 409, conf.lr1[1]),
+    ...brSplit(x1, 314, x1, 352, conf.lr2w), ...brSplit(x1, 514, x1, 552, conf.lr2l),
   ];
 }
 
@@ -2928,11 +2926,18 @@ function brChampHalf(o) {
   const boxes = [
     ...eastMain, ...westMain, ...finalists,
   ];
+  // Team-box/place-label rows evenly spaced 2026-08-09 (her request — "week18
+  // team/place/pick boxes ... evenly spaced from each other"), step=100
+  // anchored at 3rd/19th's existing y=33 (untouched, matching her established
+  // "don't move 3rd/19th itself" preference from the earlier PFA-logo and
+  // row-shift rounds). Old spacing was wildly uneven (gaps of 33-100px
+  // between consecutive rows) since each y had been hand-picked per-round
+  // over several rounds of unrelated fixes, never as one coherent set.
   const ladderBoxes = [
     ...brSplit(336, 33, 560, 33, o.third), ...eastLadder, ...westLadder,
-    ...brSplit(336, 143, 560, 143, o.fifth), ...brSplit(336, 229, 560, 229, o.seventh),
-    ...brSplit(336, 367, 560, 367, o.ninth), ...brSplit(336, 438, 560, 438, o.eleventh),
-    ...brSplit(336, 559, 560, 559, o.thirteenth), ...brSplit(336, 630, 560, 630, o.fifteenth),
+    ...brSplit(336, 133, 560, 133, o.fifth), ...brSplit(336, 233, 560, 233, o.seventh),
+    ...brSplit(336, 333, 560, 333, o.ninth), ...brSplit(336, 433, 560, 433, o.eleventh),
+    ...brSplit(336, 533, 560, 533, o.thirteenth), ...brSplit(336, 633, 560, 633, o.fifteenth),
   ];
   const section1 = {
     banners: o.banners, h: 418, paths: o.brMainPaths, logo: o.logo, logoSrc: o.logoSrc,
@@ -2950,9 +2955,9 @@ function brChampHalf(o) {
       {
         h: o.ladderH, paths: o.ladderPaths, boxes: ladderBoxes,
         winners: [
-          [448, 14, brWinner(o.third)], [448, 124, brWinner(o.fifth)], [448, 210, brWinner(o.seventh)],
-          [448, 348, brWinner(o.ninth)], [448, 419, brWinner(o.eleventh)],
-          [448, 540, brWinner(o.thirteenth)], [448, 611, brWinner(o.fifteenth)],
+          [448, 14, brWinner(o.third)], [448, 114, brWinner(o.fifth)], [448, 214, brWinner(o.seventh)],
+          [448, 314, brWinner(o.ninth)], [448, 414, brWinner(o.eleventh)],
+          [448, 514, brWinner(o.thirteenth)], [448, 614, brWinner(o.fifteenth)],
         ],
         places: o.places, footer: o.footer,
       },
@@ -3003,10 +3008,10 @@ const NFL_2025_PLAYOFFS = brChampHalf({
   // to come back.
   ladderPaths: [],
   places: [
-    [448, 33, "29th pick", "3rd place"], [448, 143, "25th pick", "5th place"],
-    [448, 229, "27th pick", "7th place"], [448, 367, "17th pick", "9th place"],
-    [448, 438, "19th pick", "11th place"], [448, 559, "21st pick", "13th place"],
-    [448, 630, "23rd pick", "15th place"],
+    [448, 33, "29th pick", "3rd place"], [448, 133, "25th pick", "5th place"],
+    [448, 233, "27th pick", "7th place"], [448, 333, "17th pick", "9th place"],
+    [448, 433, "19th pick", "11th place"], [448, 533, "21st pick", "13th place"],
+    [448, 633, "23rd pick", "15th place"],
   ],
 });
 
@@ -3050,10 +3055,10 @@ const NFL_2025_CONSOLATION = brChampHalf({
   // playoffs half above — this is her "19th-31st place" half.
   ladderPaths: [],
   places: [
-    [448, 33, "11th pick", "19th place"], [448, 143, "13th pick", "21st place"],
-    [448, 229, "15th pick", "23rd place"], [448, 367, "3rd pick", "25th place"],
-    [448, 438, "5th pick", "27th place"], [448, 559, "7th pick", "29th place"],
-    [448, 630, "2nd pick", "31st place"],
+    [448, 33, "11th pick", "19th place"], [448, 133, "13th pick", "21st place"],
+    [448, 233, "15th pick", "23rd place"], [448, 333, "3rd pick", "25th place"],
+    [448, 433, "5th pick", "27th place"], [448, 533, "7th pick", "29th place"],
+    [448, 633, "2nd pick", "31st place"],
   ],
   footer: [336, 680, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
