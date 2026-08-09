@@ -3110,15 +3110,17 @@ const USFL_2025_PLAYOFFS = {
     {
       h: 420,
       paths: [
-        "M324 169 L330 169 L330 162 L336 162", "M324 207 L330 207 L330 248 L336 248",
-        "M672 207 L666 207 L666 162 L660 162", "M672 169 L666 169 L666 248 L660 248",
+        "M324 114 L330 114 L330 133 L336 133", "M324 152 L330 152 L330 133 L336 133",
+        "M672 114 L666 114 L666 133 L660 133", "M672 152 L666 152 L666 133 L660 133",
+        "M436 133 L448 133", "M560 133 L548 133",
+        "M436 228 L448 228", "M560 228 L548 228",
       ],
       boxes: [
         [336, 33, "Washington", "192.40", 1], [560, 33, "Denver", "168.40"],
-        [224, 150, "Philadelphia", "218.20", 1], [224, 188, "Birmingham", "177.65"],
-        [672, 150, "Pittsburgh", "179.30"], [672, 188, "Los Angeles", "268.65", 1],
-        [336, 143, "Philadelphia", "273.25", 1], [560, 143, "Los Angeles", "243.10"],
-        [336, 229, "Birmingham", "154.00"], [560, 229, "Pittsburgh", "165.10", 1],
+        [224, 95, "Philadelphia", "218.20", 1], [224, 133, "Birmingham", "177.65"],
+        [672, 95, "Pittsburgh", "179.30"], [672, 133, "Los Angeles", "268.65", 1],
+        [336, 114, "Philadelphia", "273.25", 1], [560, 114, "Los Angeles", "243.10"],
+        [336, 209, "Birmingham", "154.00"], [560, 209, "Pittsburgh", "165.10", 1],
         [112, 360, "New Jersey", "195.00"], [784, 360, "Boston", "180.60"],
       ],
       series: [
@@ -3126,12 +3128,12 @@ const USFL_2025_PLAYOFFS = {
         [560, 341, "620.70", "Boston", "255.30", 1, true], [672, 341, "365.40", "Boston", "184.80"],
       ],
       winners: [
-        [448, 14, "Washington"], [448, 124, "Philadelphia"],
-        [448, 210, "Pittsburgh"], [448, 341, "Boston"],
+        [448, 14, "Washington"], [448, 95, "Philadelphia"],
+        [448, 190, "Pittsburgh"], [448, 341, "Boston"],
       ],
       places: [
-        [448, 33, "11th pick", "3rd place"], [448, 143, "13th pick", "5th place"],
-        [448, 229, "15th pick", "7th place"], [448, 360, "17th pick", "9th place"],
+        [448, 33, "11th pick", "3rd place"], [448, 114, "13th pick", "5th place"],
+        [448, 209, "15th pick", "7th place"], [448, 360, "17th pick", "9th place"],
       ],
     },
   ],
@@ -3162,15 +3164,17 @@ const USFL_2025_CONSOLATION = {
     {
       h: 470,
       paths: [
-        "M324 169 L330 169 L330 162 L336 162", "M324 207 L330 207 L330 248 L336 248",
-        "M672 169 L666 169 L666 162 L660 162", "M672 207 L666 207 L666 248 L660 248",
+        "M324 114 L330 114 L330 133 L336 133", "M324 152 L330 152 L330 133 L336 133",
+        "M672 114 L666 114 L666 133 L660 133", "M672 152 L666 152 L666 133 L660 133",
+        "M436 133 L448 133", "M560 133 L548 133",
+        "M436 228 L448 228", "M560 228 L548 228",
       ],
       boxes: [
         [336, 33, "Houston", "117.50"], [560, 33, "Orlando", "166.00", 1],
-        [224, 150, "Michigan", "204.50", 1], [224, 188, "Tampa Bay", "160.35"],
-        [672, 150, "Jacksonville", "125.65", 1], [672, 188, "Chicago", "85.50"],
-        [336, 143, "Michigan", "196.00", 1], [560, 143, "Jacksonville", "142.80"],
-        [336, 229, "Tampa Bay", "130.70", 1], [560, 229, "Chicago", "106.20"],
+        [224, 95, "Michigan", "204.50", 1], [224, 133, "Tampa Bay", "160.35"],
+        [672, 95, "Jacksonville", "125.65", 1], [672, 133, "Chicago", "85.50"],
+        [336, 114, "Michigan", "196.00", 1], [560, 114, "Jacksonville", "142.80"],
+        [336, 209, "Tampa Bay", "130.70", 1], [560, 209, "Chicago", "106.20"],
         [112, 360, "Arizona", "115.20"], [784, 360, "Oakland", "72.60"],
       ],
       series: [
@@ -3178,12 +3182,12 @@ const USFL_2025_CONSOLATION = {
         [560, 341, "275.80", "Oakland", "80.80", 0, true], [672, 341, "195.00", "Oakland", "122.40"],
       ],
       winners: [
-        [448, 14, "Orlando"], [448, 124, "Michigan"],
-        [448, 210, "Tampa Bay"], [448, 341, "Arizona"],
+        [448, 14, "Orlando"], [448, 95, "Michigan"],
+        [448, 190, "Tampa Bay"], [448, 341, "Arizona"],
       ],
       places: [
-        [448, 33, "5th pick", "13th place"], [448, 143, "7th pick", "15th place"],
-        [448, 229, "9th pick", "17th place"], [448, 360, "2nd pick", "19th place"],
+        [448, 33, "5th pick", "13th place"], [448, 114, "7th pick", "15th place"],
+        [448, 209, "9th pick", "17th place"], [448, 360, "2nd pick", "19th place"],
       ],
       footer: [112, 420, 772, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
     },
@@ -3236,15 +3240,17 @@ const XFL_2025_PLAYOFFS = {
     {
       h: 420,
       paths: [
-        "M324 169 L330 169 L330 162 L336 162", "M324 207 L330 207 L330 248 L336 248",
-        "M672 207 L666 207 L666 162 L660 162", "M672 169 L666 169 L666 248 L660 248",
+        "M324 114 L330 114 L330 133 L336 133", "M324 152 L330 152 L330 133 L336 133",
+        "M672 114 L666 114 L666 133 L660 133", "M672 152 L666 152 L666 133 L660 133",
+        "M436 133 L448 133", "M560 133 L548 133",
+        "M436 228 L448 228", "M560 228 L548 228",
       ],
       boxes: [
         [336, 33, "Seattle", "173.10", 1], [560, 33, "Boston", "111.00"],
-        [224, 150, "Memphis", "240.65", 1], [224, 188, "Orlando", "166.55"],
-        [672, 150, "Brooklyn", "226.05"], [672, 188, "LAX", "231.80", 1],
-        [336, 143, "Memphis", "205.10"], [560, 143, "LAX", "286.60", 1],
-        [336, 229, "Orlando", "182.30", 1], [560, 229, "Brooklyn", "180.95"],
+        [224, 95, "Memphis", "240.65", 1], [224, 133, "Orlando", "166.55"],
+        [672, 95, "Brooklyn", "226.05"], [672, 133, "LAX", "231.80", 1],
+        [336, 114, "Memphis", "205.10"], [560, 114, "LAX", "286.60", 1],
+        [336, 209, "Orlando", "182.30", 1], [560, 209, "Brooklyn", "180.95"],
         [112, 360, "Tampa Bay", "206.50"], [784, 360, "Dallas", "180.00"],
       ],
       series: [
@@ -3252,11 +3258,11 @@ const XFL_2025_PLAYOFFS = {
         [560, 341, "565.80", "Dallas", "194.20", 0, true], [672, 341, "371.60", "Dallas", "191.60"],
       ],
       winners: [
-        [448, 14, "Seattle"], [448, 124, "LAX"], [448, 210, "Orlando"], [448, 341, "Tampa Bay"],
+        [448, 14, "Seattle"], [448, 95, "LAX"], [448, 190, "Orlando"], [448, 341, "Tampa Bay"],
       ],
       places: [
-        [448, 33, "11th pick", "3rd place"], [448, 143, "13th pick", "5th place"],
-        [448, 229, "15th pick", "7th place"], [448, 360, "17th pick", "9th place"],
+        [448, 33, "11th pick", "3rd place"], [448, 114, "13th pick", "5th place"],
+        [448, 209, "15th pick", "7th place"], [448, 360, "17th pick", "9th place"],
       ],
     },
   ],
@@ -3287,15 +3293,17 @@ const XFL_2025_CONSOLATION = {
     {
       h: 470,
       paths: [
-        "M324 207 L330 207 L330 162 L336 162", "M324 169 L330 169 L330 248 L336 248",
-        "M672 207 L666 207 L666 162 L660 162", "M672 169 L666 169 L666 248 L660 248",
+        "M324 114 L330 114 L330 133 L336 133", "M324 152 L330 152 L330 133 L336 133",
+        "M672 114 L666 114 L666 133 L660 133", "M672 152 L666 152 L666 133 L660 133",
+        "M436 133 L448 133", "M560 133 L548 133",
+        "M436 228 L448 228", "M560 228 L548 228",
       ],
       boxes: [
         [336, 33, "LAW", "163.10"], [560, 33, "Houston", "185.30", 1],
-        [224, 150, "New Jersey", "141.60"], [224, 188, "Atlanta", "210.90", 1],
-        [672, 150, "New York", "211.65"], [672, 188, "San Francisco", "213.60", 1],
-        [336, 143, "Atlanta", "206.20", 1], [560, 143, "San Francisco", "159.20"],
-        [336, 229, "New Jersey", "172.05"], [560, 229, "New York", "181.55", 1],
+        [224, 95, "New Jersey", "141.60"], [224, 133, "Atlanta", "210.90", 1],
+        [672, 95, "New York", "211.65"], [672, 133, "San Francisco", "213.60", 1],
+        [336, 114, "Atlanta", "206.20", 1], [560, 114, "San Francisco", "159.20"],
+        [336, 209, "New Jersey", "172.05"], [560, 209, "New York", "181.55", 1],
         [112, 360, "Chicago", "172.95"], [784, 360, "Las Vegas", "171.10"],
       ],
       series: [
@@ -3303,11 +3311,11 @@ const XFL_2025_CONSOLATION = {
         [560, 341, "428.95", "Las Vegas", "142.00", 0, true], [672, 341, "286.95", "Las Vegas", "115.85"],
       ],
       winners: [
-        [448, 14, "Houston"], [448, 124, "Atlanta"], [448, 210, "New York"], [448, 341, "Chicago"],
+        [448, 14, "Houston"], [448, 95, "Atlanta"], [448, 190, "New York"], [448, 341, "Chicago"],
       ],
       places: [
-        [448, 33, "5th pick", "13th place"], [448, 143, "7th pick", "15th place"],
-        [448, 229, "9th pick", "17th place"], [448, 360, "2nd pick", "19th place"],
+        [448, 33, "5th pick", "13th place"], [448, 114, "7th pick", "15th place"],
+        [448, 209, "9th pick", "17th place"], [448, 360, "2nd pick", "19th place"],
       ],
       footer: [112, 420, 772, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
     },
@@ -5035,20 +5043,28 @@ function usflXflMainBoxes(o) {
 // Fixed draft-pick/place labels — same every season, tied to final rank not
 // to any particular team (same idea as R3_CHAMP_PICKS/BR_CHAMP_PLACES).
 const USFLXFL_CHAMP_PLACES = [
-  [448, 33, "11th pick", "3rd place"], [448, 143, "13th pick", "5th place"],
-  [448, 229, "15th pick", "7th place"], [448, 360, "17th pick", "9th place"],
+  [448, 33, "11th pick", "3rd place"], [448, 114, "13th pick", "5th place"],
+  [448, 209, "15th pick", "7th place"], [448, 360, "17th pick", "9th place"],
 ];
 const USFLXFL_CONSO_PLACES = [
-  [448, 33, "5th pick", "13th place"], [448, 143, "7th pick", "15th place"],
-  [448, 229, "9th pick", "17th place"], [448, 360, "2nd pick", "19th place"],
+  [448, 33, "5th pick", "13th place"], [448, 114, "7th pick", "15th place"],
+  [448, 209, "9th pick", "17th place"], [448, 360, "2nd pick", "19th place"],
 ];
 // The real 2025 USFL/XFL consolation halves use slightly different elbow
 // directions from each other (purely cosmetic, same finding as the NFL
 // ladder) — one canonical direction for every live/future season, same
-// principle as BR_LADDER_PATHS_LIVE.
+// principle as BR_LADDER_PATHS_LIVE. Mid/lower (5th/7th, 15th/17th) now
+// reuse the 16-team R3 leagues' exact relative geometry (her request
+// 2026-08-09 — "make 5/7th look like the 16-team leagues, 7th/17th are
+// their own mini bracket") — the qualifying-round elbows AND the final-
+// to-center bridge lines that R3 already draws but USFL/XFL never did.
+// Upper (3rd/13th) and the 3-week series (9th/19th) are untouched — she
+// didn't ask about those.
 const USFLXFL_PLACE_PATHS_LIVE = [
-  "M324 169 L330 169 L330 162 L336 162", "M324 207 L330 207 L330 248 L336 248",
-  "M672 207 L666 207 L666 162 L660 162", "M672 169 L666 169 L666 248 L660 248",
+  "M324 114 L330 114 L330 133 L336 133", "M324 152 L330 152 L330 133 L336 133",
+  "M672 114 L666 114 L666 133 L660 133", "M672 152 L666 152 L666 133 L660 133",
+  "M436 133 L448 133", "M560 133 L548 133",
+  "M436 228 L448 228", "M560 228 L548 228",
 ];
 
 // Section 2: 3rd/5th/7th place games (13th/15th/17th one tier down) plus the
@@ -5063,17 +5079,17 @@ function usflXflPlaceSection(half) {
     paths: USFLXFL_PLACE_PATHS_LIVE,
     boxes: [
       ...r3Split(336, 33, 560, 33, blank),
-      ...r3Stack(224, 150, blank),
-      ...r3Stack(672, 150, blank),
-      ...r3Split(336, 143, 560, 143, blank),
-      ...r3Split(336, 229, 560, 229, blank),
+      ...r3Stack(224, 95, blank),
+      ...r3Stack(672, 95, blank),
+      ...r3Split(336, 114, 560, 114, blank),
+      ...r3Split(336, 209, 560, 209, blank),
       ...r3Split(112, 360, 784, 360, blank),
     ],
     series: [
       [224, 341, "", "", ""], [336, 341, "", "", "", 0, true],
       [560, 341, "", "", "", 0, true], [672, 341, "", "", ""],
     ],
-    winners: [[448, 14, ""], [448, 124, ""], [448, 210, ""], [448, 341, ""]],
+    winners: [[448, 14, ""], [448, 95, ""], [448, 190, ""], [448, 341, ""]],
     places: half === "playoffs" ? USFLXFL_CHAMP_PLACES : USFLXFL_CONSO_PLACES,
   };
   if (half !== "playoffs") s.footer = [112, 420, 772, "Relegation Bowl", "LAST PLACE COACH IS FIRED"];
