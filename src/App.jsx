@@ -3112,6 +3112,7 @@ const USFL_2025_PLAYOFFS = {
       paths: [
         "M324 114 L330 114 L330 133 L336 133", "M324 152 L330 152 L330 133 L336 133",
         "M672 114 L666 114 L666 133 L660 133", "M672 152 L666 152 L666 133 L660 133",
+        "M436 52 L448 52", "M560 52 L548 52",
         "M436 133 L448 133", "M560 133 L548 133",
         "M436 228 L448 228", "M560 228 L548 228",
       ],
@@ -3166,6 +3167,7 @@ const USFL_2025_CONSOLATION = {
       paths: [
         "M324 114 L330 114 L330 133 L336 133", "M324 152 L330 152 L330 133 L336 133",
         "M672 114 L666 114 L666 133 L660 133", "M672 152 L666 152 L666 133 L660 133",
+        "M436 52 L448 52", "M560 52 L548 52",
         "M436 133 L448 133", "M560 133 L548 133",
         "M436 228 L448 228", "M560 228 L548 228",
       ],
@@ -3242,6 +3244,7 @@ const XFL_2025_PLAYOFFS = {
       paths: [
         "M324 114 L330 114 L330 133 L336 133", "M324 152 L330 152 L330 133 L336 133",
         "M672 114 L666 114 L666 133 L660 133", "M672 152 L666 152 L666 133 L660 133",
+        "M436 52 L448 52", "M560 52 L548 52",
         "M436 133 L448 133", "M560 133 L548 133",
         "M436 228 L448 228", "M560 228 L548 228",
       ],
@@ -3295,6 +3298,7 @@ const XFL_2025_CONSOLATION = {
       paths: [
         "M324 114 L330 114 L330 133 L336 133", "M324 152 L330 152 L330 133 L336 133",
         "M672 114 L666 114 L666 133 L660 133", "M672 152 L666 152 L666 133 L660 133",
+        "M436 52 L448 52", "M560 52 L548 52",
         "M436 133 L448 133", "M560 133 L548 133",
         "M436 228 L448 228", "M560 228 L548 228",
       ],
@@ -5058,11 +5062,16 @@ const USFLXFL_CONSO_PLACES = [
 // 2026-08-09 — "make 5/7th look like the 16-team leagues, 7th/17th are
 // their own mini bracket") — the qualifying-round elbows AND the final-
 // to-center bridge lines that R3 already draws but USFL/XFL never did.
-// Upper (3rd/13th) and the 3-week series (9th/19th) are untouched — she
-// didn't ask about those.
+// Upper (3rd/13th) now has its own bridge line too (her follow-up request
+// 2026-08-09), computed the same way: GPlace's rendered box is 38px tall
+// (BH*2) so its vertical center is y+19 -- upper's place box sits at
+// y=33 (untouched, she never asked to move 3rd/13th itself), so its
+// bridge sits at y=52. The 3-week series (9th/19th) still has none —
+// she hasn't asked for that one.
 const USFLXFL_PLACE_PATHS_LIVE = [
   "M324 114 L330 114 L330 133 L336 133", "M324 152 L330 152 L330 133 L336 133",
   "M672 114 L666 114 L666 133 L660 133", "M672 152 L666 152 L666 133 L660 133",
+  "M436 52 L448 52", "M560 52 L548 52",
   "M436 133 L448 133", "M560 133 L548 133",
   "M436 228 L448 228", "M560 228 L548 228",
 ];
