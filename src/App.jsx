@@ -9946,7 +9946,7 @@ export default function App() {
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                         {proBowlDisplaySeeds.map((s) => (
                           <div key={`${s.tierKey}-${s.seed}`} className="flex items-center gap-2 px-2 py-1.5 rounded-sm text-xs" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
-                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold, width: 18 }}>{s.seed}</span>
+                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold, width: 18 }}>{s.tierKey === "USFL" ? s.seed : s.seed - 4}</span>
                             <span className="truncate" style={{ color: C.chalk }}>{s.team}</span>
                             <span className="ml-auto shrink-0" style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.slate, fontSize: 10 }}>{s.pts.toFixed(2)}</span>
                             <span className="shrink-0 uppercase" style={{ color: C.slate, fontSize: 10 }}>{s.tierKey}</span>
