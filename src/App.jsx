@@ -2967,7 +2967,7 @@ const NFL_2025_PLAYOFFS = brChampHalf({
   fifteenth: ["New Orleans", "140.70", "Jacksonville", "109.60"],
   banners: BR_BANNERS, brMainPaths: BR_MAIN_PATHS, logo: "NFL", logoSrc: NFL_MARK,
   championSub: "PainBowl IV",
-  champSlots: [[448, 16, 100, 150, "Trophy", NFL_TROPHY], [448, 250, 100, 100, "PFA", PFA_MARK]],
+  champSlots: [[448, 16, 100, 150, "Trophy", NFL_TROPHY], [448, 334, 100, 100, "PFA", PFA_MARK]],
   ladderH: 690,
   ladderPaths: [
     "M324 169 L330 169 L330 162 L336 162", "M324 207 L330 207 L330 248 L336 248",
@@ -3020,7 +3020,7 @@ const NFL_2025_CONSOLATION = brChampHalf({
   fifteenth: ["Washington", "153.00", "Denver", "63.50"],
   banners: BR_BANNERS, brMainPaths: BR_MAIN_PATHS, logo: "NFL", logoSrc: NFL_MARK,
   topWinnerY: 171, topPick: "9th pick", topLabel: "17th place",
-  champSlots: [[448, 30, 100, 110, "PFA", PFA_MARK]],
+  champSlots: [[448, 324, 100, 110, "PFA", PFA_MARK]],
   ladderH: 730,
   ladderPaths: [
     "M324 169 L330 169 L330 248 L336 248", "M324 207 L330 207 L330 162 L336 162",
@@ -3086,7 +3086,7 @@ const USFL_2025_PLAYOFFS = {
   sections: [
     {
       banners: USFL_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "USFL",
-      slots: [[448, 4, 100, 84, "Trophy", USFL_TROPHY], [448, 176, 100, 96, "PFA", PFA_MARK]],
+      slots: [[448, 4, 100, 84, "Trophy", USFL_TROPHY], [448, 200, 100, 96, "PFA", PFA_MARK]],
       champion: { y: 114, label: "Champion", team: "Memphis", sub: "1st place" },
       boxes: [
         [0, 19, "New Jersey", "194.05"], [0, 57, "Philadelphia", "240.10", 1],
@@ -3137,7 +3137,7 @@ const USFL_2025_CONSOLATION = {
   sections: [
     {
       banners: USFL_CONSO_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "USFL",
-      slots: [[448, 4, 100, 70, "PFA", PFA_MARK]],
+      slots: [[448, 226, 100, 70, "PFA", PFA_MARK]],
       winners: [[448, 95, "Detroit"]],
       places: [[448, 114, "3rd pick", "11th place"]],
       boxes: [
@@ -3212,7 +3212,7 @@ const XFL_2025_PLAYOFFS = {
   sections: [
     {
       banners: XFL_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "XFL",
-      slots: [[448, 4, 100, 84, "Trophy", XFL_TROPHY], [448, 176, 100, 96, "PFA", PFA_MARK]],
+      slots: [[448, 4, 100, 84, "Trophy", XFL_TROPHY], [448, 200, 100, 96, "PFA", PFA_MARK]],
       champion: { y: 114, label: "Champion", team: "Birmingham", sub: "1st place" },
       boxes: [
         [0, 19, "Tampa Bay", "125.75"], [0, 57, "Memphis", "246.50", 1],
@@ -3262,7 +3262,7 @@ const XFL_2025_CONSOLATION = {
   sections: [
     {
       banners: XFL_CONSO_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "XFL",
-      slots: [[448, 4, 100, 70, "PFA", PFA_MARK]],
+      slots: [[448, 226, 100, 70, "PFA", PFA_MARK]],
       winners: [[448, 95, "Omaha"]],
       places: [[448, 114, "3rd pick", "11th place"]],
       boxes: [
@@ -3555,7 +3555,7 @@ function r3ChampHalf(o) {
     sections: [
       {
         banners: o.banners, cols: WK_COLS_3, h: 200, paths: R3_MAIN_PATHS, logo: o.logo,
-        slots: [[448, 0, 100, 52, "Trophy", o.trophy], [448, 114, 100, 57, "PFA", PFA_MARK]],
+        slots: [[448, 0, 100, 52, "Trophy", o.trophy], [448, 159, 100, 57, "PFA", PFA_MARK]],
         champion: { y: 76, label: o.championLabel || "Champion", team: r3Winner(o.final) },
         boxes: r3MainBoxes(o),
       },
@@ -3571,7 +3571,7 @@ function r3ConsoHalf(o) {
     sections: [
       {
         banners: o.banners, cols: WK_COLS_3, h: 200, paths: R3_MAIN_PATHS, logo: o.logo,
-        slots: [[448, 0, 100, 50, "PFA", PFA_MARK]],
+        slots: [[448, 166, 100, 50, "PFA", PFA_MARK]],
         winners: [[448, 57, r3Winner(o.final)]],
         places: [[448, 76, "3rd pick", "9th place"]],
         boxes: r3MainBoxes(o),
@@ -3591,7 +3591,7 @@ const SEC_2025_PLAYOFFS = {
   sections: [
     {
       banners: SEC_BANNERS, cols: WK_COLS_3, h: 200, paths: R3_MAIN_PATHS, logo: "SEC",
-      slots: [[448, 0, 100, 52, "Trophy", SEC_TROPHY], [448, 114, 100, 57, "PFA", PFA_MARK]],
+      slots: [[448, 0, 100, 52, "Trophy", SEC_TROPHY], [448, 159, 100, 57, "PFA", PFA_MARK]],
       champion: { y: 76, label: "Champion", team: "South Carolina" },
       boxes: [
         [112, 0, "South Carolina", "240.65", 1], [112, 38, "Miss State", "227.60"],
@@ -3630,7 +3630,7 @@ const SEC_2025_CONSOLATION = {
   sections: [
     {
       banners: SEC_CONSO_BANNERS, cols: WK_COLS_3, h: 200, paths: R3_MAIN_PATHS, logo: "SEC",
-      slots: [[448, 0, 100, 50, "PFA", PFA_MARK]],
+      slots: [[448, 166, 100, 50, "PFA", PFA_MARK]],
       winners: [[448, 57, "Florida"]],
       places: [[448, 76, "3rd pick", "9th place"]],
       boxes: [
@@ -3696,7 +3696,7 @@ const TEN_2025_PLAYOFFS = {
   sections: [
     {
       banners: TEN_BANNERS, cols: WK_COLS_3, h: 200, paths: R3_MAIN_PATHS, logo: "B1G",
-      slots: [[448, 0, 100, 52, "Trophy", TEN_TROPHY], [448, 114, 100, 57, "PFA", PFA_MARK]],
+      slots: [[448, 0, 100, 52, "Trophy", TEN_TROPHY], [448, 159, 100, 57, "PFA", PFA_MARK]],
       champion: { y: 76, label: "Champion", team: "Northwestern" },
       boxes: [
         [112, 0, "Northwestern", "233.00", 1], [112, 38, "Oregon", "145.30"],
@@ -3737,7 +3737,7 @@ const TEN_2025_CONSOLATION = {
   sections: [
     {
       banners: TEN_CONSO_BANNERS, cols: WK_COLS_3, h: 200, paths: R3_MAIN_PATHS, logo: "B1G",
-      slots: [[448, 0, 100, 50, "PFA", PFA_MARK]],
+      slots: [[448, 166, 100, 50, "PFA", PFA_MARK]],
       winners: [[448, 57, "Purdue"]],
       places: [[448, 76, "3rd pick", "9th place"]],
       boxes: [
@@ -3810,7 +3810,7 @@ const SWAC_2025_PLAYOFFS = {
   sections: [
     {
       banners: SWAC_BANNERS, cols: WK_COLS_3, h: 200, paths: R3_MAIN_PATHS, logo: "SWAC",
-      slots: [[448, 0, 100, 52, "Trophy", SWAC_TROPHY], [448, 114, 100, 57, "PFA", PFA_MARK]],
+      slots: [[448, 0, 100, 52, "Trophy", SWAC_TROPHY], [448, 159, 100, 57, "PFA", PFA_MARK]],
       champion: { y: 76, label: "Champion", team: "Morgan St" },
       boxes: [
         [112, 0, "Jackson St", "309.30", 1], [112, 38, "Florida A&M", "278.85"],
@@ -3849,7 +3849,7 @@ const SWAC_2025_CONSOLATION = {
   sections: [
     {
       banners: SWAC_CONSO_BANNERS, cols: WK_COLS_3, h: 200, paths: R3_MAIN_PATHS, logo: "SWAC",
-      slots: [[448, 0, 100, 50, "PFA", PFA_MARK]],
+      slots: [[448, 166, 100, 50, "PFA", PFA_MARK]],
       winners: [[448, 57, "Grambling"]],
       places: [[448, 76, "3rd pick", "9th place"]],
       boxes: [
@@ -3905,7 +3905,7 @@ const XII_2025_PLAYOFFS = {
   sections: [
     {
       banners: XII_BANNERS, cols: WK_COLS_3, h: 200, paths: R3_MAIN_PATHS, logo: "XII",
-      slots: [[448, 0, 100, 52, "Trophy", XII_TROPHY], [448, 114, 100, 57, "PFA", PFA_MARK]],
+      slots: [[448, 0, 100, 52, "Trophy", XII_TROPHY], [448, 159, 100, 57, "PFA", PFA_MARK]],
       champion: { y: 76, label: "Champion", team: "OSU" },
       boxes: [
         [112, 0, "Iowa State", "260.95"], [112, 38, "OSU", "301.90", 1],
@@ -3944,7 +3944,7 @@ const XII_2025_CONSOLATION = {
   sections: [
     {
       banners: XII_CONSO_BANNERS, cols: WK_COLS_3, h: 200, paths: R3_MAIN_PATHS, logo: "XII",
-      slots: [[448, 0, 100, 50, "PFA", PFA_MARK]],
+      slots: [[448, 166, 100, 50, "PFA", PFA_MARK]],
       winners: [[448, 57, "Baylor"]],
       places: [[448, 76, "3rd pick", "9th place"]],
       boxes: [
@@ -4966,12 +4966,12 @@ function brLiveHalf(cfg, group, half) {
   };
   if (half === "playoffs") {
     o.championSub = "";   // no championship-game nickname known yet — renders no sub-line
-    o.champSlots = [[448, 16, 100, 150, "Trophy", cfg.trophy], [448, 250, 100, 100, "PFA", PFA_MARK]];
+    o.champSlots = [[448, 16, 100, 150, "Trophy", cfg.trophy], [448, 334, 100, 100, "PFA", PFA_MARK]];
     o.ladderH = 690;
     o.places = BR_CHAMP_PLACES;
   } else {
     o.topWinnerY = 171; o.topPick = "9th pick"; o.topLabel = "17th place";
-    o.champSlots = [[448, 30, 100, 110, "PFA", PFA_MARK]];
+    o.champSlots = [[448, 324, 100, 110, "PFA", PFA_MARK]];
     o.ladderH = 730;
     o.places = BR_CONSO_PLACES;
     o.footer = [336, 680, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"];
@@ -5080,7 +5080,7 @@ function usflXflChampHalf(o) {
     sections: [
       {
         banners: o.banners, h: 280, paths: USFL_MAIN_PATHS, logo: o.logo,
-        slots: [[448, 4, 100, 84, "Trophy", o.trophy], [448, 176, 100, 96, "PFA", PFA_MARK]],
+        slots: [[448, 4, 100, 84, "Trophy", o.trophy], [448, 200, 100, 96, "PFA", PFA_MARK]],
         champion: { y: 114, label: "Champion", team: r3Winner(o.final), sub: "1st place" },
         boxes: usflXflMainBoxes(o),
       },
@@ -5095,7 +5095,7 @@ function usflXflConsHalf(o) {
     sections: [
       {
         banners: o.banners, h: 280, paths: USFL_MAIN_PATHS, logo: o.logo,
-        slots: [[448, 4, 100, 70, "PFA", PFA_MARK]],
+        slots: [[448, 226, 100, 70, "PFA", PFA_MARK]],
         winners: [[448, 95, r3Winner(o.final)]],
         places: [[448, 114, "3rd pick", "11th place"]],
         boxes: usflXflMainBoxes(o),
