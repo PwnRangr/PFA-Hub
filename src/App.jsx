@@ -2810,13 +2810,20 @@ const BR_MAIN_PATHS = [
   "M672 209 L660 209", "M560 209 L548 209",
 ];
 
-// week 15 -> week 16 feeders inside the 8-team placement bracket (identical
-// in both halves; only which box wins differs, and that's in the paths below)
+// Week15->week16 feeders inside the 8-team placement bracket, live/future
+// seasons only (both real 2025 halves now carry their own inline feeder
+// paths matching that season's real winners — see the note on
+// BR_LADDER_PATHS_LIVE below for why a single shared set can't work once
+// real results exist). Only the WINNER of each losers'-round-1 game
+// advances into this next round — her clarification 2026-08-09 ("losers
+// fall down into a new sub-bracket" with no connecting line back) means
+// the loser's duplicate feed into this same box never belonged here in
+// the first place, live or historical. No real winner exists yet for a
+// live/future season, so one consistent top-slot assumption is used
+// throughout, same principle as the rest of this live template.
 const BR_W15_FEEDERS = [
-  "M212 329 L218 329 L218 386 L224 386", "M212 367 L218 367 L218 386 L224 386",
-  "M212 443 L218 443 L218 424 L224 424", "M212 481 L218 481 L218 424 L224 424",
-  "M884 329 L878 329 L878 386 L872 386", "M884 367 L878 367 L878 386 L872 386",
-  "M884 443 L878 443 L878 424 L872 424", "M884 481 L878 481 L878 424 L872 424",
+  "M212 329 L218 329 L218 386 L224 386", "M212 443 L218 443 L218 424 L224 424",
+  "M884 329 L878 329 L878 386 L872 386", "M884 443 L878 443 L878 424 L872 424",
 ];
 
 // --- 2025 NFL, ranks 1-16 (championship half) ------------------------------
@@ -2976,13 +2983,11 @@ const NFL_2025_PLAYOFFS = brChampHalf({
   champSlots: [[448, 16, 100, 150, "Trophy", NFL_TROPHY], [448, 334, 100, 100, "PFA", PFA_MARK]],
   ladderH: 690,
   ladderPaths: [
-    "M324 169 L330 169 L330 162 L336 162", "M324 207 L330 207 L330 248 L336 248",
-    "M672 207 L666 207 L666 162 L660 162", "M672 169 L666 169 L666 248 L660 248",
-    ...BR_W15_FEEDERS,
-    "M324 386 L336 386", "M324 424 L330 424 L330 457 L336 457",
-    "M672 386 L666 386 L666 457 L660 457", "M672 424 L666 424 L666 386 L660 386",
-    "M324 579 L330 579 L330 578 L336 578", "M324 617 L330 617 L330 649 L336 649",
-    "M672 579 L666 579 L666 578 L660 578", "M672 617 L666 617 L666 649 L660 649",
+    "M324 169 L330 169 L330 162 L336 162", "M672 207 L666 207 L666 162 L660 162",
+    "M212 367 L218 367 L218 386 L224 386", "M212 443 L218 443 L218 424 L224 424",
+    "M884 367 L878 367 L878 386 L872 386", "M884 443 L878 443 L878 424 L872 424",
+    "M324 386 L336 386", "M672 424 L666 424 L666 386 L660 386",
+    "M324 579 L330 579 L330 578 L336 578", "M672 579 L666 579 L666 578 L660 578",
   ],
   places: [
     [448, 33, "29th pick", "3rd place"], [448, 143, "25th pick", "5th place"],
@@ -3029,13 +3034,11 @@ const NFL_2025_CONSOLATION = brChampHalf({
   champSlots: [[448, 324, 100, 110, "PFA", PFA_MARK]],
   ladderH: 730,
   ladderPaths: [
-    "M324 169 L330 169 L330 248 L336 248", "M324 207 L330 207 L330 162 L336 162",
-    "M672 169 L666 169 L666 162 L660 162", "M672 207 L666 207 L666 248 L660 248",
-    ...BR_W15_FEEDERS,
-    "M324 424 L330 424 L330 386 L336 386", "M324 386 L330 386 L330 457 L336 457",
-    "M672 424 L666 424 L666 386 L660 386", "M672 386 L666 386 L666 457 L660 457",
-    "M324 617 L330 617 L330 578 L336 578", "M324 579 L330 579 L330 649 L336 649",
-    "M672 617 L666 617 L666 578 L660 578", "M672 579 L666 579 L666 649 L660 649",
+    "M324 207 L330 207 L330 162 L336 162", "M672 169 L666 169 L666 162 L660 162",
+    "M212 329 L218 329 L218 386 L224 386", "M212 481 L218 481 L218 424 L224 424",
+    "M884 367 L878 367 L878 386 L872 386", "M884 443 L878 443 L878 424 L872 424",
+    "M324 424 L330 424 L330 386 L336 386", "M672 424 L666 424 L666 386 L660 386",
+    "M324 617 L330 617 L330 578 L336 578", "M672 617 L666 617 L666 578 L660 578",
   ],
   places: [
     [448, 33, "11th pick", "19th place"], [448, 143, "13th pick", "21st place"],
@@ -4923,19 +4926,26 @@ const BR_CONSO_PLACES = [
   [448, 438, "5th pick", "27th place"], [448, 559, "7th pick", "29th place"],
   [448, 630, "2nd pick", "31st place"],
 ];
-// One canonical connector-elbow direction for the placement ladder. The real
-// 2025 halves use DIFFERENT elbow directions from each other at points where
-// it happened to look tidier for that season's particular winner — proven
-// cosmetic-only (GBox positions never depend on it), and with no winner yet
-// to hand-tune around, every live/future season uses this one consistent set.
+// One canonical connector set for the placement ladder, live/future seasons.
+// Her correction 2026-08-09: "losers fall down into a new sub-bracket" —
+// every placement whose entrants are the LOSERS of the round above (7th,
+// 11th, 15th, mirrored 23rd/27th/31st in the consolation half) needs NO
+// connecting line back to where they came from; that's a genuinely
+// separate mini-bracket, not a continuation. Only the WINNER-continuation
+// paths (feeding 5th/9th/13th and their mirrors) are drawn. The real 2025
+// halves each carry their own inline paths matching that season's real
+// winner slots (verified team-by-team against real scores) — a single
+// shared "assume winner is always in this slot" set like this one is
+// provably wrong for at least one of two real seasons already checked
+// (2025 playoffs and 2025 consolation have their east-side lr1 winners in
+// OPPOSITE slots from each other), so for a live/future season, with no
+// real winner to check against yet, this keeps one consistent assumption
+// rather than guessing differently per game.
 const BR_LADDER_PATHS_LIVE = [
-  "M324 169 L330 169 L330 162 L336 162", "M324 207 L330 207 L330 248 L336 248",
-  "M672 207 L666 207 L666 162 L660 162", "M672 169 L666 169 L666 248 L660 248",
+  "M324 169 L330 169 L330 162 L336 162", "M672 207 L666 207 L666 162 L660 162",
   ...BR_W15_FEEDERS,
-  "M324 386 L330 386 L330 457 L336 457", "M324 424 L330 424 L330 386 L336 386",
-  "M672 386 L666 386 L666 457 L660 457", "M672 424 L666 424 L666 386 L660 386",
-  "M324 579 L330 579 L330 649 L336 649", "M324 617 L330 617 L330 578 L336 578",
-  "M672 579 L666 579 L666 649 L660 649", "M672 617 L666 617 L666 578 L660 578",
+  "M324 424 L330 424 L330 386 L336 386", "M672 424 L666 424 L666 386 L660 386",
+  "M324 617 L330 617 L330 578 L336 578", "M672 617 L666 617 L666 578 L660 578",
 ];
 
 const BR_LIVE = {
