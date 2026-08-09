@@ -5440,17 +5440,16 @@ function resolveProBowlBracket(seeds, scores) {
 }
 
 // Flat CP per her exact numbers -- NOT a stacking formula like the main
-// Tournament's. Champion 20, 2nd place 10, EVERY quarterfinal loser 5
-// regardless of path. Semifinal losers aren't a named CP tier in her
-// template (only Champion/2nd/Quarterfinal L are labeled) -- no entry here
-// (0 CP), flagged to her as an assumption, not explicitly confirmed.
+// Tournament's. Champion 20, 2nd place 10, semifinal loser 5 (confirmed
+// 2026-08-09). Quarterfinal losers get 0 CP / no entry -- confirmed same
+// day, not an assumption.
 function proBowlCPTable(games) {
   const cp = {};
   const set = (team, amount, result) => {
     if (!team) return;
     cp[team.rosterId] = { team: team.team, coach: team.coach, tierKey: team.tierKey, cp: amount, result };
   };
-  PRO_BOWL_QF.forEach((g) => { const r = games[g.key]; if (r && r.played) set(r.loser, 5, "Quarterfinal loss"); });
+  PRO_BOWL_SF.forEach((g) => { const r = games[g.key]; if (r && r.played) set(r.loser, 5, "Semifinal loss"); });
   const fin = games[PRO_BOWL_FINAL.key];
   if (fin && fin.played) {
     set(fin.winner, 20, "Champion");
@@ -5835,7 +5834,7 @@ function ProBowlBracket({ data }) {
           <GSlot x={X.center} y={208} w={BW} h={40} label="PFA" src={PFA_MARK} />
           <div style={{ position: "absolute", left: X.center - 15, top: 262, display: "flex", flexDirection: "column", gap: 4 }}>
             {cpRow("2nd", `${(cp[(g("FINAL") || {}).loser && g("FINAL").loser.rosterId] || {}).cp ?? 10} CP`, "#c0c0c0", "#2C2C2A")}
-            {cpRow("QF loser", "5 CP", "#cc9054", "#2A1200")}
+            {cpRow("SF loser", "5 CP", "#cc9054", "#2A1200")}
           </div>
           </div>
         </div>
