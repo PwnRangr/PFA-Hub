@@ -2524,20 +2524,26 @@ function GPlace({ x, y, pick, text }) {
   );
 }
 
-// One game of a multi-week points series: running total on top, which game
-// it is, then that week's score. The winning side's final total is flagged.
-function GSeries({ x, y, cum, label, score, win }) {
+// One week of a multi-week points series: running cumulative total on top
+// (bold only for the deciding/final week — her request 2026-08-08, was
+// previously bold only for the series winner regardless of week), the
+// team name in the middle (colored like every other box on the site —
+// was "Gm N/3" text before, which never actually showed who the score
+// belonged to), that week's own score on the bottom.
+function GSeries({ x, y, cum, team, score, win, colors, cumBold }) {
+  const clr = (colors && colors[team]) || TEAM_CLR[team] || ["#2A3550", C.chalk];
   return (
     <div style={{ position: "absolute", left: x, top: y, width: BW }}>
       <div style={{
         height: BH, lineHeight: `${BH}px`, fontSize: 11, textAlign: "center",
         fontFamily: "'IBM Plex Mono', monospace",
-        color: win ? C.turf : C.slate, fontWeight: win ? 700 : 400,
+        color: win ? C.turf : C.slate, fontWeight: cumBold ? 700 : 400,
       }}>{cum}</div>
       <div style={{
-        height: BH, lineHeight: `${BH}px`, fontSize: 11, fontWeight: 700, textAlign: "center",
-        color: C.slate, background: C.panelHi, border: `1px solid ${BR_LINE}`, boxSizing: "border-box",
-      }}>{label}</div>
+        height: BH, lineHeight: `${BH}px`, fontSize: 11, fontWeight: 700, padding: "0 3px",
+        textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+        color: clr[1], background: clr[0], border: `1px solid ${BR_LINE}`, boxSizing: "border-box",
+      }}>{team}</div>
       <div style={{
         height: BH, lineHeight: `${BH}px`, fontSize: 11, textAlign: "center",
         fontFamily: "'IBM Plex Mono', monospace", color: C.slate,
@@ -2654,7 +2660,7 @@ function GridBracket({ data }) {
                   <GBox x={0} y={0} team={b[2]} colors={data.colors} nameBorder={BR_LINE} />
                 </div>
               ))}
-              {(s.series || []).map((v, i) => <GSeries key={`v${i}`} x={v[0]} y={v[1]} cum={v[2]} label={v[3]} score={v[4]} win={v[5]} />)}
+              {(s.series || []).map((v, i) => <GSeries key={`v${i}`} x={v[0]} y={v[1]} cum={v[2]} team={v[3]} score={v[4]} win={v[5]} colors={data.colors} cumBold={v[6]} />)}
               {(s.places || []).map((p, i) => <GPlace key={`p${i}`} x={p[0]} y={p[1]} pick={p[2]} text={p[3]} />)}
               {s.champion && (
                 <>
@@ -3116,8 +3122,8 @@ const USFL_2025_PLAYOFFS = {
         [112, 360, "New Jersey", "195.00"], [784, 360, "Boston", "180.60"],
       ],
       series: [
-        [224, 341, "435.70", "Gm 2/3", "240.70"], [336, 341, "580.85", "Gm 3/3", "145.15"],
-        [560, 341, "620.70", "Gm 3/3", "255.30", 1], [672, 341, "365.40", "Gm 2/3", "184.80"],
+        [224, 341, "435.70", "New Jersey", "240.70"], [336, 341, "580.85", "New Jersey", "145.15", 0, true],
+        [560, 341, "620.70", "Boston", "255.30", 1, true], [672, 341, "365.40", "Boston", "184.80"],
       ],
       winners: [
         [448, 14, "Washington"], [448, 124, "Philadelphia"],
@@ -3168,8 +3174,8 @@ const USFL_2025_CONSOLATION = {
         [112, 360, "Arizona", "115.20"], [784, 360, "Oakland", "72.60"],
       ],
       series: [
-        [224, 341, "231.90", "Gm 2/3", "116.70"], [336, 341, "391.85", "Gm 3/3", "159.95", 1],
-        [560, 341, "275.80", "Gm 3/3", "80.80"], [672, 341, "195.00", "Gm 2/3", "122.40"],
+        [224, 341, "231.90", "Arizona", "116.70"], [336, 341, "391.85", "Arizona", "159.95", 1, true],
+        [560, 341, "275.80", "Oakland", "80.80", 0, true], [672, 341, "195.00", "Oakland", "122.40"],
       ],
       winners: [
         [448, 14, "Orlando"], [448, 124, "Michigan"],
@@ -3242,8 +3248,8 @@ const XFL_2025_PLAYOFFS = {
         [112, 360, "Tampa Bay", "206.50"], [784, 360, "Dallas", "180.00"],
       ],
       series: [
-        [224, 341, "358.60", "Gm 2/3", "152.10"], [336, 341, "572.50", "Gm 3/3", "213.90", 1],
-        [560, 341, "565.80", "Gm 3/3", "194.20"], [672, 341, "371.60", "Gm 2/3", "191.60"],
+        [224, 341, "358.60", "Tampa Bay", "152.10"], [336, 341, "572.50", "Tampa Bay", "213.90", 1, true],
+        [560, 341, "565.80", "Dallas", "194.20", 0, true], [672, 341, "371.60", "Dallas", "191.60"],
       ],
       winners: [
         [448, 14, "Seattle"], [448, 124, "LAX"], [448, 210, "Orlando"], [448, 341, "Tampa Bay"],
@@ -3293,8 +3299,8 @@ const XFL_2025_CONSOLATION = {
         [112, 360, "Chicago", "172.95"], [784, 360, "Las Vegas", "171.10"],
       ],
       series: [
-        [224, 341, "323.60", "Gm 2/3", "150.65"], [336, 341, "459.10", "Gm 3/3", "135.50", 1],
-        [560, 341, "428.95", "Gm 3/3", "142.00"], [672, 341, "286.95", "Gm 2/3", "115.85"],
+        [224, 341, "323.60", "Chicago", "150.65"], [336, 341, "459.10", "Chicago", "135.50", 1, true],
+        [560, 341, "428.95", "Las Vegas", "142.00", 0, true], [672, 341, "286.95", "Las Vegas", "115.85"],
       ],
       winners: [
         [448, 14, "Houston"], [448, 124, "Atlanta"], [448, 210, "New York"], [448, 341, "Chicago"],
@@ -5064,8 +5070,8 @@ function usflXflPlaceSection(half) {
       ...r3Split(112, 360, 784, 360, blank),
     ],
     series: [
-      [224, 341, "", "", ""], [336, 341, "", "", ""],
-      [560, 341, "", "", ""], [672, 341, "", "", ""],
+      [224, 341, "", "", ""], [336, 341, "", "", "", 0, true],
+      [560, 341, "", "", "", 0, true], [672, 341, "", "", ""],
     ],
     winners: [[448, 14, ""], [448, 124, ""], [448, 210, ""], [448, 341, ""]],
     places: half === "playoffs" ? USFLXFL_CHAMP_PLACES : USFLXFL_CONSO_PLACES,
