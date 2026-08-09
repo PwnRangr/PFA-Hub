@@ -2993,13 +2993,15 @@ const NFL_2025_PLAYOFFS = brChampHalf({
   championSub: "PainBowl IV",
   champSlots: [[448, 16, 100, 150, "Trophy", NFL_TROPHY], [448, 334, 100, 100, "PFA", PFA_MARK]],
   ladderH: 690,
-  ladderPaths: [
-    "M324 141 L330 141 L330 160 L336 160", "M672 179 L666 179 L666 160 L660 160",
-    "M212 346 L218 346 L218 365 L224 365", "M212 422 L218 422 L218 403 L224 403",
-    "M884 346 L878 346 L878 365 L872 365", "M884 422 L878 422 L878 403 L872 403",
-    "M324 365 L330 365 L330 384 L336 384", "M672 403 L666 403 L666 384 L660 384",
-    "M324 557 L330 557 L330 576 L336 576", "M672 557 L666 557 L666 576 L660 576",
-  ],
+  // Connector lines removed from this section only, her request 2026-08-09
+  // ("remove the connecting lines in all games below the championship and
+  // consolation brackets") — the box positions/spacing themselves are
+  // untouched, this only stops GPaths from drawing between them. The
+  // section[0] bracket above (1st/2nd place) keeps its own lines via
+  // brMainPaths, unaffected. Exact path values from every round of tuning
+  // this session are preserved in chat/memory history if lines ever need
+  // to come back.
+  ladderPaths: [],
   places: [
     [448, 33, "29th pick", "3rd place"], [448, 143, "25th pick", "5th place"],
     [448, 229, "27th pick", "7th place"], [448, 367, "17th pick", "9th place"],
@@ -3044,13 +3046,9 @@ const NFL_2025_CONSOLATION = brChampHalf({
   topWinnerY: 171, topPick: "9th pick", topLabel: "17th place",
   champSlots: [[448, 324, 100, 110, "PFA", PFA_MARK]],
   ladderH: 730,
-  ladderPaths: [
-    "M324 179 L330 179 L330 160 L336 160", "M672 141 L666 141 L666 160 L660 160",
-    "M212 308 L218 308 L218 365 L224 365", "M212 460 L218 460 L218 403 L224 403",
-    "M884 346 L878 346 L878 365 L872 365", "M884 422 L878 422 L878 403 L872 403",
-    "M324 403 L330 403 L330 384 L336 384", "M672 403 L666 403 L666 384 L660 384",
-    "M324 595 L330 595 L330 576 L336 576", "M672 595 L666 595 L666 576 L660 576",
-  ],
+  // Connector lines removed here too, same request/reasoning as the
+  // playoffs half above — this is her "19th-31st place" half.
+  ladderPaths: [],
   places: [
     [448, 33, "11th pick", "19th place"], [448, 143, "13th pick", "21st place"],
     [448, 229, "15th pick", "23rd place"], [448, 367, "3rd pick", "25th place"],
@@ -5001,7 +4999,11 @@ function brLiveHalf(cfg, group, half) {
     champ: brBlank, third: brBlank, fifth: brBlank, seventh: brBlank,
     ninth: brBlank, eleventh: brBlank, thirteenth: brBlank, fifteenth: brBlank,
     banners: cfg.banners, brMainPaths: BR_MAIN_PATHS, logo: cfg.logo, logoSrc: cfg.logoSrc,
-    ladderPaths: BR_LADDER_PATHS_LIVE,
+    // Connector lines removed in the ladder for live/future seasons too,
+    // matching both real 2025 halves — her request 2026-08-09.
+    // BR_LADDER_PATHS_LIVE stays defined, just unused, in case lines
+    // return later.
+    ladderPaths: [],
   };
   if (half === "playoffs") {
     o.championSub = "";   // no championship-game nickname known yet — renders no sub-line
