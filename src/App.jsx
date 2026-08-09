@@ -4929,16 +4929,16 @@ const R3_LIVE = {
 // tied to final rank, not to any particular team, so they're shared
 // constants rather than per-season data (same idea as R3_CHAMP_PICKS).
 const BR_CHAMP_PLACES = [
-  [448, 33, "29th pick", "3rd place"], [448, 143, "25th pick", "5th place"],
-  [448, 229, "27th pick", "7th place"], [448, 367, "17th pick", "9th place"],
-  [448, 438, "19th pick", "11th place"], [448, 559, "21st pick", "13th place"],
-  [448, 630, "23rd pick", "15th place"],
+  [448, 33, "29th pick", "3rd place"], [448, 133, "25th pick", "5th place"],
+  [448, 233, "27th pick", "7th place"], [448, 333, "17th pick", "9th place"],
+  [448, 433, "19th pick", "11th place"], [448, 533, "21st pick", "13th place"],
+  [448, 633, "23rd pick", "15th place"],
 ];
 const BR_CONSO_PLACES = [
-  [448, 33, "11th pick", "19th place"], [448, 143, "13th pick", "21st place"],
-  [448, 229, "15th pick", "23rd place"], [448, 367, "3rd pick", "25th place"],
-  [448, 438, "5th pick", "27th place"], [448, 559, "7th pick", "29th place"],
-  [448, 630, "2nd pick", "31st place"],
+  [448, 33, "11th pick", "19th place"], [448, 133, "13th pick", "21st place"],
+  [448, 233, "15th pick", "23rd place"], [448, 333, "3rd pick", "25th place"],
+  [448, 433, "5th pick", "27th place"], [448, 533, "7th pick", "29th place"],
+  [448, 633, "2nd pick", "31st place"],
 ];
 // One canonical connector set for the placement ladder, live/future seasons.
 // Her correction 2026-08-09: "losers fall down into a new sub-bracket" —
