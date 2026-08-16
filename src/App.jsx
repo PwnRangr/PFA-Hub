@@ -1775,13 +1775,14 @@ function TrophyBadges({ name, size = 14 }) {
 // STATS has an entry for this coach, otherwise a plain "not in yet" note.
 function CoachProfileModal({ coach, onClose }) {
   if (!coach) return null;
+  const isCurrentSeason = Boolean(coach.currentStats);
   const entries = CAREER_STATS[coach.name.toLowerCase()] || [];
   // Only ever show the entry for the league this coach is CURRENTLY in —
   // a coach who's held multiple teams over their career has genuinely
   // different records per league, and showing the wrong one would be
   // actively misleading, not just imprecise.
   const match = entries.find((e) => e.tierKey === coach.tierKey);
-  const stats = match ? match.stats : null;
+  const stats = isCurrentSeason ? coach.currentStats : match ? match.stats : null;
   return (
     <div
       onClick={onClose}
@@ -1805,6 +1806,7 @@ function CoachProfileModal({ coach, onClose }) {
               {coach.tierKey && (
                 <div className="text-xs uppercase tracking-wider mt-0.5" style={{ color: C.gold }}>
                   {coach.tierName || coach.tierKey}
+                  {isCurrentSeason && <span style={{ color: C.slate }}> · This season</span>}
                 </div>
               )}
             </div>
@@ -1825,7 +1827,7 @@ function CoachProfileModal({ coach, onClose }) {
           </div>
         ) : (
           <div className="text-xs leading-relaxed" style={{ color: C.slate }}>
-            No career stats on file for this coach yet.
+            No {isCurrentSeason ? "current-season" : "career"} stats on file for this coach yet.
           </div>
         )}
       </div>
@@ -7879,10 +7881,22 @@ export default function App() {
     if (mode === "live") {
       const id = leagueMap[tKey];
       const tRows = id ? standingsCache[id] : null;
-      return tRows && tRows.length ? tRows[tRows.length - 1] : null;
+      if (!tRows || !tRows.length) return null;
+      return { ...tRows[tRows.length - 1], totalTeams: tRows.length };
     }
-    return tKey === "NFL" ? DEMO_NFL[DEMO_NFL.length - 1] : null;
+    return tKey === "NFL" ? { ...DEMO_NFL[DEMO_NFL.length - 1], totalTeams: DEMO_NFL.length } : null;
   };
+
+  // Current-season stats for the Home page Hot Seat popup — deliberately
+  // NOT career stats (that's what CoachProfileModal shows everywhere else).
+  // Everything here already lives on the standings row itself, no extra
+  // fetch needed.
+  const hotSeatStats = (seat) => ({
+    Place: seat.totalTeams ? `${seat.place} of ${seat.totalTeams}` : `${seat.place}`,
+    "W–L": `${seat.w}–${seat.l}`,
+    PF: fmt(seat.pts),
+    "Max PF": fmt(seat.maxPts),
+  });
 
   // ── Coach directory: every coach currently rostered across all connected
   // leagues, built entirely from data already fetched for standings — no
@@ -7988,9 +8002,13 @@ export default function App() {
     return hit ? hit.avatar : null;
   };
 
-  const openCoachProfile = (name) => {
+  // `currentStats`, when passed, overrides CoachProfileModal's default
+  // career-stats lookup — used by the Home page Hot Seat, which wants this
+  // season's record, not the coach's career totals.
+  const openCoachProfile = (name, currentStats) => {
     const hit = coachDirectory.find((c) => c.name.toLowerCase() === (name || "").toLowerCase());
-    setSelectedCoach(hit || { name, avatar: null, team: null, tierKey: null, tierName: null });
+    const base = hit || { name, avatar: null, team: null, tierKey: null, tierName: null };
+    setSelectedCoach(currentStats ? { ...base, currentStats } : base);
   };
 
   // Draft-pick ownership (including trades) is fetched lazily per league,
@@ -8945,13 +8963,21 @@ export default function App() {
                       const seat = hotSeatFor(t.key);
                       const connected = Boolean(leagueMap[t.key]);
                       return (
-                        <button
+                        <div
                           key={t.key}
+                          role="button"
+                          tabIndex={0}
                           onClick={() => {
                             setTierKey(t.key);
                             setView("standings");
                           }}
-                          className="text-left px-3 py-2.5 rounded-sm transition-colors"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              setTierKey(t.key);
+                              setView("standings");
+                            }
+                          }}
+                          className="text-left px-3 py-2.5 rounded-sm transition-colors cursor-pointer"
                           style={{
                             background: "rgba(212,96,76,0.07)",
                             border: `1px solid ${seat ? "rgba(212,96,76,0.35)" : C.line}`,
@@ -8968,7 +8994,17 @@ export default function App() {
                           </div>
                           {seat ? (
                             <>
-                              <div className="mt-1 text-sm font-semibold truncate">{seat.coach}</div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openCoachProfile(seat.coach, hotSeatStats(seat));
+                                }}
+                                className="mt-1 text-sm font-semibold truncate block"
+                                style={{ color: "inherit" }}
+                              >
+                                {seat.coach}
+                              </button>
                               <div className="text-xs truncate" style={{ color: C.slate }}>{seat.team}</div>
                               <div className="mt-1 text-xs" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
                                 <span style={{ color: C.turf }}>{seat.w}</span>
@@ -8981,7 +9017,7 @@ export default function App() {
                               {mode === "live" ? (connected ? "Loading…" : "Not connected") : "Live only"}
                             </div>
                           )}
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
