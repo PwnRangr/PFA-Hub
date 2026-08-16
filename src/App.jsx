@@ -5765,14 +5765,24 @@ const PRO_BOWL_WEEK_COLS = [
   { label: "Week 10", left: "87.047%", width: "12.953%" },
 ];
 
+// 2026-08-16: pairs pulled closer together (LQ1/RQ1 y 0->45, LQ2/RQ2 y
+// 280->235) per her side-by-side reference screenshot. Chose 45/235
+// specifically because their SUM stays 280 -- the Final-entrant/Champion
+// position is (LQ1_top + LQ2_top)/2 + 19, so preserving that sum keeps the
+// trophy/Champion column at its exact original y with zero risk of
+// colliding with it, touching only the four QF/SF boxes per side. Paths
+// regenerated with the same anchor rule the originals already followed
+// (connector attaches at box_top + 17, the name/score row divider; SF/Final
+// anchor = the average of its two children's anchors) -- confirmed against
+// the pre-existing numbers before any of this was changed.
 const PRO_BOWL_PATHS = [
-  "M100 17 L106 17 L106 36 L112 36", "M100 55 L106 55 L106 36 L112 36",
-  "M100 297 L106 297 L106 316 L112 316", "M100 335 L106 335 L106 316 L112 316",
-  "M212 36 L218 36 L218 176 L224 176", "M212 316 L218 316 L218 176 L224 176",
+  "M100 62 L106 62 L106 81 L112 81", "M100 100 L106 100 L106 81 L112 81",
+  "M100 252 L106 252 L106 271 L112 271", "M100 290 L106 290 L106 271 L112 271",
+  "M212 81 L218 81 L218 176 L224 176", "M212 271 L218 271 L218 176 L224 176",
   "M324 176 L336 176",
-  "M672 17 L666 17 L666 36 L660 36", "M672 55 L666 55 L666 36 L660 36",
-  "M672 297 L666 297 L666 316 L660 316", "M672 335 L666 335 L666 316 L660 316",
-  "M560 36 L554 36 L554 176 L548 176", "M560 316 L554 316 L554 176 L548 176",
+  "M672 62 L666 62 L666 81 L660 81", "M672 100 L666 100 L666 81 L660 81",
+  "M672 252 L666 252 L666 271 L660 271", "M672 290 L666 290 L666 271 L660 271",
+  "M560 81 L554 81 L554 176 L548 176", "M560 271 L554 271 L554 176 L548 176",
   "M448 176 L436 176",
 ];
 
@@ -5836,17 +5846,17 @@ function ProBowlBracket({ data }) {
             <GPaths h={PRO_BOWL_H} w={PRO_BOWL_GRID_W} color="#2E6DA4" d={PRO_BOWL_PATHS} />
 
           {/* --- LEFT half --- */}
-          <TourneyPair x={X.qf} y={0} g={g("LQ1")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} nameBorder={BR_LINE} />
-          <TourneyPair x={X.qf} y={280} g={g("LQ2")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} nameBorder={BR_LINE} />
-          <TourneySolo x={X.sf} y={19} team={(g("LQ1") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
-          <TourneySolo x={X.sf} y={299} team={(g("LQ2") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
+          <TourneyPair x={X.qf} y={45} g={g("LQ1")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} nameBorder={BR_LINE} />
+          <TourneyPair x={X.qf} y={235} g={g("LQ2")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} nameBorder={BR_LINE} />
+          <TourneySolo x={X.sf} y={64} team={(g("LQ1") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
+          <TourneySolo x={X.sf} y={254} team={(g("LQ2") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
           <TourneySolo x={X.finalEntrant} y={159} team={(g("LSF") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
 
           {/* --- RIGHT half (mirrored) --- */}
-          <TourneyPair x={proBowlMirrorX(X.qf) - BW} y={0} g={g("RQ1")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} nameBorder={BR_LINE} />
-          <TourneyPair x={proBowlMirrorX(X.qf) - BW} y={280} g={g("RQ2")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} nameBorder={BR_LINE} />
-          <TourneySolo x={proBowlMirrorX(X.sf) - BW} y={19} team={(g("RQ1") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
-          <TourneySolo x={proBowlMirrorX(X.sf) - BW} y={299} team={(g("RQ2") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
+          <TourneyPair x={proBowlMirrorX(X.qf) - BW} y={45} g={g("RQ1")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} nameBorder={BR_LINE} />
+          <TourneyPair x={proBowlMirrorX(X.qf) - BW} y={235} g={g("RQ2")} colors={colors} scoreBgPlayed="#f5f5f5" scoreBgUnplayed="#f5f5f5" scoreBorder={BR_LINE} nameBorder={BR_LINE} />
+          <TourneySolo x={proBowlMirrorX(X.sf) - BW} y={64} team={(g("RQ1") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
+          <TourneySolo x={proBowlMirrorX(X.sf) - BW} y={254} team={(g("RQ2") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
           <TourneySolo x={proBowlMirrorX(X.finalEntrant) - BW} y={159} team={(g("RSF") || {}).winner} colors={colors} nameBorder={BR_LINE} showScorePlaceholder={false} />
 
           {/* --- Center: logo, trophy, Champion, PFA mark, legend --- */}
