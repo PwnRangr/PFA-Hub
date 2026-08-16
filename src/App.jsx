@@ -7,7 +7,9 @@ import {
   postNewsItem,
   removeNewsItem,
   pinNewsItem,
+  editNewsItem,
   removeChatMessage,
+  pinChatMessage,
   watchApplications,
   submitApplication,
   watchPromotionWindow,
@@ -6503,6 +6505,10 @@ export default function App() {
   const [newsTitle, setNewsTitle] = useState("");
   const [newsBody, setNewsBody] = useState("");
   const [newsTag, setNewsTag] = useState("NEWS");
+  const [editingNewsId, setEditingNewsId] = useState(null);
+  const [editNewsTitle, setEditNewsTitle] = useState("");
+  const [editNewsBody, setEditNewsBody] = useState("");
+  const [editNewsTag, setEditNewsTag] = useState("NEWS");
   const [applications, setApplications] = useState([]);
   const [promotionWindowOpen, setPromotionWindowOpen] = useState(false);
   const chatEndRef = useRef(null);
@@ -7272,6 +7278,25 @@ export default function App() {
     if (local) setNews(local.length ? local : SEED_NEWS);
   };
 
+  const startEditNews = (n) => {
+    setEditingNewsId(n.id);
+    setEditNewsTitle(n.title);
+    setEditNewsBody(n.body || "");
+    setEditNewsTag(n.tag);
+  };
+
+  const cancelEditNews = () => setEditingNewsId(null);
+
+  const saveEditNews = async () => {
+    const title = editNewsTitle.trim().slice(0, 120);
+    const body = editNewsBody.trim().slice(0, 600);
+    if (!title) return;
+    const id = editingNewsId;
+    setEditingNewsId(null);
+    const local = await editNewsItem(id, { tag: editNewsTag, title, body });
+    if (local) setNews(local.length ? local : SEED_NEWS);
+  };
+
   // Pinned news items float to the top of the feed, each group keeping its
   // own order (newest-first, same as watchNews/postNewsItem already give us).
   const pinnedFirstNews = useMemo(() => {
@@ -7282,6 +7307,14 @@ export default function App() {
 
   const deleteChatMsg = async (id) => {
     const local = await removeChatMessage(id);
+    if (local) setChat(local);
+  };
+
+  // Same shared/persisted shape as pinNews — needs the chat collection's
+  // Firestore rules to grant isMod() an update, not just delete (see the
+  // companion firestore.rules file for that change).
+  const pinChatMsg = async (id, pinned) => {
+    const local = await pinChatMessage(id, pinned);
     if (local) setChat(local);
   };
 
@@ -8538,26 +8571,142 @@ export default function App() {
                           borderLeft: n.pinned ? `3px solid ${C.gold}` : `1px solid ${C.line}`,
                         }}
                       >
-                        <div className="flex items-center gap-2 text-xs mb-1.5">
-                          {n.pinned && <span title="Pinned">📌</span>}
-                          <span className="uppercase tracking-wider font-semibold" style={{ color: tagColor(n.tag) }}>{n.tag}</span>
-                          <span style={{ color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>{ago(n.ts)} ago</span>
-                          {isMod && (
-                            <span className="ml-auto flex items-center gap-2 text-xs">
-                              <button onClick={() => pinNews(n.id, !n.pinned)} style={{ color: C.gold }}>
-                                {n.pinned ? "unpin" : "pin"}
+                        {editingNewsId === n.id ? (
+                          <div className="space-y-2">
+                            <div className="flex gap-2 flex-wrap">
+                              {["NEWS", "BREAKING", "ANNOUNCEMENT", "COACHING CAROUSEL"].map((t) => (
+                                <button
+                                  key={t}
+                                  onClick={() => setEditNewsTag(t)}
+                                  className="px-2 py-0.5 text-xs uppercase tracking-wider rounded-sm"
+                                  style={{
+                                    color: editNewsTag === t ? C.ink : tagColor(t),
+                                    background: editNewsTag === t ? tagColor(t) : "transparent",
+                                    border: `1px solid ${tagColor(t)}`,
+                                  }}
+                                >
+                                  {t}
+                                </button>
+                              ))}
+                            </div>
+                            <input
+                              value={editNewsTitle}
+                              onChange={(e) => setEditNewsTitle(e.target.value)}
+                              placeholder="Headline"
+                              className="w-full px-3 py-2 text-sm rounded-sm outline-none"
+                              style={{ background: C.ink, border: `1px solid ${C.line}`, color: C.chalk }}
+                            />
+                            <textarea
+                              value={editNewsBody}
+                              onChange={(e) => setEditNewsBody(e.target.value)}
+                              placeholder="Story (optional)"
+                              rows={3}
+                              className="w-full px-3 py-2 text-sm rounded-sm outline-none resize-none"
+                              style={{ background: C.ink, border: `1px solid ${C.line}`, color: C.chalk }}
+                            />
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={cancelEditNews}
+                                className="px-3 py-1.5 text-sm uppercase tracking-wider rounded-sm"
+                                style={{ color: C.slate, border: `1px solid ${C.line}` }}
+                              >
+                                Cancel
                               </button>
-                              <button onClick={() => deleteNews(n.id)} style={{ color: C.ember }}>
-                                delete
+                              <button
+                                onClick={saveEditNews}
+                                className="px-4 py-1.5 text-sm uppercase tracking-wider rounded-sm"
+                                style={{ background: C.gold, color: C.ink, fontWeight: 600 }}
+                              >
+                                Save
                               </button>
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="text-base font-semibold leading-snug">{n.title}</h3>
-                        {n.body && <p className="mt-1 text-sm leading-relaxed" style={{ color: C.slate }}>{n.body}</p>}
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2 text-xs mb-1.5">
+                              {n.pinned && <span title="Pinned">📌</span>}
+                              <span className="uppercase tracking-wider font-semibold" style={{ color: tagColor(n.tag) }}>{n.tag}</span>
+                              <span style={{ color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>{ago(n.ts)} ago</span>
+                              {isMod && (
+                                <span className="ml-auto flex items-center gap-2 text-xs">
+                                  <button onClick={() => pinNews(n.id, !n.pinned)} style={{ color: C.gold }}>
+                                    {n.pinned ? "unpin" : "pin"}
+                                  </button>
+                                  <button onClick={() => startEditNews(n)} style={{ color: C.chalk }}>
+                                    edit
+                                  </button>
+                                  <button onClick={() => deleteNews(n.id)} style={{ color: C.ember }}>
+                                    delete
+                                  </button>
+                                </span>
+                              )}
+                            </div>
+                            <h3 className="text-base font-semibold leading-snug">{n.title}</h3>
+                            {n.body && <p className="mt-1 text-sm leading-relaxed" style={{ color: C.slate }}>{n.body}</p>}
+                          </>
+                        )}
                       </article>
                     </div>
                   ))}
+                </div>
+
+                <div className="mt-6">
+                  <div className="flex items-baseline justify-between mb-1">
+                    <h2 className="text-2xl uppercase leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
+                      The Hot Seat
+                    </h2>
+                    <button onClick={() => setView("standings")} className="text-xs uppercase tracking-wider" style={{ color: C.gold }}>
+                      Full standings →
+                    </button>
+                  </div>
+                  <div className="mb-3 text-xs" style={{ color: C.slate }}>
+                    Last place in every league, right now. Sleep with one eye open.
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {TIERS.map((t) => {
+                      const seat = hotSeatFor(t.key);
+                      const connected = Boolean(leagueMap[t.key]);
+                      return (
+                        <button
+                          key={t.key}
+                          onClick={() => {
+                            setTierKey(t.key);
+                            setView("standings");
+                          }}
+                          className="text-left px-3 py-2.5 rounded-sm transition-colors"
+                          style={{
+                            background: "rgba(212,96,76,0.07)",
+                            border: `1px solid ${seat ? "rgba(212,96,76,0.35)" : C.line}`,
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span
+                              className="text-xs uppercase tracking-wider"
+                              style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, color: C.slate, letterSpacing: "0.06em" }}
+                            >
+                              {t.key}
+                            </span>
+                            {seat && <span className="text-xs" style={{ color: C.ember }}>●</span>}
+                          </div>
+                          {seat ? (
+                            <>
+                              <div className="mt-1 text-sm font-semibold truncate">{seat.coach}</div>
+                              <div className="text-xs truncate" style={{ color: C.slate }}>{seat.team}</div>
+                              <div className="mt-1 text-xs" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                                <span style={{ color: C.turf }}>{seat.w}</span>
+                                <span style={{ color: C.slate }}>–</span>
+                                <span style={{ color: C.ember }}>{seat.l}</span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="mt-1 text-xs" style={{ color: C.slate }}>
+                              {mode === "live" ? (connected ? "Loading…" : "Not connected") : "Live only"}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </section>
 
@@ -8580,6 +8729,7 @@ export default function App() {
                         <Avatar name={m.name} avatar={findCoachAvatar(m.name)} size={24} />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline gap-2 text-xs">
+                            {m.pinned && <span title="Pinned">📌</span>}
                             <button
                               type="button"
                               onClick={() => openCoachProfile(m.name)}
@@ -8591,9 +8741,14 @@ export default function App() {
                             </button>
                             <span style={{ color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>{ago(m.ts)}</span>
                             {isMod && (
-                              <button onClick={() => deleteChatMsg(m.id)} className="ml-auto text-xs" style={{ color: C.ember }}>
-                                delete
-                              </button>
+                              <span className="ml-auto flex items-center gap-2 text-xs">
+                                <button onClick={() => pinChatMsg(m.id, !m.pinned)} style={{ color: C.gold }}>
+                                  {m.pinned ? "unpin" : "pin"}
+                                </button>
+                                <button onClick={() => deleteChatMsg(m.id)} style={{ color: C.ember }}>
+                                  delete
+                                </button>
+                              </span>
                             )}
                           </div>
                           <div className="text-sm leading-snug mt-0.5">{m.text}</div>
@@ -8623,65 +8778,6 @@ export default function App() {
                   </div>
                 </div>
               </section>
-            </div>
-
-            <div className="mt-6">
-              <div className="flex items-baseline justify-between mb-1">
-                <h2 className="text-2xl uppercase leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
-                  The Hot Seat
-                </h2>
-                <button onClick={() => setView("standings")} className="text-xs uppercase tracking-wider" style={{ color: C.gold }}>
-                  Full standings →
-                </button>
-              </div>
-              <div className="mb-3 text-xs" style={{ color: C.slate }}>
-                Last place in every league, right now. Sleep with one eye open.
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                {TIERS.map((t) => {
-                  const seat = hotSeatFor(t.key);
-                  const connected = Boolean(leagueMap[t.key]);
-                  return (
-                    <button
-                      key={t.key}
-                      onClick={() => {
-                        setTierKey(t.key);
-                        setView("standings");
-                      }}
-                      className="text-left px-3 py-2.5 rounded-sm transition-colors"
-                      style={{
-                        background: "rgba(212,96,76,0.07)",
-                        border: `1px solid ${seat ? "rgba(212,96,76,0.35)" : C.line}`,
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span
-                          className="text-xs uppercase tracking-wider"
-                          style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, color: C.slate, letterSpacing: "0.06em" }}
-                        >
-                          {t.key}
-                        </span>
-                        {seat && <span className="text-xs" style={{ color: C.ember }}>●</span>}
-                      </div>
-                      {seat ? (
-                        <>
-                          <div className="mt-1 text-sm font-semibold truncate">{seat.coach}</div>
-                          <div className="text-xs truncate" style={{ color: C.slate }}>{seat.team}</div>
-                          <div className="mt-1 text-xs" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                            <span style={{ color: C.turf }}>{seat.w}</span>
-                            <span style={{ color: C.slate }}>–</span>
-                            <span style={{ color: C.ember }}>{seat.l}</span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="mt-1 text-xs" style={{ color: C.slate }}>
-                          {mode === "live" ? (connected ? "Loading…" : "Not connected") : "Live only"}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
             </div>
           </div>
         )}
