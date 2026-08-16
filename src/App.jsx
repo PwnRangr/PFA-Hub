@@ -6472,6 +6472,7 @@ function SingleBracket8({ seeds, rankLabels, fired }) {
 export default function App() {
   const [mode, setMode] = useState("loading");
   const [view, setView] = useState("home");
+  const [adminSubTab, setAdminSubTab] = useState("applications");
   const [tierKey, setTierKey] = useState("NFL");
   const [dirQuery, setDirQuery] = useState("");
   const [club300Query, setClub300Query] = useState("");
@@ -10282,9 +10283,32 @@ export default function App() {
 
         {view === "admin" && isAdmin && (
           <>
+            <div className="flex gap-1.5 mb-6">
+              {[
+                ["applications", "Applications"],
+                ["users", "Users"],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setAdminSubTab(id)}
+                  className="px-3.5 py-1.5 text-sm tracking-widest uppercase transition-colors rounded-sm"
+                  style={{
+                    fontFamily: "'Barlow Condensed', sans-serif",
+                    fontWeight: 600,
+                    letterSpacing: "0.1em",
+                    color: adminSubTab === id ? C.ink : C.slate,
+                    background: adminSubTab === id ? C.gold : "transparent",
+                    border: `1px solid ${adminSubTab === id ? C.gold : C.line}`,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {adminSubTab === "applications" && (
             <section className="mb-8">
               <h2 className="text-3xl uppercase leading-none mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
-                Open Applications
+                Applications
               </h2>
               <p className="text-sm mb-4" style={{ color: C.slate }}>
                 Every open team across all 13 leagues, ranked applicants underneath. Hiring here records the Alliance's
@@ -10446,7 +10470,8 @@ export default function App() {
                 </div>
               )}
             </section>
-            <AdminPanel currentUser={currentUser} />
+            )}
+            {adminSubTab === "users" && <AdminPanel currentUser={currentUser} />}
           </>
         )}
       </main>
