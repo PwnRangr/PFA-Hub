@@ -1410,9 +1410,17 @@ function benchPointsFor(t) {
   return Math.max(0, total - started);
 }
 
+// Placeholder news shown ONLY while the Firestore `news` collection is empty
+// (watchNews below leaves this in place until real items exist). These are NOT
+// real documents — their ids are made up, so any pin/edit/delete against them
+// would target a Firestore doc that doesn't exist and reject silently. The
+// `seed: true` flag is what the feed uses to hide mod controls on them; the
+// moment a real item is posted, watchNews replaces this array wholesale and
+// the controls come back.
 const SEED_NEWS = [
   {
     id: "seed-1",
+    seed: true,
     tag: "ANNOUNCEMENT",
     title: "The 2026 season is underway",
     body: "All thirteen leagues have reset. Check your tier, check your roster, and remember: the coach below you wants your job.",
@@ -1420,6 +1428,7 @@ const SEED_NEWS = [
   },
   {
     id: "seed-2",
+    seed: true,
     tag: "COACHING CAROUSEL",
     title: "Open teams post after final standings",
     body: "Fired coaches: your severance is your career coaching points. Spend them wisely on the way back up.",
@@ -1448,6 +1457,16 @@ const ago = (ts) => {
   if (s < 3600) return `${Math.floor(s / 60)}m`;
   if (s < 86400) return `${Math.floor(s / 3600)}h`;
   return `${Math.floor(s / 86400)}d`;
+};
+
+// News items show a real posted date rather than an age — "Aug 9, 2026".
+// Chat still uses ago() above: a relative stamp reads better on a live
+// conversation, where everything is minutes old anyway.
+const postDate = (ts) => {
+  if (!ts) return "";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
 
 // ── Conference Strength — Troy's original spreadsheet metric, rebuilt.
@@ -6509,6 +6528,7 @@ export default function App() {
   const [editNewsTitle, setEditNewsTitle] = useState("");
   const [editNewsBody, setEditNewsBody] = useState("");
   const [editNewsTag, setEditNewsTag] = useState("NEWS");
+  const [newsError, setNewsError] = useState("");
   const [applications, setApplications] = useState([]);
   const [promotionWindowOpen, setPromotionWindowOpen] = useState(false);
   const chatEndRef = useRef(null);
@@ -7261,21 +7281,36 @@ export default function App() {
     const item = { tag: newsTag, title, body, ts: Date.now() };
     setNewsTitle("");
     setNewsBody("");
-    const local = await postNewsItem(item);
-    if (local) setNews(local);
+    try {
+      const local = await postNewsItem(item);
+      if (local) setNews(local);
+    } catch (e) {
+      console.error("postNews failed", e);
+      setNewsError("Couldn't post that item — see the browser console for details.");
+    }
   };
 
   const deleteNews = async (id) => {
-    const local = await removeNewsItem(id);
-    if (local) setNews(local.length ? local : SEED_NEWS);
+    try {
+      const local = await removeNewsItem(id);
+      if (local) setNews(local.length ? local : SEED_NEWS);
+    } catch (e) {
+      console.error("deleteNews failed", e);
+      setNewsError("Couldn't delete that item — see the browser console for details.");
+    }
   };
 
   // Toggles a news item's pinned flag. Shared/persisted the same way delete
   // is — updateDoc on Firebase, direct array rewrite on the local fallback
   // — so a pin sticks for every viewer, not just this browser.
   const pinNews = async (id, pinned) => {
-    const local = await pinNewsItem(id, pinned);
-    if (local) setNews(local.length ? local : SEED_NEWS);
+    try {
+      const local = await pinNewsItem(id, pinned);
+      if (local) setNews(local.length ? local : SEED_NEWS);
+    } catch (e) {
+      console.error("pinNews failed", e);
+      setNewsError("Couldn't pin that item — see the browser console for details.");
+    }
   };
 
   const startEditNews = (n) => {
@@ -7292,9 +7327,14 @@ export default function App() {
     const body = editNewsBody.trim().slice(0, 600);
     if (!title) return;
     const id = editingNewsId;
-    setEditingNewsId(null);
-    const local = await editNewsItem(id, { tag: editNewsTag, title, body });
-    if (local) setNews(local.length ? local : SEED_NEWS);
+    try {
+      const local = await editNewsItem(id, { tag: editNewsTag, title, body });
+      if (local) setNews(local.length ? local : SEED_NEWS);
+      setEditingNewsId(null);
+    } catch (e) {
+      console.error("saveEditNews failed", e);
+      setNewsError("Couldn't save those changes — see the browser console for details.");
+    }
   };
 
   // Pinned news items float to the top of the feed, each group keeping its
@@ -8552,6 +8592,22 @@ export default function App() {
                   </div>
                 )}
 
+                {newsError && (
+                  <div
+                    className="mb-3 px-3 py-2 text-xs rounded-sm flex items-center gap-2"
+                    style={{ background: "rgba(212,96,76,0.12)", border: `1px solid ${C.ember}`, color: C.ember }}
+                  >
+                    <span className="flex-1">{newsError}</span>
+                    <button onClick={() => setNewsError("")} style={{ color: C.ember }}>dismiss</button>
+                  </div>
+                )}
+
+                {isMod && pinnedFirstNews.list.some((n) => n.seed) && (
+                  <div className="mb-3 px-3 py-2 text-xs rounded-sm" style={{ background: C.panel, border: `1px solid ${C.line}`, color: C.slate }}>
+                    These are placeholder items, not saved posts — that's why they have no pin/edit/delete controls. Post something real and they'll disappear for good.
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   {pinnedFirstNews.list.map((n, i) => (
                     <div key={n.id}>
@@ -8626,8 +8682,8 @@ export default function App() {
                             <div className="flex items-center gap-2 text-xs mb-1.5">
                               {n.pinned && <span title="Pinned">📌</span>}
                               <span className="uppercase tracking-wider font-semibold" style={{ color: tagColor(n.tag) }}>{n.tag}</span>
-                              <span style={{ color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>{ago(n.ts)} ago</span>
-                              {isMod && (
+                              <span style={{ color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>{postDate(n.ts)}</span>
+                              {isMod && !n.seed && (
                                 <span className="ml-auto flex items-center gap-2 text-xs">
                                   <button onClick={() => pinNews(n.id, !n.pinned)} style={{ color: C.gold }}>
                                     {n.pinned ? "unpin" : "pin"}
@@ -8649,65 +8705,6 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-
-                <div className="mt-6">
-                  <div className="flex items-baseline justify-between mb-1">
-                    <h2 className="text-2xl uppercase leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
-                      The Hot Seat
-                    </h2>
-                    <button onClick={() => setView("standings")} className="text-xs uppercase tracking-wider" style={{ color: C.gold }}>
-                      Full standings →
-                    </button>
-                  </div>
-                  <div className="mb-3 text-xs" style={{ color: C.slate }}>
-                    Last place in every league, right now. Sleep with one eye open.
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                    {TIERS.map((t) => {
-                      const seat = hotSeatFor(t.key);
-                      const connected = Boolean(leagueMap[t.key]);
-                      return (
-                        <button
-                          key={t.key}
-                          onClick={() => {
-                            setTierKey(t.key);
-                            setView("standings");
-                          }}
-                          className="text-left px-3 py-2.5 rounded-sm transition-colors"
-                          style={{
-                            background: "rgba(212,96,76,0.07)",
-                            border: `1px solid ${seat ? "rgba(212,96,76,0.35)" : C.line}`,
-                          }}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span
-                              className="text-xs uppercase tracking-wider"
-                              style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, color: C.slate, letterSpacing: "0.06em" }}
-                            >
-                              {t.key}
-                            </span>
-                            {seat && <span className="text-xs" style={{ color: C.ember }}>●</span>}
-                          </div>
-                          {seat ? (
-                            <>
-                              <div className="mt-1 text-sm font-semibold truncate">{seat.coach}</div>
-                              <div className="text-xs truncate" style={{ color: C.slate }}>{seat.team}</div>
-                              <div className="mt-1 text-xs" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                                <span style={{ color: C.turf }}>{seat.w}</span>
-                                <span style={{ color: C.slate }}>–</span>
-                                <span style={{ color: C.ember }}>{seat.l}</span>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="mt-1 text-xs" style={{ color: C.slate }}>
-                              {mode === "live" ? (connected ? "Loading…" : "Not connected") : "Live only"}
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
               </section>
 
               <section className="lg:w-96 shrink-0 flex flex-col" style={{ minHeight: "24rem" }}>
@@ -8718,7 +8715,7 @@ export default function App() {
                   <span className="text-xs uppercase tracking-widest" style={{ color: C.slate }}>all 13 leagues</span>
                 </div>
                 <div className="flex-1 flex flex-col rounded-sm overflow-hidden" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
-                  <div className="flex-1 overflow-y-auto p-3 space-y-2.5" style={{ maxHeight: "26rem", minHeight: "16rem" }}>
+                  <div className="flex-1 overflow-y-auto p-3 space-y-2.5" style={{ maxHeight: "34rem", minHeight: "22rem" }}>
                     {chat.length === 0 && (
                       <div className="h-full flex items-center justify-center text-sm text-center px-6" style={{ color: C.slate }}>
                         Nobody's talking yet. Someone in FLHS probably thinks they could hang in the NFL — discuss.
@@ -8775,6 +8772,65 @@ export default function App() {
                         Send
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <div className="flex items-baseline justify-between mb-1">
+                    <h2 className="text-2xl uppercase leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
+                      The Hot Seat
+                    </h2>
+                    <button onClick={() => setView("standings")} className="text-xs uppercase tracking-wider" style={{ color: C.gold }}>
+                      Full standings →
+                    </button>
+                  </div>
+                  <div className="mb-3 text-xs" style={{ color: C.slate }}>
+                    Last place in every league, right now. Sleep with one eye open.
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {TIERS.map((t) => {
+                      const seat = hotSeatFor(t.key);
+                      const connected = Boolean(leagueMap[t.key]);
+                      return (
+                        <button
+                          key={t.key}
+                          onClick={() => {
+                            setTierKey(t.key);
+                            setView("standings");
+                          }}
+                          className="text-left px-3 py-2.5 rounded-sm transition-colors"
+                          style={{
+                            background: "rgba(212,96,76,0.07)",
+                            border: `1px solid ${seat ? "rgba(212,96,76,0.35)" : C.line}`,
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span
+                              className="text-xs uppercase tracking-wider"
+                              style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, color: C.slate, letterSpacing: "0.06em" }}
+                            >
+                              {t.key}
+                            </span>
+                            {seat && <span className="text-xs" style={{ color: C.ember }}>●</span>}
+                          </div>
+                          {seat ? (
+                            <>
+                              <div className="mt-1 text-sm font-semibold truncate">{seat.coach}</div>
+                              <div className="text-xs truncate" style={{ color: C.slate }}>{seat.team}</div>
+                              <div className="mt-1 text-xs" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                                <span style={{ color: C.turf }}>{seat.w}</span>
+                                <span style={{ color: C.slate }}>–</span>
+                                <span style={{ color: C.ember }}>{seat.l}</span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="mt-1 text-xs" style={{ color: C.slate }}>
+                              {mode === "live" ? (connected ? "Loading…" : "Not connected") : "Live only"}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </section>
