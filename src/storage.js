@@ -64,6 +64,22 @@ export async function removeChatMessage(id) {
   return null;
 }
 
+// Pins/unpins a chat message. NOTE: this needs a Firestore rules change —
+// the chat collection's rule only ever had `allow delete: if isMod();`,
+// no `update` at all, so this updateDoc call is rejected until the rules
+// gain `allow update: if isMod();` under match /chat/{msg}. See the
+// companion firestore.rules file delivered alongside this.
+export async function pinChatMessage(id, pinned) {
+  if (!firebaseReady) {
+    const c = (localGet("pfa-chat") || []).map((m) => (m.id === id ? { ...m, pinned } : m));
+    localSet("pfa-chat", c);
+    return c;
+  }
+  await ensureDb();
+  await fs.updateDoc(fs.doc(db, "chat", id), { pinned });
+  return null;
+}
+
 // ── News ──
 export function watchNews(cb) {
   if (!firebaseReady) {
@@ -109,6 +125,21 @@ export async function pinNewsItem(id, pinned) {
   }
   await ensureDb();
   await fs.updateDoc(fs.doc(db, "news", id), { pinned });
+  return null;
+}
+
+// Edits an existing news item's tag/title/body in place. Firestore rules
+// already cover this — news's `allow write: if isMod();` grants create,
+// update, AND delete together, unlike chat (see pinChatMessage below,
+// which needed a real rules change since chat only ever had `delete`).
+export async function editNewsItem(id, updates) {
+  if (!firebaseReady) {
+    const n = (localGet("pfa-news") || []).map((x) => (x.id === id ? { ...x, ...updates } : x));
+    localSet("pfa-news", n);
+    return n;
+  }
+  await ensureDb();
+  await fs.updateDoc(fs.doc(db, "news", id), updates);
   return null;
 }
 
