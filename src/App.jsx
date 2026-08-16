@@ -6500,7 +6500,6 @@ export default function App() {
   const [news, setNews] = useState(SEED_NEWS);
   const [chat, setChat] = useState([]);
   const [msgInput, setMsgInput] = useState("");
-  const [commish, setCommish] = useState(false);
   const [newsTitle, setNewsTitle] = useState("");
   const [newsBody, setNewsBody] = useState("");
   const [newsTag, setNewsTag] = useState("NEWS");
@@ -6517,6 +6516,8 @@ export default function App() {
   // so the loading screen and the landing page never flash into each other.
   const [currentUser, setCurrentUser] = useState(undefined);
   const [authReady, setAuthReady] = useState(false);
+  const isAdmin = currentUser?.role === "admin";
+  const isMod = isAdmin || currentUser?.role === "moderator";
 
   useEffect(() => {
     const unsub = onAuthChange((profile) => {
@@ -8450,7 +8451,7 @@ export default function App() {
             <Tab id="300club">300 Club</Tab>
             <Tab id="weeklyawards">Weekly Awards</Tab>
             <Tab id="tournament">Tournament</Tab>
-            {currentUser.role === "admin" && <Tab id="admin">Admin</Tab>}
+            {isAdmin && <Tab id="admin">Admin</Tab>}
             <div className="flex-1" style={{ borderBottom: `1px solid ${C.line}` }} />
           </nav>
         </div>
@@ -8469,24 +8470,11 @@ export default function App() {
           <div>
             <div className="flex flex-col lg:flex-row gap-6">
               <section className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-2xl uppercase leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
-                    Alliance News
-                  </h2>
-                  <button
-                    onClick={() => setCommish(!commish)}
-                    className="text-xs uppercase tracking-wider px-2.5 py-1 rounded-sm"
-                    style={{
-                      color: commish ? C.ink : C.slate,
-                      background: commish ? C.gold : "transparent",
-                      border: `1px solid ${commish ? C.gold : C.line}`,
-                    }}
-                  >
-                    {commish ? "Commissioner mode on" : "Commissioner mode"}
-                  </button>
-                </div>
+                <h2 className="text-2xl uppercase leading-none mb-3" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
+                  Alliance News
+                </h2>
 
-                {commish && (
+                {isMod && (
                   <div className="mb-4 p-3 rounded-sm space-y-2" style={{ background: C.panel, border: `1px solid ${C.goldDim}` }}>
                     <div className="flex gap-2 flex-wrap">
                       {["NEWS", "BREAKING", "ANNOUNCEMENT", "COACHING CAROUSEL"].map((t) => (
@@ -8554,7 +8542,7 @@ export default function App() {
                           {n.pinned && <span title="Pinned">📌</span>}
                           <span className="uppercase tracking-wider font-semibold" style={{ color: tagColor(n.tag) }}>{n.tag}</span>
                           <span style={{ color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>{ago(n.ts)} ago</span>
-                          {commish && (
+                          {isMod && (
                             <span className="ml-auto flex items-center gap-2 text-xs">
                               <button onClick={() => pinNews(n.id, !n.pinned)} style={{ color: C.gold }}>
                                 {n.pinned ? "unpin" : "pin"}
@@ -8602,7 +8590,7 @@ export default function App() {
                               <TrophyBadges name={m.name} size={11} />
                             </button>
                             <span style={{ color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>{ago(m.ts)}</span>
-                            {commish && (
+                            {isMod && (
                               <button onClick={() => deleteChatMsg(m.id)} className="ml-auto text-xs" style={{ color: C.ember }}>
                                 delete
                               </button>
@@ -9061,7 +9049,7 @@ export default function App() {
                     <div className="text-xs uppercase tracking-widest" style={{ color: C.slate, letterSpacing: "0.2em" }}>
                       Open Teams
                     </div>
-                    {commish && (
+                    {isAdmin && (
                       <button
                         onClick={togglePromotionWindow}
                         className="px-2.5 py-1 text-xs uppercase tracking-wider rounded-sm"
@@ -9077,7 +9065,7 @@ export default function App() {
                   </div>
                   {!promotionWindowOpen && (
                     <div className="mb-2 text-xs" style={{ color: C.slate }}>
-                      {commish
+                      {isAdmin
                         ? "Applications are hidden from coaches until you open the promotion window."
                         : "Applications aren't open yet — check back once the promotion window opens."}
                     </div>
@@ -9112,7 +9100,7 @@ export default function App() {
                                 </button>
                               )}
                             </div>
-                            {commish && (
+                            {isAdmin && (
                               <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.line}` }}>
                                 {teamApps.length === 0 ? (
                                   <span className="text-xs" style={{ color: C.slate }}>No applicants yet.</span>
@@ -9988,7 +9976,7 @@ export default function App() {
           <SettingsPanel currentUser={currentUser} onUpdate={handleProfileUpdate} onAccountDeleted={handleAccountDeleted} />
         )}
 
-        {view === "admin" && currentUser.role === "admin" && <AdminPanel currentUser={currentUser} />}
+        {view === "admin" && isAdmin && <AdminPanel currentUser={currentUser} />}
       </main>
 
       <Footer />
