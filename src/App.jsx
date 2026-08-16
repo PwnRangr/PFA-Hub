@@ -8707,7 +8707,7 @@ export default function App() {
                 </div>
               </section>
 
-              <section className="lg:w-96 shrink-0 flex flex-col" style={{ minHeight: "24rem" }}>
+              <section className="lg:w-96 shrink-0 flex flex-col" style={{ minHeight: "32rem" }}>
                 <div className="flex items-baseline justify-between mb-3">
                   <h2 className="text-2xl uppercase leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
                     The Clubhouse
@@ -8715,7 +8715,7 @@ export default function App() {
                   <span className="text-xs uppercase tracking-widest" style={{ color: C.slate }}>all 13 leagues</span>
                 </div>
                 <div className="flex-1 flex flex-col rounded-sm overflow-hidden" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
-                  <div className="flex-1 overflow-y-auto p-3 space-y-2.5" style={{ maxHeight: "34rem", minHeight: "22rem" }}>
+                  <div className="flex-1 overflow-y-auto p-3 space-y-2.5" style={{ maxHeight: "37.5rem", minHeight: "24rem" }}>
                     {chat.length === 0 && (
                       <div className="h-full flex items-center justify-center text-sm text-center px-6" style={{ color: C.slate }}>
                         Nobody's talking yet. Someone in FLHS probably thinks they could hang in the NFL — discuss.

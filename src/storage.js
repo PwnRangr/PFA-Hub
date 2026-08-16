@@ -36,7 +36,7 @@ export function watchChat(cb) {
   let unsub = () => {};
   ensureDb().then(() => {
     const q = fs.query(fs.collection(db, "chat"), fs.orderBy("ts"), fs.limitToLast(200));
-    unsub = fs.onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+    unsub = fs.onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ ...d.data(), id: d.id }))));
   });
   return () => unsub();
 }
@@ -81,6 +81,14 @@ export async function pinChatMessage(id, pinned) {
 }
 
 // ── News ──
+// NOTE the spread order below: `{ ...d.data(), id: d.id }`, NOT
+// `{ id: d.id, ...d.data() }`. Some older documents have a stale `id` field
+// stored in their own data (written before postNewsItem stopped including
+// one). With the spread last, that stale value overwrote the real Firestore
+// document ID, so pin/edit/delete addressed a document that doesn't exist
+// and failed silently. Putting `id: d.id` last makes the true document ID
+// always win, which repairs those older items without a data migration.
+// Same reasoning applies to watchChat and watchApplications.
 export function watchNews(cb) {
   if (!firebaseReady) {
     cb(localGet("pfa-news") || []);
@@ -89,7 +97,7 @@ export function watchNews(cb) {
   let unsub = () => {};
   ensureDb().then(() => {
     const q = fs.query(fs.collection(db, "news"), fs.orderBy("ts", "desc"), fs.limit(50));
-    unsub = fs.onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+    unsub = fs.onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ ...d.data(), id: d.id }))));
   });
   return () => unsub();
 }
@@ -152,7 +160,7 @@ export function watchApplications(cb) {
   let unsub = () => {};
   ensureDb().then(() => {
     const q = fs.query(fs.collection(db, "applications"), fs.orderBy("ts"));
-    unsub = fs.onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
+    unsub = fs.onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ ...d.data(), id: d.id }))));
   });
   return () => unsub();
 }
