@@ -12,6 +12,13 @@ import {
   pinChatMessage,
   watchApplications,
   submitApplication,
+  hireApplicant,
+  unhireApplicant,
+  watchHireTimers,
+  setHireTimer,
+  cancelHireTimer,
+  claimHireTimer,
+  markHireTimerDone,
   watchPromotionWindow,
   setPromotionWindow,
   getWeeklyResult,
@@ -6531,6 +6538,9 @@ export default function App() {
   const [newsError, setNewsError] = useState("");
   const [applications, setApplications] = useState([]);
   const [promotionWindowOpen, setPromotionWindowOpen] = useState(false);
+  const [hireTimers, setHireTimers] = useState([]);
+  const [timerDrafts, setTimerDrafts] = useState({}); // key: `${tierKey}__${team}` -> datetime-local input value
+  const [adminHireError, setAdminHireError] = useState("");
   const chatEndRef = useRef(null);
   const bulkLoadedRef = useRef(false);
   const [coachTagsByRosterKey, setCoachTagsByRosterKey] = useState({});
@@ -6953,12 +6963,14 @@ export default function App() {
     const unsubApps = watchApplications((apps) => setApplications(apps));
     const unsubPromo = watchPromotionWindow((open) => setPromotionWindowOpen(open));
     const unsubClub300 = watchClub300Live((entries) => setClub300Live(entries));
+    const unsubHireTimers = watchHireTimers((timers) => setHireTimers(timers));
     return () => {
       unsubChat();
       unsubNews();
       unsubApps();
       unsubPromo();
       unsubClub300();
+      unsubHireTimers();
     };
   }, []);
 
@@ -7537,6 +7549,127 @@ export default function App() {
     await setPromotionWindow(next);
   };
 
+  // ── Hiring (Admin tab → Open Applications) ──
+  // A coach can be hired for at most one team per cycle. `isHiredElsewhere`
+  // checks every OTHER application by this same coach name for a `hired`
+  // flag — used both to gray that coach out (disabled, still visible) in
+  // every other team's ranked list, and to skip them as a candidate when a
+  // timer auto-hires.
+  const isHiredElsewhere = (a) =>
+    applications.some(
+      (x) => x.hired && x.coachName.toLowerCase() === a.coachName.toLowerCase() && !(x.tierKey === a.tierKey && x.team === a.team)
+    );
+  const hiredApplicationFor = (tKey, team) =>
+    applications.find((a) => a.tierKey === tKey && a.team === team && a.hired);
+
+  // Body text is Troy's exact wording; headline is my own placeholder —
+  // say the word if you want different copy, that part wasn't specified.
+  const postHireNews = async (team, coachName) => {
+    const item = {
+      tag: "COACHING CAROUSEL",
+      title: `${team}: new head coach hired`,
+      body: `The ${team} have hired ${coachName} to be their new head coach going forward. Everyone is looking forward to a fresh start and a playoff season this year.`,
+      ts: Date.now(),
+    };
+    try {
+      const local = await postNewsItem(item);
+      if (local) setNews(local);
+    } catch (e) {
+      console.error("postHireNews failed", e);
+    }
+  };
+
+  const doHireApplication = async (a) => {
+    try {
+      const local = await hireApplicant(a.id);
+      if (local) setApplications(local);
+      await postHireNews(a.team, a.coachName);
+    } catch (e) {
+      console.error("hireApplicant failed", e);
+      setAdminHireError("Couldn't record that hire — see the browser console for details.");
+    }
+  };
+
+  const doUnhireApplication = async (a) => {
+    try {
+      const local = await unhireApplicant(a.id);
+      if (local) setApplications(local);
+    } catch (e) {
+      console.error("unhireApplicant failed", e);
+      setAdminHireError("Couldn't undo that hire — see the browser console for details.");
+    }
+  };
+
+  // ── Hire timers ──
+  const timerKeyFor = (tKey, team) => `${tKey}__${team}`;
+  const hireTimerFor = (tKey, team) => hireTimers.find((t) => t.tierKey === tKey && t.team === team);
+  const setTimerDraft = (tKey, team, value) => setTimerDrafts((d) => ({ ...d, [timerKeyFor(tKey, team)]: value }));
+
+  const confirmHireTimer = async (tKey, team) => {
+    const raw = timerDrafts[timerKeyFor(tKey, team)];
+    if (!raw) return;
+    const deadline = new Date(raw).getTime();
+    if (Number.isNaN(deadline)) return;
+    try {
+      const local = await setHireTimer(tKey, team, deadline);
+      if (local) setHireTimers(local);
+    } catch (e) {
+      console.error("setHireTimer failed", e);
+      setAdminHireError("Couldn't set that timer — see the browser console for details.");
+    }
+  };
+
+  const removeHireTimer = async (tKey, team) => {
+    try {
+      const local = await cancelHireTimer(tKey, team);
+      if (local) setHireTimers(local);
+    } catch (e) {
+      console.error("cancelHireTimer failed", e);
+    }
+  };
+
+  // No server backend exists here (Firebase's free Spark tier has no
+  // scheduled Cloud Functions), so a timer can only fire from a signed-in
+  // ADMIN's own open browser tab — `applications`' Firestore rule only
+  // grants isAdmin() update, the same rule the ranked applicant list
+  // already depends on. In practice that means: as long as an admin has
+  // ANY tab open on the site at or after the deadline, it fires the moment
+  // that tab is open (checked immediately, then every 30s) — it is NOT a
+  // guaranteed to-the-second cron. If nobody with admin access opens the
+  // site until the next morning, the timer fires then, retroactively.
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    const processDue = async () => {
+      const now = Date.now();
+      const due = hireTimers.filter((t) => t.status === "pending" && t.deadline <= now);
+      for (const t of due) {
+        const claimed = await claimHireTimer(t.tierKey, t.team);
+        if (cancelled || !claimed) continue; // another admin tab already won this one
+        const candidates = applicantsForTeam(t.tierKey, t.team).filter(
+          (a) => applicantEligibility(a.coachName) !== false && !isHiredElsewhere(a)
+        );
+        const best = candidates[0]; // applicantsForTeam already sorts by Promotion Score, nulls last
+        if (best) {
+          try {
+            const local = await hireApplicant(best.id);
+            if (local) setApplications(local);
+            await postHireNews(t.team, best.coachName);
+          } catch (e) {
+            console.error("auto-hire failed", e);
+          }
+        }
+        await markHireTimerDone(t.tierKey, t.team, "fired");
+      }
+    };
+    processDue();
+    const id = setInterval(processDue, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [isAdmin, hireTimers, applications]);
+
   const tier = TIERS.find((t) => t.key === tierKey);
   // The Standings page can look at any season in SEASON_OPTIONS; every other
   // page (Coaches, Directory, homepage Hot Seat, Conference Strength) always
@@ -8006,6 +8139,25 @@ export default function App() {
       openTeams: (openByTier.get(t.key) || []).sort((a, b) => a.team.localeCompare(b.team)),
     }));
   }, [filteredDirectory, filteredOpenTeams]);
+
+  // ── Admin: consolidated Open Applications, every tier, ladder order ──
+  // Lives under the Admin tab per Lainey's call — Standings' existing
+  // per-tier applicant list only ever surfaced once you were already
+  // looking at that tier, which is exactly the discoverability gap that
+  // started this. Reuses openTeamsDirectory (unfiltered — this isn't tied
+  // to Directory's search box) so there's no second Sleeper fetch, just a
+  // different grouping.
+  const openApplicationsByTier = useMemo(() => {
+    const byTier = new Map();
+    openTeamsDirectory.forEach((t) => {
+      if (!byTier.has(t.tierKey)) byTier.set(t.tierKey, []);
+      byTier.get(t.tierKey).push(t);
+    });
+    return TIERS.filter((t) => byTier.has(t.key)).map((t) => ({
+      tier: t,
+      openTeams: (byTier.get(t.key) || []).sort((a, b) => a.team.localeCompare(b.team)),
+    }));
+  }, [openTeamsDirectory]);
 
   // ── Conference Strength — our JS port of her "League Difficulty" sheet
   // formula (confirmed cell-by-cell against the sheet's real formulas and a
@@ -10128,7 +10280,175 @@ export default function App() {
           <SettingsPanel currentUser={currentUser} onUpdate={handleProfileUpdate} onAccountDeleted={handleAccountDeleted} />
         )}
 
-        {view === "admin" && isAdmin && <AdminPanel currentUser={currentUser} />}
+        {view === "admin" && isAdmin && (
+          <>
+            <section className="mb-8">
+              <h2 className="text-3xl uppercase leading-none mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
+                Open Applications
+              </h2>
+              <p className="text-sm mb-4" style={{ color: C.slate }}>
+                Every open team across all 13 leagues, ranked applicants underneath. Hiring here records the Alliance's
+                decision and posts the Coaching Carousel news item — Sleeper still needs the roster reassigned by hand
+                afterward.
+              </p>
+              {adminHireError && (
+                <div className="mb-3 px-3 py-2 text-xs rounded-sm" style={{ background: "rgba(212,96,76,0.12)", border: `1px solid ${C.ember}`, color: C.ember }}>
+                  {adminHireError}
+                </div>
+              )}
+              {openApplicationsByTier.length === 0 ? (
+                <div className="py-10 text-center text-sm rounded-sm" style={{ border: `1px dashed ${C.line}`, color: C.slate }}>
+                  No open teams right now — every roster across all 13 leagues is filled.
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {openApplicationsByTier.map(({ tier, openTeams }) => (
+                    <div key={tier.key}>
+                      <div className="text-xs uppercase tracking-widest mb-2" style={{ color: C.gold, letterSpacing: "0.2em" }}>
+                        {tier.name} <span style={{ color: C.slate }}>· {openTeams.length} open</span>
+                      </div>
+                      <div className="space-y-2">
+                        {openTeams.map((t) => {
+                          const teamApps = applicantsForTeam(tier.key, t.team);
+                          const hiredApp = hiredApplicationFor(tier.key, t.team);
+                          const timer = hireTimerFor(tier.key, t.team);
+                          const draftKey = timerKeyFor(tier.key, t.team);
+                          return (
+                            <div key={t.team} className="p-3 rounded-sm" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <button type="button" onClick={() => openTeamProfile(t, tier.key)} className="font-semibold text-sm" style={{ color: "inherit" }}>
+                                  {t.team}
+                                </button>
+                                {hiredApp && (
+                                  <span
+                                    className="px-2 py-0.5 text-xs uppercase tracking-wider rounded-sm"
+                                    style={{ background: "rgba(87,180,120,0.15)", color: C.turf, border: `1px solid ${C.turf}` }}
+                                  >
+                                    Hired: {hiredApp.coachName}
+                                  </span>
+                                )}
+                              </div>
+
+                              {!hiredApp && (
+                                <div className="mt-2 pt-2 flex items-center gap-2 flex-wrap" style={{ borderTop: `1px solid ${C.line}` }}>
+                                  {timer && timer.status !== "fired" ? (
+                                    <>
+                                      <span className="text-xs" style={{ color: C.slate }}>
+                                        {timer.deadline <= Date.now()
+                                          ? "Auto-hire overdue — fires next time an admin has the site open"
+                                          : `Auto-hires ${new Date(timer.deadline).toLocaleString()}`}
+                                      </span>
+                                      <button onClick={() => removeHireTimer(tier.key, t.team)} className="text-xs" style={{ color: C.ember }}>
+                                        Cancel timer
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <input
+                                        type="datetime-local"
+                                        value={timerDrafts[draftKey] || ""}
+                                        onChange={(e) => setTimerDraft(tier.key, t.team, e.target.value)}
+                                        className="px-2 py-1 text-xs rounded-sm outline-none"
+                                        style={{ background: C.ink, border: `1px solid ${C.line}`, color: C.chalk, colorScheme: "dark" }}
+                                      />
+                                      <button
+                                        onClick={() => confirmHireTimer(tier.key, t.team)}
+                                        disabled={!timerDrafts[draftKey]}
+                                        className="px-2.5 py-1 text-xs uppercase tracking-wider rounded-sm"
+                                        style={{
+                                          background: timerDrafts[draftKey] ? C.gold : "transparent",
+                                          color: timerDrafts[draftKey] ? C.ink : C.slate,
+                                          border: `1px solid ${timerDrafts[draftKey] ? C.gold : C.line}`,
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        Set auto-hire timer
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.line}` }}>
+                                {teamApps.length === 0 ? (
+                                  <span className="text-xs" style={{ color: C.slate }}>No applicants yet.</span>
+                                ) : (
+                                  <ol className="space-y-1.5 text-xs">
+                                    {teamApps.map((a, i) => {
+                                      const pts = promotionPointsFor(a.coachName);
+                                      const eligible = applicantEligibility(a.coachName);
+                                      const elsewhere = isHiredElsewhere(a);
+                                      const isThisHire = Boolean(a.hired);
+                                      return (
+                                        <li key={a.id || i} className="flex items-center justify-between gap-2" style={{ opacity: elsewhere ? 0.45 : 1 }}>
+                                          <button
+                                            type="button"
+                                            onClick={() => openCoachProfile(a.coachName)}
+                                            style={{ color: isThisHire ? C.turf : C.chalk, fontWeight: isThisHire ? 600 : 400 }}
+                                          >
+                                            {i + 1}. {a.coachName}
+                                          </button>
+                                          <span className="flex items-center gap-2 shrink-0">
+                                            {eligible === false && (
+                                              <span
+                                                className="px-1.5 py-0.5 text-xs uppercase tracking-wider rounded-sm"
+                                                style={{ background: "rgba(212,96,76,0.15)", color: C.ember }}
+                                              >
+                                                Ineligible
+                                              </span>
+                                            )}
+                                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold }}>
+                                              {pts === null ? "—" : fmt(pts)} PS
+                                            </span>
+                                            {isThisHire ? (
+                                              <button
+                                                onClick={() => doUnhireApplication(a)}
+                                                className="px-2 py-0.5 text-xs uppercase tracking-wider rounded-sm"
+                                                style={{ color: C.turf, border: `1px solid ${C.turf}` }}
+                                              >
+                                                Hired ✓
+                                              </button>
+                                            ) : elsewhere ? (
+                                              <span
+                                                className="px-2 py-0.5 text-xs uppercase tracking-wider rounded-sm"
+                                                style={{ color: C.slate, border: `1px solid ${C.line}` }}
+                                              >
+                                                Hired elsewhere
+                                              </span>
+                                            ) : (
+                                              <button
+                                                onClick={() => doHireApplication(a)}
+                                                disabled={Boolean(hiredApp)}
+                                                className="px-2 py-0.5 text-xs uppercase tracking-wider rounded-sm"
+                                                style={{
+                                                  background: hiredApp ? "transparent" : C.gold,
+                                                  color: hiredApp ? C.slate : C.ink,
+                                                  border: `1px solid ${hiredApp ? C.line : C.gold}`,
+                                                  fontWeight: 600,
+                                                }}
+                                              >
+                                                Hire
+                                              </button>
+                                            )}
+                                          </span>
+                                        </li>
+                                      );
+                                    })}
+                                  </ol>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+            <AdminPanel currentUser={currentUser} />
+          </>
+        )}
       </main>
 
       <Footer />

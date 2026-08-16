@@ -188,6 +188,131 @@ export async function removeApplication(id) {
   return null;
 }
 
+// Marks a specific application as the team's hire. Doesn't touch Sleeper —
+// this is the Alliance's own record of the decision; the roster still has
+// to be reassigned by hand in Sleeper afterward. The `applications`
+// collection's Firestore rule already grants isAdmin() update (same rule
+// the ranked applicant list on Standings already relies on), so this needs
+// no rules change.
+export async function hireApplicant(id) {
+  const updates = { hired: true, hiredAt: Date.now() };
+  if (!firebaseReady) {
+    const a = (localGet("pfa-applications") || []).map((x) => (x.id === id ? { ...x, ...updates } : x));
+    localSet("pfa-applications", a);
+    return a;
+  }
+  await ensureDb();
+  await fs.updateDoc(fs.doc(db, "applications", id), updates);
+  return null;
+}
+
+// Reverses a mistaken hire — clears the flag, application goes back to
+// being just a ranked, un-hired entry.
+export async function unhireApplicant(id) {
+  const updates = { hired: false, hiredAt: null };
+  if (!firebaseReady) {
+    const a = (localGet("pfa-applications") || []).map((x) => (x.id === id ? { ...x, ...updates } : x));
+    localSet("pfa-applications", a);
+    return a;
+  }
+  await ensureDb();
+  await fs.updateDoc(fs.doc(db, "applications", id), updates);
+  return null;
+}
+
+// ── Hire Timers (per open team, admin-set auto-hire deadline) ──
+// Doc ID is deterministic from tierKey+team so a team only ever has ONE
+// active timer doc — setting a new one overwrites rather than piling up
+// stale ones. Status moves pending -> processing -> fired; "processing" is
+// a short-lived claim state (see claimHireTimer) that exists purely to stop
+// two admin tabs open at once from both auto-hiring the same team.
+function hireTimerKey(tierKey, team) {
+  return `${tierKey}__${team}`;
+}
+
+export function watchHireTimers(cb) {
+  if (!firebaseReady) {
+    cb(Object.values(localGet("pfa-hire-timers") || {}));
+    return () => {};
+  }
+  let unsub = () => {};
+  ensureDb().then(() => {
+    unsub = fs.onSnapshot(fs.collection(db, "hireTimers"), (snap) => cb(snap.docs.map((d) => ({ ...d.data(), id: d.id }))));
+  });
+  return () => unsub();
+}
+
+export async function setHireTimer(tierKey, team, deadlineMs) {
+  const key = hireTimerKey(tierKey, team);
+  const data = { tierKey, team, deadline: deadlineMs, status: "pending" };
+  if (!firebaseReady) {
+    const all = localGet("pfa-hire-timers") || {};
+    all[key] = { ...data, id: key };
+    localSet("pfa-hire-timers", all);
+    return Object.values(all);
+  }
+  await ensureDb();
+  await fs.setDoc(fs.doc(db, "hireTimers", key), data);
+  return null;
+}
+
+export async function cancelHireTimer(tierKey, team) {
+  const key = hireTimerKey(tierKey, team);
+  if (!firebaseReady) {
+    const all = localGet("pfa-hire-timers") || {};
+    delete all[key];
+    localSet("pfa-hire-timers", all);
+    return Object.values(all);
+  }
+  await ensureDb();
+  await fs.deleteDoc(fs.doc(db, "hireTimers", key));
+  return null;
+}
+
+// Atomically flips a pending, past-due timer to "processing" so only ONE
+// connected admin tab wins the race to actually perform the auto-hire +
+// news post — every other admin tab polling at the same moment gets `null`
+// back and does nothing. Returns the timer's own data (so the caller
+// doesn't need a second read) when this client wins, otherwise null.
+export async function claimHireTimer(tierKey, team) {
+  const key = hireTimerKey(tierKey, team);
+  if (!firebaseReady) {
+    const all = localGet("pfa-hire-timers") || {};
+    const t = all[key];
+    if (!t || t.status !== "pending" || t.deadline > Date.now()) return null;
+    all[key] = { ...t, status: "processing" };
+    localSet("pfa-hire-timers", all);
+    return all[key];
+  }
+  await ensureDb();
+  const ref = fs.doc(db, "hireTimers", key);
+  try {
+    return await fs.runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists()) return null;
+      const data = snap.data();
+      if (data.status !== "pending" || data.deadline > Date.now()) return null;
+      tx.update(ref, { status: "processing" });
+      return { ...data, id: key };
+    });
+  } catch (e) {
+    console.error("claimHireTimer failed", e);
+    return null;
+  }
+}
+
+export async function markHireTimerDone(tierKey, team, status) {
+  const key = hireTimerKey(tierKey, team);
+  if (!firebaseReady) {
+    const all = localGet("pfa-hire-timers") || {};
+    if (all[key]) all[key] = { ...all[key], status };
+    localSet("pfa-hire-timers", all);
+    return;
+  }
+  await ensureDb();
+  await fs.updateDoc(fs.doc(db, "hireTimers", key), { status });
+}
+
 // ── Promotion Window (global, commissioner-controlled on/off switch) ──
 export function watchPromotionWindow(cb) {
   if (!firebaseReady) {
