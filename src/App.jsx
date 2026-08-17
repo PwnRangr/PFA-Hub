@@ -216,6 +216,12 @@ const HISTORICAL_FINAL_ORDER = {
       "Coral Springs", "Cypress Bay", "Miami Beach", "Western", "Taravella", "Deerfield", "West Boca", "Palmetto",
       "Boca Raton", "West Broward", "Dr Krop", "Miami Senior", "Southwest", "Stoneman", "Coral Glades", "Miami Dade",
     ],
+    // Transcribed from her PFA_Playoffs_2024 - GLIAC.numbers export, same
+    // mirrored bracket-sheet layout as FLHS above, confirmed 2026-08-17.
+    GLIAC: [
+      "Capital", "Northwood", "Ohio N", "N Michigan", "Davenport", "Mount Union", "Baldwin", "Wayne State",
+      "JCU", "Ferris State", "Muskingum", "Lake Superior", "Parkside", "Wilmington", "Heidelberg", "Purdue NW",
+    ],
   },
 };
 
@@ -5068,6 +5074,63 @@ const FLHS_2024_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2024 GLIAC, ranks 1-8 (championship half) ------------------------------
+// Transcribed from her PFA_Playoffs_2024 - GLIAC.numbers export, same
+// mirrored bracket-sheet layout as FLHS 2024 above, confirmed 2026-08-17.
+// Team pool differs from 2025's (which schools land in the top 8 vs bottom
+// 8 moves year to year) but every name matches GLIAC_CLR's existing keys --
+// one spelling correction made: the sheet has "Heidelburg", the confirmed
+// color key (and the school's real name) is "Heidelberg", used here so it
+// picks up its real colors instead of falling through to the default.
+const GLIAC_2024_PLAYOFFS = r3ChampHalf({
+  colors: GLIAC_CLR, logo: "GLIAC", logoSrc: GLIAC_MARK, trophy: GLIAC_TROPHY,
+  banners: GLIAC_BANNERS,
+  wk15: [
+    ["Capital", "206.15", "Mount Union", "188.60"],
+    ["Ohio N", "256.40", "Baldwin", "194.00"],
+    ["Wayne State", "187.45", "N Michigan", "188.35"],
+    ["Davenport", "216.45", "Northwood", "316.20"],
+  ],
+  semis: [
+    ["Capital", "265.15", "Ohio N", "263.40"],
+    ["N Michigan", "157.90", "Northwood", "184.05"],
+  ],
+  final: ["Capital", "284.60", "Northwood", "238.00"],
+  third: ["Ohio N", "208.20", "N Michigan", "189.85"],
+  fifth: {
+    leftQual: ["Mount Union", "213.90", "Baldwin", "186.65"],
+    rightQual: ["Wayne State", "181.50", "Davenport", "238.85"],
+    final: ["Mount Union", "192.00", "Davenport", "235.15"],
+  },
+  seventh: ["Baldwin", "226.95", "Wayne State", "125.90"],
+});
+
+// --- 2024 GLIAC, ranks 9-16 (consolation half) ------------------------------
+const GLIAC_2024_CONSOLATION = r3ConsoHalf({
+  colors: GLIAC_CLR, logo: "GLIAC", logoSrc: GLIAC_MARK,
+  banners: GLIAC_CONSO_BANNERS,
+  wk15: [
+    ["JCU", "226.20", "Wilmington", "217.65"],
+    ["Heidelberg", "206.80", "Muskingum", "287.00"],
+    ["Ferris State", "214.75", "Purdue NW", "184.20"],
+    ["Parkside", "168.40", "Lake Superior", "230.35"],
+  ],
+  semis: [
+    ["JCU", "289.40", "Muskingum", "136.05"],
+    ["Ferris State", "266.30", "Lake Superior", "237.00"],
+  ],
+  final: ["JCU", "250.50", "Ferris State", "211.70"],
+  // The closest game in the tier -- 302.00 to 301.70, a 0.30 margin.
+  eleventh: ["Muskingum", "302.00", "Lake Superior", "301.70"],
+  thirteenth: {
+    leftQual: ["Wilmington", "223.30", "Heidelberg", "159.30"],
+    rightQual: ["Purdue NW", "113.10", "Parkside", "247.10"],
+    final: ["Wilmington", "173.45", "Parkside", "223.45"],
+  },
+  fifteenth: ["Heidelberg", "178.10", "Purdue NW", "154.30"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // Which tiers render a live R3 bracket. SEC first as the test run; the others
 // need their own short-name check before being added.
 const R3_LIVE = {
@@ -6093,6 +6156,7 @@ const GRID_BRACKETS = {
   },
   2024: {
     FLHS: { playoffs: FLHS_2024_PLAYOFFS, consolation: FLHS_2024_CONSOLATION },
+    GLIAC: { playoffs: GLIAC_2024_PLAYOFFS, consolation: GLIAC_2024_CONSOLATION },
   },
 };
 
