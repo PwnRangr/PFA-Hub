@@ -870,7 +870,7 @@ function draftOrderRowsByTeam(finalOrder) {
   return finalOrder
     .map((team, i) => ({ place: i + 1, pick: picks[i], team }))
     .sort((a, b) => a.pick - b.pick)
-    .map((r) => ({ label: ordinal(r.pick), value: r.team, mono: false, fired: r.place === size }));
+    .map((r) => ({ label: ordinal(r.pick), value: r.team, isTeam: true, fired: r.place === size }));
 }
 
 // Builds the reference rows shown beside a bracket: one per final place,
@@ -960,39 +960,64 @@ const promotionEligible = (size, place) =>
 
 // Compact reference box showing draft-pick order by final place, meant to
 // sit ABOVE the Coaching Points box below in the same left column (her
+// A small "team chip" reusing GBox's own color-resolution logic (same
+// colors map + TEAM_CLR fallback, same visual DNA: colored background,
+// bold centered text) but for normal document flow instead of the
+// bracket's absolute x/y grid -- used by DraftOrderPanel's team-mode rows
+// so a completed season's draft order reads with "the same team-colored
+// team name boxes that are used in the brackets" (her request 2026-08-17).
+function TeamChip({ team, colors }) {
+  const clr = (colors && colors[team]) || TEAM_CLR[team] || ["#2A3550", C.chalk];
+  return (
+    <span
+      className="inline-block whitespace-nowrap overflow-hidden text-ellipsis"
+      style={{
+        background: clr[0], color: clr[1], fontWeight: 700, fontSize: 11,
+        padding: "2px 6px", borderRadius: 2, maxWidth: "8.5rem", boxSizing: "border-box",
+      }}
+    >
+      {team}
+    </span>
+  );
+}
+
 // request 2026-08-17). Deliberately its own small component rather than a
 // generalized version of PlacementInfoPanel below -- the two boxes' row
 // shapes differ enough (pick/team + fired-only vs CP + fired/ineligible)
 // that sharing one component would mean branching inside it, and the CP
 // box already works and shouldn't need touching to add this. Rows are
-// pre-normalized to {label, value, mono, fired} by whichever builder made
-// them (draftOrderRows or draftOrderRowsByTeam) so this component itself
-// never needs to know whether `value` is a pick-number string or a team
-// name -- `mono` just says whether to set the numbers-style font.
-function DraftOrderPanel({ rows, title }) {
+// pre-normalized to {label, value, mono, isTeam, fired} by whichever
+// builder made them (draftOrderRows or draftOrderRowsByTeam) so this
+// component itself doesn't need to know much about WHERE the data came
+// from -- `isTeam` just says whether to render `value` as a colored
+// TeamChip (needs the `colors` prop, her follow-up request 2026-08-17) or
+// as plain/mono text. Title and rows both centered per her request.
+function DraftOrderPanel({ rows, title, colors }) {
   return (
     <div className="shrink-0 rounded-sm p-3 text-xs" style={{ background: C.panel, border: `1px solid ${C.line}`, minWidth: "12rem" }}>
-      <div className="uppercase tracking-wider mb-2" style={{ color: C.slate, fontSize: "0.65rem", letterSpacing: "0.08em" }}>
+      <div className="uppercase tracking-wider mb-2 text-center" style={{ color: C.slate, fontSize: "0.65rem", letterSpacing: "0.08em" }}>
         {title}
       </div>
       <div>
         {rows.map((r, i) => (
           <div
             key={i}
-            className="flex items-baseline justify-between gap-2"
+            className="flex items-center justify-center gap-2"
             style={{ padding: "1px 0", color: r.fired ? C.ember : C.chalk }}
           >
             <span className="shrink-0">{r.label}</span>
-            <span className="whitespace-nowrap truncate text-right" style={{ maxWidth: "9rem" }}>
-              {r.value !== undefined && (
-                <span style={r.mono ? { fontFamily: "'IBM Plex Mono', monospace" } : undefined}>{r.value}</span>
-              )}
-              {r.fired && (
-                <span style={{ fontSize: "0.55rem", letterSpacing: "0.04em", marginLeft: r.value !== undefined ? 4 : 0 }}>
-                  FIRED
+            {r.isTeam ? (
+              <TeamChip team={r.value} colors={colors} />
+            ) : (
+              r.value !== undefined && (
+                <span className="whitespace-nowrap" style={r.mono ? { fontFamily: "'IBM Plex Mono', monospace" } : undefined}>
+                  {r.value}
                 </span>
-              )}
-            </span>
+              )
+            )}
+            {r.fired && (
+              <span style={{ fontSize: "0.55rem", letterSpacing: "0.04em" }}>FIRED</span>
+            )}
           </div>
         ))}
       </div>
@@ -1006,14 +1031,14 @@ function DraftOrderPanel({ rows, title }) {
 function PlacementInfoPanel({ rows, title }) {
   return (
     <div className="shrink-0 rounded-sm p-3 text-xs" style={{ background: C.panel, border: `1px solid ${C.line}`, minWidth: "12rem" }}>
-      <div className="uppercase tracking-wider mb-2" style={{ color: C.slate, fontSize: "0.65rem", letterSpacing: "0.08em" }}>
+      <div className="uppercase tracking-wider mb-2 text-center" style={{ color: C.slate, fontSize: "0.65rem", letterSpacing: "0.08em" }}>
         {title}
       </div>
       <div>
         {rows.map((r) => (
           <div
             key={r.label}
-            className="flex items-baseline justify-between gap-2"
+            className="flex items-baseline justify-center gap-2"
             style={{ padding: "1px 0", color: r.fired ? C.ember : r.ineligible ? C.slate : C.chalk }}
           >
             <span>{r.label}</span>
@@ -9612,7 +9637,7 @@ export default function App() {
               </div>
               {SHOW_BRACKETS && draftOrderPanel && (
                 <div className="hidden lg:block mt-4">
-                  <DraftOrderPanel rows={draftOrderPanel.rows} title={draftOrderPanel.title} />
+                  <DraftOrderPanel rows={draftOrderPanel.rows} title={draftOrderPanel.title} colors={TIER_COLOR_CFG[tierKey] && TIER_COLOR_CFG[tierKey].colors} />
                 </div>
               )}
               {SHOW_BRACKETS && placementPanel && (
