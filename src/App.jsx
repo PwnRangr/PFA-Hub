@@ -9216,13 +9216,21 @@ export default function App() {
                           role="button"
                           tabIndex={0}
                           onClick={() => {
-                            setTierKey(t.key);
-                            setView("standings");
+                            if (seat) {
+                              openTeamProfile(seat, t.key);
+                            } else {
+                              setTierKey(t.key);
+                              setView("standings");
+                            }
                           }}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
-                              setTierKey(t.key);
-                              setView("standings");
+                              if (seat) {
+                                openTeamProfile(seat, t.key);
+                              } else {
+                                setTierKey(t.key);
+                                setView("standings");
+                              }
                             }
                           }}
                           className="text-left px-3 py-2.5 rounded-sm transition-colors cursor-pointer"
