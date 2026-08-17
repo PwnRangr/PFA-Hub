@@ -8937,12 +8937,12 @@ export default function App() {
             <Tab id="home">Home</Tab>
             <Tab id="standings">Standings</Tab>
             <Tab id="coaches">Coaches</Tab>
-            <Tab id="directory">Directory</Tab>
-            <Tab id="pyramid">Rules</Tab>
+            <Tab id="weeklyawards">Weekly Awards</Tab>
             <Tab id="300club">300 Club</Tab>
             <Tab id="4000club">4000 Club</Tab>
-            <Tab id="weeklyawards">Weekly Awards</Tab>
             <Tab id="tournament">Tournament</Tab>
+            <Tab id="directory">Directory</Tab>
+            <Tab id="pyramid">Rules</Tab>
             {isAdmin && <Tab id="admin">Admin</Tab>}
             <div className="flex-1" style={{ borderBottom: `1px solid ${C.line}` }} />
           </nav>
