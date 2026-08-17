@@ -25,6 +25,10 @@ import {
   setWeeklyResult,
   addClub300Entry,
   watchClub300Live,
+  addClub4000Entry,
+  watchClub4000Live,
+  getClub4000ProcessedYear,
+  markClub4000ProcessedYear,
   getTournamentSeeds,
   setTournamentSeeds,
   getUflProBowlSeeds,
@@ -6598,6 +6602,7 @@ export default function App() {
   // resolves (see the effect near the initial load below).
   const [weeklyResultsCache, setWeeklyResultsCache] = useState({});
   const [club300Live, setClub300Live] = useState([]);
+  const [club4000Live, setClub4000Live] = useState([]);
   const [weeklyAwardsSeason, setWeeklyAwardsSeason] = useState(CURRENT_SEASON);
   const [weeklyAwardsWeek, setWeeklyAwardsWeek] = useState(null);
   const [weeklyAwardsLoading, setWeeklyAwardsLoading] = useState(false);
@@ -6919,6 +6924,27 @@ export default function App() {
     });
   };
 
+  // 4000 Club auto-detection — same idea as detect300 above, but checks
+  // each roster's SEASON total (the exact `pts` field buildStandings
+  // already computes from Sleeper's own running fpts/fpts_decimal — the
+  // same number the Standings PF column shows) instead of one week's
+  // score. Only called once week 17 is over (see the sweep effect below),
+  // since a mid-season total isn't meaningful for a "4,000 in a season"
+  // club — a team sitting at 3,900 through week 16 isn't a miss, they just
+  // aren't done yet. `avg` matches how she computed it in her own sheet
+  // (pts / 17, confirmed against her CSV — e.g. 4569.70 / 268.81 = 17.00),
+  // not pts / (wins+losses).
+  const detect4000 = (rows, tierKeyArg, year) => {
+    rows.forEach((r) => {
+      if (r.pts >= 4000 && r.rosterId != null) {
+        const entry = { coach: r.coach || "—", team: r.team || "—", conf: tierKeyArg, pts: r.pts, avg: r.pts / 17, year };
+        addClub4000Entry(tierKeyArg, year, r.rosterId, entry).then((local) => {
+          if (local) setClub4000Live(local);
+        });
+      }
+    });
+  };
+
   const loadLeague = useCallback(async (leagueId, week, tKey, isCurrentSeason = true) => {
     const [users, rosters] = await Promise.all([
       j(`${SLEEPER}/league/${leagueId}/users`),
@@ -6939,6 +6965,53 @@ export default function App() {
       } catch (e) {}
     }
   }, []);
+
+  // ── 4000 Club season-end sweep ──
+  // Week 17 is the last week of the regular season across every tier (the
+  // "everyone keeps playing through Week 17" rule — see mistakes.md), so
+  // nflState.week > 17 means every roster's Sleeper fpts/fpts_decimal is
+  // now a FINAL season total, not a moving one. Doesn't wait for anyone to
+  // visit any particular tier's Standings page — sweeps every league
+  // already resolved in leagueMap directly, since nobody's guaranteed to
+  // click through all 13 tiers themselves. The Firestore write-once guard
+  // (getClub4000ProcessedYear/markClub4000ProcessedYear) means this only
+  // actually hits Sleeper once per season — the first visitor to load the
+  // site after week 17 pays for the 13-league fetch, everyone after that
+  // just sees the "already processed" flag and skips it entirely.
+  useEffect(() => {
+    if (mode !== "live" || !nflState || nflState.week <= 17) return;
+    let cancelled = false;
+    (async () => {
+      let already;
+      try {
+        already = await getClub4000ProcessedYear(nflState.season);
+      } catch (e) {
+        return; // can't confirm either way (offline, rules issue, etc.) — skip rather than risk a duplicate sweep
+      }
+      if (cancelled || already) return;
+      for (const [tierKey, leagueId] of Object.entries(leagueMap)) {
+        if (cancelled) return;
+        try {
+          const [users, rosters] = await Promise.all([
+            j(`${SLEEPER}/league/${leagueId}/users`),
+            j(`${SLEEPER}/league/${leagueId}/rosters`),
+          ]);
+          const rows = buildStandings(users, rosters, leagueId, tierKey, true);
+          detect4000(rows, tierKey, nflState.season);
+        } catch (e) {
+          console.error(`4000 Club sweep failed for ${tierKey}`, e);
+        }
+      }
+      if (!cancelled) {
+        try {
+          await markClub4000ProcessedYear(nflState.season);
+        } catch (e) {}
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, nflState, leagueMap]);
 
   // Lazy, cache-first fetch for one tier's one week — the Weekly Awards tab
   // calls this once per tier (up to 13 calls) whenever the selected
@@ -7063,6 +7136,7 @@ export default function App() {
     const unsubApps = watchApplications((apps) => setApplications(apps));
     const unsubPromo = watchPromotionWindow((open) => setPromotionWindowOpen(open));
     const unsubClub300 = watchClub300Live((entries) => setClub300Live(entries));
+    const unsubClub4000 = watchClub4000Live((entries) => setClub4000Live(entries));
     const unsubHireTimers = watchHireTimers((timers) => setHireTimers(timers));
     return () => {
       unsubChat();
@@ -7070,6 +7144,7 @@ export default function App() {
       unsubApps();
       unsubPromo();
       unsubClub300();
+      unsubClub4000();
       unsubHireTimers();
     };
   }, []);
@@ -8459,26 +8534,48 @@ export default function App() {
   const club300TopTeams = useMemo(() => tally(club300All, (r) => r.team).slice(0, 8), [club300All]);
   const club300ByConf = useMemo(() => tally(club300All, (r) => r.conf), [club300All]);
 
-  // ── The 4000 Club ── CLUB_4000 is a static module-level constant (like
-  // CLUB_300), so every memo below computes once (empty dep array) rather
-  // than re-running per render.
+  // ── The 4000 Club ──
+  // CLUB_4000 is the static curated list (2022-2025, hand-exported from
+  // her sheet); club4000Live is what the season-end sweep above writes
+  // once week 17 ends for the CURRENT season. Same "static list for
+  // history + live detection only for the current season" split
+  // club300All established just above, for the same reason (see its
+  // comment): a stray live entry for a leftover prior season would be
+  // unreliable the same way. Fingerprint is tier+year+coach rather than
+  // club300All's tier+week+year+pts — there's no "week" here (one season
+  // total per roster per year), and a coach only ever holds one roster per
+  // league per year, so coach alone is already a unique identity within a
+  // tier+year without needing points as a tiebreaker.
+  const club4000All = useMemo(() => {
+    const currentLive = club4000Live.filter((r) => r.year === CURRENT_SEASON);
+    const merged = currentLive.length ? [...CLUB_4000, ...currentLive] : CLUB_4000;
+    const seen = new Set();
+    const deduped = [];
+    merged.forEach((r) => {
+      const tierKey = CONF_TO_TIER_KEY[r.conf] || r.conf;
+      const key = `${tierKey}|${r.year}|${r.coach}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      deduped.push(r);
+    });
+    return deduped.sort((a, b) => b.pts - a.pts);
+  }, [club4000Live]);
   const club4000Ranked = useMemo(
-    () => [...CLUB_4000].sort((a, b) => b.pts - a.pts).map((r, i) => ({ ...r, rank: i + 1 })),
-    []
+    () => club4000All.map((r, i) => ({ ...r, rank: i + 1 })), // already sorted by pts desc above
+    [club4000All]
   );
   // "Current" for highlighting purposes is whatever the newest year IN THE
-  // DATA is (2025 right now), not the site's CURRENT_SEASON constant
-  // (2026) -- this is a season-TOTAL club, so it can't have an entry for a
-  // season that's still in progress. Updates itself automatically the next
-  // time this list is refreshed with a new year's data.
-  const club4000CurrentYear = useMemo(() => Math.max(...CLUB_4000.map((r) => r.year)), []);
+  // DATA is (2025 right now) rather than a hardcoded value — once the
+  // season-end sweep adds live 2026 entries this becomes 2026
+  // automatically, no code change needed.
+  const club4000CurrentYear = useMemo(() => Math.max(...club4000All.map((r) => r.year)), [club4000All]);
   // Coaches/teams who've hit the club more than once. Tie-break (when two
   // coaches/teams both have the same count) is by most-recent year first --
   // my own choice to keep this deterministic, not something confirmed
   // against her original sheet, so flagging it as an assumption.
   const club4000RepeatCoaches = useMemo(() => {
     const map = new Map();
-    CLUB_4000.forEach((r) => {
+    club4000All.forEach((r) => {
       if (!map.has(r.coach)) map.set(r.coach, { count: 0, years: new Set() });
       const e = map.get(r.coach);
       e.count += 1;
@@ -8488,10 +8585,10 @@ export default function App() {
       .filter(([, e]) => e.count >= 2)
       .map(([coach, e]) => ({ coach, count: e.count, years: Array.from(e.years).sort((a, b) => b - a) }))
       .sort((a, b) => b.count - a.count || b.years[0] - a.years[0]);
-  }, []);
+  }, [club4000All]);
   const club4000RepeatTeams = useMemo(() => {
     const map = new Map();
-    CLUB_4000.forEach((r) => {
+    club4000All.forEach((r) => {
       if (!map.has(r.team)) map.set(r.team, { count: 0, years: new Set(), conf: r.conf });
       const e = map.get(r.team);
       e.count += 1;
@@ -8501,16 +8598,16 @@ export default function App() {
       .filter(([, e]) => e.count >= 2)
       .map(([team, e]) => ({ team, count: e.count, years: Array.from(e.years).sort((a, b) => b - a), conf: e.conf }))
       .sort((a, b) => b.count - a.count || b.years[0] - a.years[0]);
-  }, []);
+  }, [club4000All]);
   // Only conferences that actually have a qualifying entry -- matches
   // club300ByConf's own convention (tally() drops zero-count keys) rather
   // than the reference mockup, which listed all 15 including zeros.
-  const club4000ByConf = useMemo(() => tally(CLUB_4000, (r) => r.conf), []);
+  const club4000ByConf = useMemo(() => tally(club4000All, (r) => r.conf), [club4000All]);
   const club4000BySeason = useMemo(() => {
     const map = new Map();
-    CLUB_4000.forEach((r) => map.set(r.year, (map.get(r.year) || 0) + 1));
+    club4000All.forEach((r) => map.set(r.year, (map.get(r.year) || 0) + 1));
     return Array.from(map.entries()).sort((a, b) => b[0] - a[0]); // year, most recent first
-  }, []);
+  }, [club4000All]);
 
   const tagColor = (t) =>
     t === "BREAKING" ? C.ember : t === "ANNOUNCEMENT" ? C.gold : t === "COACHING CAROUSEL" ? C.turf : C.slate;
@@ -10182,7 +10279,7 @@ export default function App() {
                 </h2>
               </div>
               <p className="text-sm mb-4" style={{ color: C.slate }}>
-                4,000+ combined points across a full regular season, weeks 1–17. {club4000Ranked.length} seasons and counting.
+                4,000+ combined points across a full regular season, weeks 1–17.
               </p>
               <input
                 value={club4000Query}

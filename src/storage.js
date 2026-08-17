@@ -403,6 +403,71 @@ export function watchClub300Live(cb) {
   return () => unsub();
 }
 
+// ── 4000 Club (live, auto-detected) ──
+// Same shape as club300Live above, but the "score" being checked is a
+// roster's SEASON total (Sleeper's own running fpts/fpts_decimal — the
+// exact number Standings' PF column already shows), not a single week's
+// matchup score. Doc ID is deterministic from tier/year/roster (no week —
+// there's only ever one season total per roster per year), so re-running
+// the sweep is always safe to repeat, never duplicates an entry.
+function club4000Key(tierKey, year, rosterId) {
+  return `${tierKey}_${year}_${rosterId}`;
+}
+
+export async function addClub4000Entry(tierKey, year, rosterId, entry) {
+  const key = club4000Key(tierKey, year, rosterId);
+  if (!firebaseReady) {
+    const all = localGet("pfa-club4000-live") || {};
+    all[key] = entry;
+    localSet("pfa-club4000-live", all);
+    return Object.values(all); // local fallback only; Firebase updates via watchClub4000Live's snapshot
+  }
+  await ensureDb();
+  await fs.setDoc(fs.doc(db, "club4000Live", key), entry);
+  return null;
+}
+
+export function watchClub4000Live(cb) {
+  if (!firebaseReady) {
+    cb(Object.values(localGet("pfa-club4000-live") || {}));
+    return () => {};
+  }
+  let unsub = () => {};
+  ensureDb().then(() => {
+    unsub = fs.onSnapshot(fs.collection(db, "club4000Live"), (snap) => cb(snap.docs.map((d) => d.data())));
+  });
+  return () => unsub();
+}
+
+// Guards the 13-league sweep (see detect4000/its calling effect in App.jsx)
+// so it only actually hits Sleeper once per season, the first time anyone
+// loads the site after week 17 -- without this, EVERY page load for the
+// rest of the off-season would re-fetch all 13 leagues just to find
+// nothing new. Same write-once/read-thereafter shape as tournamentSeeds
+// below, just a bare marker instead of seed data.
+export async function getClub4000ProcessedYear(year) {
+  const key = `pfa-club4000-processed-${year}`;
+  if (!firebaseReady) {
+    return Boolean(localGet(key));
+  }
+  await ensureDb();
+  const snap = await fs.getDoc(fs.doc(db, "club4000Processed", String(year)));
+  return snap.exists();
+}
+
+export async function markClub4000ProcessedYear(year) {
+  const key = `pfa-club4000-processed-${year}`;
+  if (!firebaseReady) {
+    localSet(key, true);
+    return;
+  }
+  await ensureDb();
+  const ref = fs.doc(db, "club4000Processed", String(year));
+  const existing = await fs.getDoc(ref);
+  if (existing.exists()) return;
+  await fs.setDoc(ref, { processedAt: fs.serverTimestamp() });
+}
+
 // ── Tournament (frozen seed snapshot, written once per season) ──
 // One doc per season — tournamentSeeds/{year}. Written ONCE, at the
 // Week7->Week8 rollover, then only ever read from for the rest of that
