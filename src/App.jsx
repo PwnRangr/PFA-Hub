@@ -680,6 +680,52 @@ const C = {
   ember: "#D4604C",
 };
 
+// ── Rotating accent theme ───────────────────────────────────────────────
+// The site's one accent color (C.gold/C.goldDim -- active tabs, buttons,
+// seed-number highlighting, borders, etc. throughout the whole file, ~94
+// call sites) cycles through a fixed palette instead of always being the
+// same amber: a new color each time the site loads or someone logs in,
+// her request 2026-08-17. Implemented as a direct mutation of C's own
+// gold/goldDim properties (C is declared const, but that only locks the
+// VARIABLE, not its properties) rather than threading a theme prop through
+// every one of those call sites -- none of them are memoized (no
+// React.memo anywhere in this file), so every one already reads C.gold
+// fresh on every render; mutating it and then letting any state update
+// trigger a re-render is enough for the whole site to pick it up at once.
+// Every color below was chosen to keep C.ink text readable when C.gold is
+// used as a button/tab BACKGROUND (contrast-checked against #0B1220,
+// matching or beating the original amber's own 8.68:1 ratio).
+const THEME_PALETTE = [
+  { gold: "#E8A33D", goldDim: "#8A6323" }, // amber (the original)
+  { gold: "#6FBEF0", goldDim: "#2C5F82" }, // sky blue
+  { gold: "#B994ED", goldDim: "#5C4488" }, // violet
+  { gold: "#EF7FB4", goldDim: "#8A3560" }, // rose
+  { gold: "#5DD8D8", goldDim: "#206666" }, // teal
+  { gold: "#D6C24A", goldDim: "#7A6D22" }, // olive gold
+];
+// Persisted PER DEVICE (localStorage, not Firestore) since this is a purely
+// cosmetic per-visitor preference, not shared league data -- same tier as
+// the coach-name/local-chat fallback storage.js already uses elsewhere.
+// Advancing in order (not randomizing) is deliberate, per her "scroll
+// through a list" framing -- a genuine rotation, wrapping at the end,
+// rather than a random pick that could repeat the same color twice in a
+// row. Called once at module load (below) so every browser refresh already
+// shows the next color before the first render -- no flash of the old one
+// -- and again from inside App on a genuine login transition (see
+// onAuthChange below) so a same-session login also gets a new color live.
+function advanceTheme() {
+  let idx = -1;
+  try { idx = parseInt(localStorage.getItem("pfa-theme-index") || "-1", 10); } catch (e) {}
+  if (!Number.isFinite(idx)) idx = -1;
+  idx = (idx + 1) % THEME_PALETTE.length;
+  try { localStorage.setItem("pfa-theme-index", String(idx)); } catch (e) {}
+  const theme = THEME_PALETTE[idx];
+  C.gold = theme.gold;
+  C.goldDim = theme.goldDim;
+  return theme;
+}
+advanceTheme();
+
 const TIERS = [
   { key: "NFL", name: "National Football League", tier: 1, size: 32 },
   { key: "USFL", name: "United States Football League", tier: 2, size: 20 },
@@ -6717,11 +6763,24 @@ export default function App() {
   // so the loading screen and the landing page never flash into each other.
   const [currentUser, setCurrentUser] = useState(undefined);
   const [authReady, setAuthReady] = useState(false);
+  const authInitializedRef = useRef(false);
+  const wasLoggedInRef = useRef(false);
   const isAdmin = currentUser?.role === "admin";
   const isMod = isAdmin || currentUser?.role === "moderator";
 
   useEffect(() => {
+    // Tracks whether onAuthChange has fired at all yet (authInitialized) and
+    // whether the last known state was logged-in (wasLoggedIn) -- together
+    // these isolate a GENUINE login transition mid-session (was logged out,
+    // now logged in) from the very first firing, which just reports
+    // whatever session already existed on load and shouldn't double-count
+    // against the refresh-triggered advanceTheme() call above.
     const unsub = onAuthChange((profile) => {
+      if (authInitializedRef.current && profile && !wasLoggedInRef.current) {
+        advanceTheme();
+      }
+      wasLoggedInRef.current = Boolean(profile);
+      authInitializedRef.current = true;
       setCurrentUser(profile);
       setAuthReady(true);
     });
