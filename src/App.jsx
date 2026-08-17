@@ -991,7 +991,9 @@ function TeamChip({ team, colors }) {
 // component itself doesn't need to know much about WHERE the data came
 // from -- `isTeam` just says whether to render `value` as a colored
 // TeamChip (needs the `colors` prop, her follow-up request 2026-08-17) or
-// as plain/mono text. Title and rows both centered per her request.
+// as plain/mono text. Two-column grid (her follow-up request 2026-08-17):
+// label and value each centered WITHIN their own column, not just centered
+// as one flowing cluster, so every row's label/value line up like a table.
 function DraftOrderPanel({ rows, title, colors }) {
   return (
     <div className="shrink-0 rounded-sm p-3 text-xs" style={{ background: C.panel, border: `1px solid ${C.line}`, minWidth: "12rem" }}>
@@ -1002,22 +1004,26 @@ function DraftOrderPanel({ rows, title, colors }) {
         {rows.map((r, i) => (
           <div
             key={i}
-            className="flex items-center justify-center gap-2"
-            style={{ padding: "1px 0", color: r.fired ? C.ember : C.chalk }}
+            className="grid items-center"
+            style={{ gridTemplateColumns: "1fr 1fr", padding: "1px 0", color: r.fired ? C.ember : C.chalk }}
           >
-            <span className="shrink-0">{r.label}</span>
-            {r.isTeam ? (
-              <TeamChip team={r.value} colors={colors} />
-            ) : (
-              r.value !== undefined && (
-                <span className="whitespace-nowrap" style={r.mono ? { fontFamily: "'IBM Plex Mono', monospace" } : undefined}>
-                  {r.value}
-                </span>
-              )
-            )}
-            {r.fired && (
-              <span style={{ fontSize: "0.55rem", letterSpacing: "0.04em" }}>FIRED</span>
-            )}
+            <div className="flex justify-center">
+              <span>{r.label}</span>
+            </div>
+            <div className="flex items-center justify-center gap-1">
+              {r.isTeam ? (
+                <TeamChip team={r.value} colors={colors} />
+              ) : (
+                r.value !== undefined && (
+                  <span className="whitespace-nowrap" style={r.mono ? { fontFamily: "'IBM Plex Mono', monospace" } : undefined}>
+                    {r.value}
+                  </span>
+                )
+              )}
+              {r.fired && (
+                <span style={{ fontSize: "0.55rem", letterSpacing: "0.04em" }}>FIRED</span>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -1038,23 +1044,23 @@ function PlacementInfoPanel({ rows, title }) {
         {rows.map((r) => (
           <div
             key={r.label}
-            className="flex items-baseline justify-center gap-2"
-            style={{ padding: "1px 0", color: r.fired ? C.ember : r.ineligible ? C.slate : C.chalk }}
+            className="grid items-baseline"
+            style={{ gridTemplateColumns: "1fr 1fr", padding: "1px 0", color: r.fired ? C.ember : r.ineligible ? C.slate : C.chalk }}
           >
-            <span>{r.label}</span>
-            <span className="whitespace-nowrap">
+            <div className="text-center">{r.label}</div>
+            <div className="flex items-baseline justify-center gap-1 whitespace-nowrap">
               {r.cp !== undefined && (
                 <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{r.cp} CP</span>
               )}
               {(r.fired || r.ineligible) && (
-                <span style={{ fontSize: "0.55rem", letterSpacing: "0.04em", marginLeft: r.cp !== undefined ? 4 : 0 }}>
+                <span style={{ fontSize: "0.55rem", letterSpacing: "0.04em" }}>
                   {r.fired ? "FIRED" : "inelig."}
                 </span>
               )}
               {r.cp === undefined && !r.fired && !r.ineligible && (
                 <span style={{ fontSize: "0.55rem", letterSpacing: "0.04em" }}>eligible</span>
               )}
-            </span>
+            </div>
           </div>
         ))}
       </div>
