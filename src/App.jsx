@@ -5827,17 +5827,20 @@ function TournamentBracket({ data }) {
           {/* --- Mascots, moved into the Week-10/QF column's own empty gap
               between its two matchup pairs now that the Week-8 play-in
               column (their original home) is gone, per her request
-              2026-08-17. Same y as before (140) -- that value already sat
-              in the middle of a wide vertical gap, which the QF column
-              also has between its own two matchup pairs (ends at 114,
-              resumes at 285), so it drops in without recalculating. --- */}
-          <GSlot x={X.qf} y={140} w={BW} h={70} label="" src={TOURNEY_MASCOT_LEFT} />
-          <GSlot x={tourneyMirrorX(X.qf) - BW} y={140} w={BW} h={70} label="" src={TOURNEY_MASCOT_RIGHT} />
-          {/* --- Corner leaves, also moved into the Week-10/QF column, to
-              its bottom (below its lower matchup pair, which ends at
-              y=342) per her request 2026-08-17. --- */}
-          <GSlot x={X.qf} y={350} w={BW} h={70} label="" src={TOURNEY_DECOR_BOTTOM_LEFT} />
-          <GSlot x={tourneyMirrorX(X.qf) - BW} y={350} w={BW} h={70} label="" src={TOURNEY_DECOR_BOTTOM_RIGHT} />
+              2026-08-17. y=165 is the true vertical center of that gap: the
+              top matchup pair ends at y=114 (95+19) and the bottom pair
+              starts at y=285, so the gap's center is (114+285)/2=199.5,
+              less half the mascot's own 70px height (her follow-up
+              2026-08-17 -- the first pass at y=140 read as too high). --- */}
+          <GSlot x={X.qf} y={165} w={BW} h={70} label="" src={TOURNEY_MASCOT_LEFT} />
+          <GSlot x={tourneyMirrorX(X.qf) - BW} y={165} w={BW} h={70} label="" src={TOURNEY_MASCOT_RIGHT} />
+          {/* --- Corner leaves, pushed down near the bottom of the Week-10/
+              QF column (her follow-up 2026-08-17 -- the first pass at
+              y=350 read as too high too). y=380 clears the bottom matchup
+              pair (ends at y=342) with a 38px gap above and leaves a 10px
+              margin below the panel's own TOURNEY_H=460 bottom edge. --- */}
+          <GSlot x={X.qf} y={380} w={BW} h={70} label="" src={TOURNEY_DECOR_BOTTOM_LEFT} />
+          <GSlot x={tourneyMirrorX(X.qf) - BW} y={380} w={BW} h={70} label="" src={TOURNEY_DECOR_BOTTOM_RIGHT} />
 
           {/* --- Week 13: no game, results only --- */}
           <GSlot x={X.finalEntrant} y={0} w={BW} h={40} label="" src={TOURNEY_DECOR_TOP_LEFT} />
