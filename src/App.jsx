@@ -208,6 +208,15 @@ const HISTORICAL_FINAL_ORDER = {
       "Grambling", "SC St", "Alabama A&M", "NC Central", "Alabama St", "Pine Bluff", "TX Southern", "Norfolk St",
     ],
   },
+  // First historical year added beyond 2025 — transcribed from her
+  // PFA_Playoffs_2024 - FLHS.csv export (a direct CSV export of the actual
+  // bracket-sheet tab, not a screenshot), confirmed with her 2026-08-17.
+  2024: {
+    FLHS: [
+      "Coral Springs", "Cypress Bay", "Miami Beach", "Western", "Taravella", "Deerfield", "West Boca", "Palmetto",
+      "Boca Raton", "West Broward", "Dr Krop", "Miami Senior", "Southwest", "Stoneman", "Coral Glades", "Miami Dade",
+    ],
+  },
 };
 
 // Loose match for confirmed-historical team names against that season's own
@@ -4959,6 +4968,60 @@ const FLHS_2025_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2024 FLHS, ranks 1-8 (championship half) -------------------------------
+// Transcribed from her PFA_Playoffs_2024 - FLHS.csv export (a direct export
+// of the actual bracket-sheet tab), confirmed against her sheet 2026-08-17.
+// Same 16 schools as 2025, so FLHS_CLR/FLHS_MARK/FLHS_TROPHY/FLHS_BANNERS are
+// reused unchanged — this tier's own note (FLHS_CLR above) already flags
+// these colours don't need a "new tier" refresh year to year.
+const FLHS_2024_PLAYOFFS = r3ChampHalf({
+  colors: FLHS_CLR, logo: "FHSAA", logoSrc: FLHS_MARK, trophy: FLHS_TROPHY,
+  banners: FLHS_BANNERS,
+  wk15: [
+    ["Miami Beach", "211.45", "West Boca", "170.85"],
+    ["Coral Springs", "225.55", "Taravella", "214.90"],
+    ["Western", "312.50", "Deerfield", "192.50"],
+    ["Palmetto", "186.95", "Cypress Bay", "207.05"],
+  ],
+  semis: [
+    ["Miami Beach", "234.15", "Coral Springs", "251.90"],
+    ["Western", "201.35", "Cypress Bay", "278.00"],
+  ],
+  final: ["Coral Springs", "270.30", "Cypress Bay", "192.30"],
+  third: ["Miami Beach", "254.05", "Western", "235.15"],
+  fifth: {
+    leftQual: ["West Boca", "185.20", "Taravella", "237.70"],
+    rightQual: ["Deerfield", "180.30", "Palmetto", "178.65"],
+    final: ["Taravella", "246.00", "Deerfield", "220.50"],
+  },
+  seventh: ["West Boca", "232.05", "Palmetto", "174.80"],
+});
+
+// --- 2024 FLHS, ranks 9-16 (consolation half) -------------------------------
+const FLHS_2024_CONSOLATION = r3ConsoHalf({
+  colors: FLHS_CLR, logo: "FHSAA", logoSrc: FLHS_MARK,
+  banners: FLHS_CONSO_BANNERS,
+  wk15: [
+    ["Coral Glades", "167.20", "Miami Senior", "203.00"],
+    ["Boca Raton", "241.80", "Southwest", "175.25"],
+    ["Dr Krop", "224.70", "Stoneman", "180.00"],
+    ["Miami Dade", "105.40", "West Broward", "208.65"],
+  ],
+  semis: [
+    ["Miami Senior", "209.40", "Boca Raton", "243.65"],
+    ["Dr Krop", "178.70", "West Broward", "197.90"],
+  ],
+  final: ["Boca Raton", "215.80", "West Broward", "203.80"],
+  eleventh: ["Miami Senior", "120.80", "Dr Krop", "237.65"],
+  thirteenth: {
+    leftQual: ["Coral Glades", "164.90", "Southwest", "181.20"],
+    rightQual: ["Stoneman", "142.95", "Miami Dade", "106.75"],
+    final: ["Southwest", "217.35", "Stoneman", "131.40"],
+  },
+  fifteenth: ["Coral Glades", "239.25", "Miami Dade", "141.05"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // Which tiers render a live R3 bracket. SEC first as the test run; the others
 // need their own short-name check before being added.
 const R3_LIVE = {
@@ -5973,21 +6036,31 @@ function ProBowlBracket({ data }) {
   );
 }
 
+// Keyed by season, then by tier — was a flat single-year object until the
+// first pre-2025 tier (FLHS 2024) shipped 2026-08-17. Each year only needs
+// entries for whichever tiers have confirmed data; a season/tier combo
+// missing here falls through to the plainer historical renderers below
+// (round-1-only, or a flat final-order list) rather than rendering nothing.
 const GRID_BRACKETS = {
-  NFL: { playoffs: NFL_2025_PLAYOFFS, consolation: NFL_2025_CONSOLATION },
-  USFL: { playoffs: USFL_2025_PLAYOFFS, consolation: USFL_2025_CONSOLATION },
-  XFL: { playoffs: XFL_2025_PLAYOFFS, consolation: XFL_2025_CONSOLATION },
-  SEC: { playoffs: SEC_2025_PLAYOFFS, consolation: SEC_2025_CONSOLATION, bowls: SEC_2025_BOWLS },
-  TEN: { playoffs: TEN_2025_PLAYOFFS, consolation: TEN_2025_CONSOLATION, bowls: TEN_2025_BOWLS },
+  2025: {
+    NFL: { playoffs: NFL_2025_PLAYOFFS, consolation: NFL_2025_CONSOLATION },
+    USFL: { playoffs: USFL_2025_PLAYOFFS, consolation: USFL_2025_CONSOLATION },
+    XFL: { playoffs: XFL_2025_PLAYOFFS, consolation: XFL_2025_CONSOLATION },
+    SEC: { playoffs: SEC_2025_PLAYOFFS, consolation: SEC_2025_CONSOLATION, bowls: SEC_2025_BOWLS },
+    TEN: { playoffs: TEN_2025_PLAYOFFS, consolation: TEN_2025_CONSOLATION, bowls: TEN_2025_BOWLS },
 
-  SWAC: { playoffs: SWAC_2025_PLAYOFFS, consolation: SWAC_2025_CONSOLATION },
-  "BIG XII": { playoffs: XII_2025_PLAYOFFS, consolation: XII_2025_CONSOLATION },
-  ACC: { playoffs: ACC_2025_PLAYOFFS, consolation: ACC_2025_CONSOLATION },
-  SOCO: { playoffs: SOCO_2025_PLAYOFFS, consolation: SOCO_2025_CONSOLATION },
-  SUN: { playoffs: SUN_2025_PLAYOFFS, consolation: SUN_2025_CONSOLATION },
-  IVY: { playoffs: IVY_2025_PLAYOFFS, consolation: IVY_2025_CONSOLATION },
-  GLIAC: { playoffs: GLIAC_2025_PLAYOFFS, consolation: GLIAC_2025_CONSOLATION },
-  FLHS: { playoffs: FLHS_2025_PLAYOFFS, consolation: FLHS_2025_CONSOLATION },
+    SWAC: { playoffs: SWAC_2025_PLAYOFFS, consolation: SWAC_2025_CONSOLATION },
+    "BIG XII": { playoffs: XII_2025_PLAYOFFS, consolation: XII_2025_CONSOLATION },
+    ACC: { playoffs: ACC_2025_PLAYOFFS, consolation: ACC_2025_CONSOLATION },
+    SOCO: { playoffs: SOCO_2025_PLAYOFFS, consolation: SOCO_2025_CONSOLATION },
+    SUN: { playoffs: SUN_2025_PLAYOFFS, consolation: SUN_2025_CONSOLATION },
+    IVY: { playoffs: IVY_2025_PLAYOFFS, consolation: IVY_2025_CONSOLATION },
+    GLIAC: { playoffs: GLIAC_2025_PLAYOFFS, consolation: GLIAC_2025_CONSOLATION },
+    FLHS: { playoffs: FLHS_2025_PLAYOFFS, consolation: FLHS_2025_CONSOLATION },
+  },
+  2024: {
+    FLHS: { playoffs: FLHS_2024_PLAYOFFS, consolation: FLHS_2024_CONSOLATION },
+  },
 };
 
 // A from-scratch "completed bracket" visual for confirmed historical results —
@@ -9481,11 +9554,11 @@ export default function App() {
                         <div className="text-sm font-semibold mb-2" style={{ color: C.gold }}>
                           {g.label} {g.key === "playoffs" ? `— ranks 1–${half}` : `— ranks ${half + 1}–${order.length}`}
                         </div>
-                        {standingsSeason === 2025 && GRID_BRACKETS[tierKey] ? (
+                        {GRID_BRACKETS[standingsSeason] && GRID_BRACKETS[standingsSeason][tierKey] ? (
                           <>
-                            <GridBracket data={GRID_BRACKETS[tierKey][g.key]} />
-                            {g.key === "consolation" && GRID_BRACKETS[tierKey].bowls && (
-                              <GBowls data={GRID_BRACKETS[tierKey].bowls} />
+                            <GridBracket data={GRID_BRACKETS[standingsSeason][tierKey][g.key]} />
+                            {g.key === "consolation" && GRID_BRACKETS[standingsSeason][tierKey].bowls && (
+                              <GBowls data={GRID_BRACKETS[standingsSeason][tierKey].bowls} />
                             )}
                           </>
                         ) : r1 && r1[g.key] ? (
