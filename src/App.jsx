@@ -685,7 +685,7 @@ const TIERS = [
 
 // Some historical records (300 Club, older exports) abbreviate conferences
 // slightly differently than the site's TIERS keys — map the ones that differ.
-const CONF_TO_TIER_KEY = { XII: "BIG XII", FHS: "FLHS" };
+const CONF_TO_TIER_KEY = { XII: "BIG XII", FHS: "FLHS", BIG10: "TEN" };
 
 // NFL division numbers as configured in Sleeper -> real conference/division
 // names. Confirmed directly by Lainey.
@@ -1387,6 +1387,78 @@ const CLUB_300 = [
   { coach: "hockeydoug", team: "Houston Cougars", conf: "XII", pts: 300.25, week: 17, year: 2024 },
   { coach: "jaquise", team: "Austin Peay Governors", conf: "SOCO", pts: 300.1, week: 6, year: 2022 },
   { coach: "finnbar3", team: "Detroit Drive", conf: "USFL", pts: 300.05, week: 3, year: 2023 },
+];
+
+// The 4000 Club: 4,000+ combined points across a full regular season
+// (weeks 1-17), the season-long sibling of CLUB_300 above. Sourced from
+// Lainey's "Painless Football Alliance - 4000 Club" export, 2026-08-16 --
+// 53 qualifying seasons, 2022-2025. Static like CLUB_300 (no live-detection
+// counterpart yet -- that would need a full-season point total per roster,
+// not just a single week's matchup score, so it isn't a simple extension of
+// the existing club300Live watcher). Conference labels are exactly as she
+// recorded them historically, including three that predate or fall outside
+// the current 13-tier structure -- "XII" (aliased to BIG XII via
+// CONF_TO_TIER_KEY already), "BIG10" (an inconsistent alt-label for TEN in
+// some 2025 rows, aliased below), and "PAC"/"PION" (leagues that no longer
+// exist in the Alliance -- PION is likely the folded league mentioned
+// elsewhere as having sat between GLIAC and FLHS, though that's my
+// inference, not confirmed). Left as-is rather than "corrected" -- this is
+// a historical record, not current standings.
+
+const CLUB_4000 = [
+  { coach: "MambasDisciples", team: "PVAM Panthers", conf: "SWAC", pts: 4470.3, avg: 262.96, year: 2023 },
+  { coach: "beardmantv", team: "Auburn Tigers", conf: "SEC", pts: 4360.6, avg: 256.51, year: 2022 },
+  { coach: "MrCoolBuns", team: "Seattle Dragons", conf: "XFL", pts: 4250.2, avg: 250.01, year: 2023 },
+  { coach: "samwow123", team: "Austin Peay Governors", conf: "SOCO", pts: 4241.4, avg: 249.49, year: 2022 },
+  { coach: "Harvey28", team: "Coastal Carolina Chanticleers", conf: "SUN", pts: 4241.15, avg: 249.48, year: 2022 },
+  { coach: "TheColburnator01", team: "Bucknell Bison", conf: "IVY", pts: 4202.6, avg: 247.21, year: 2023 },
+  { coach: "Wynnguy", team: "Brown Bears", conf: "IVY", pts: 4137.2, avg: 243.36, year: 2023 },
+  { coach: "finnbar3", team: "Arizona Wildcats", conf: "PAC", pts: 4133.2, avg: 243.13, year: 2023 },
+  { coach: "wdh76", team: "Iowa State Cyclones", conf: "XII", pts: 4132.05, avg: 243.06, year: 2023 },
+  { coach: "Sb428", team: "Bethune-Cookman Wildcats", conf: "SWAC", pts: 4125, avg: 242.65, year: 2023 },
+  { coach: "RifeLife520", team: "Oklahoma Sooners", conf: "SEC", pts: 4110.7, avg: 241.81, year: 2023 },
+  { coach: "treetwig", team: "AK Pine Bluff Lions", conf: "SWAC", pts: 4109.85, avg: 241.76, year: 2023 },
+  { coach: "Wynnguy", team: "Brown Bears", conf: "IVY", pts: 4087.1, avg: 240.42, year: 2022 },
+  { coach: "AZiv49", team: "Ole Miss Rebels", conf: "SEC", pts: 4083.85, avg: 240.23, year: 2022 },
+  { coach: "Newkbomb", team: "Arizona Wildcats", conf: "PAC", pts: 4071.8, avg: 239.52, year: 2022 },
+  { coach: "gsk1993", team: "Troy Trojans", conf: "SUN", pts: 4065.4, avg: 239.14, year: 2022 },
+  { coach: "bradlevo", team: "Jax State Gamecocks", conf: "SOCO", pts: 4051.15, avg: 238.3, year: 2023 },
+  { coach: "samwow123", team: "South Carolina Gamecocks", conf: "SEC", pts: 4050.95, avg: 238.29, year: 2023 },
+  { coach: "catinthehat2", team: "St Francis Red Flash", conf: "PION", pts: 4043.25, avg: 237.84, year: 2022 },
+  { coach: "Harold2576", team: "Davenport Panthers", conf: "GLIAC", pts: 4035.65, avg: 237.39, year: 2023 },
+  { coach: "Sb428", team: "Bethune-Cookman Wildcats", conf: "SWAC", pts: 4411.9, avg: 259.52, year: 2024 },
+  { coach: "SpacebarRacecar", team: "The Citadel Bulldogs", conf: "SOCO", pts: 4259.65, avg: 250.57, year: 2024 },
+  { coach: "Noga2003", team: "Memphis Showboats", conf: "USFL", pts: 4065.35, avg: 239.14, year: 2024 },
+  { coach: "samwow123", team: "South Carolina Gamecocks", conf: "SEC", pts: 4200, avg: 247.06, year: 2024 },
+  { coach: "zero00", team: "Ole Miss Rebels", conf: "SEC", pts: 4082.9, avg: 240.17, year: 2024 },
+  { coach: "TylerWT003", team: "Virginia Tech Hokies", conf: "ACC", pts: 4226.6, avg: 248.62, year: 2024 },
+  { coach: "samwow123", team: "Northwestern Wildcats", conf: "TEN", pts: 4088.45, avg: 240.5, year: 2024 },
+  { coach: "CrazyKirt", team: "UCLA Bruins", conf: "TEN", pts: 4158.9, avg: 244.64, year: 2024 },
+  { coach: "runhaags", team: "Arkansas State Red Wolves", conf: "SUN", pts: 4286.35, avg: 252.14, year: 2024 },
+  { coach: "JuugKing", team: "Georgia State Panthers", conf: "SUN", pts: 4082.65, avg: 240.16, year: 2024 },
+  { coach: "acubes21", team: "Belmont Bruins", conf: "SOCO", pts: 4227.4, avg: 248.67, year: 2024 },
+  { coach: "Wynnguy", team: "Brown Bears", conf: "IVY", pts: 4184.65, avg: 246.16, year: 2024 },
+  { coach: "MambasDisciples", team: "PVAM Panthers", conf: "SWAC", pts: 4146.85, avg: 243.93, year: 2024 },
+  { coach: "DirtyByrd30", team: "Jackson State Tigers", conf: "SWAC", pts: 4224.95, avg: 248.53, year: 2024 },
+  { coach: "StokesCity", team: "Western Wildcats", conf: "FLHS", pts: 4158.65, avg: 244.63, year: 2024 },
+  { coach: "PwnRangr", team: "Miami Beach Hi-Tides", conf: "FLHS", pts: 4129.05, avg: 242.89, year: 2024 },
+  { coach: "ahdi", team: "Chattanooga Mocs", conf: "SOCO", pts: 4046.4, avg: 238.02, year: 2024 },
+  { coach: "Illustrious_Fox_1", team: "Ohio State Buckeyes", conf: "TEN", pts: 4039.25, avg: 237.6, year: 2024 },
+  { coach: "mattbanks3x", team: "San Antonio Gunslingers", conf: "USFL", pts: 4202.9, avg: 247.23, year: 2025 },
+  { coach: "z1856z", team: "DC Defenders", conf: "XFL", pts: 4130.55, avg: 242.97, year: 2025 },
+  { coach: "samwow123", team: "South Carolina Gamecocks", conf: "SEC", pts: 4173.45, avg: 245.5, year: 2025 },
+  { coach: "TylerWT003", team: "Virginia Tech Hokies", conf: "ACC", pts: 4527.8, avg: 266.34, year: 2025 },
+  { coach: "samwow123", team: "Northwestern Wildcats", conf: "BIG10", pts: 4081.8, avg: 240.11, year: 2025 },
+  { coach: "JuugKing", team: "Georgia State Panthers", conf: "SUN", pts: 4311.5, avg: 253.62, year: 2025 },
+  { coach: "Roedshow502", team: "Little Rock Trojans", conf: "SUN", pts: 4050.2, avg: 238.25, year: 2025 },
+  { coach: "Wynnguy", team: "Brown Bears", conf: "IVY", pts: 4258.3, avg: 250.49, year: 2025 },
+  { coach: "RifeLife520", team: "Colgate Raiders", conf: "IVY", pts: 4019.95, avg: 236.47, year: 2025 },
+  { coach: "garcia925", team: "Lehigh Mountain Hawks", conf: "IVY", pts: 4050.7, avg: 238.28, year: 2025 },
+  { coach: "DirtyByrd30", team: "Jackson State Tigers", conf: "SWAC", pts: 4569.7, avg: 268.81, year: 2025 },
+  { coach: "MambasDisciples", team: "PVAM Panthers", conf: "SWAC", pts: 4007.75, avg: 235.75, year: 2025 },
+  { coach: "z1856z", team: "Mississippi Valley Delta Devils", conf: "SWAC", pts: 4105.45, avg: 241.5, year: 2025 },
+  { coach: "cspeece22", team: "WI Parkside Rangers", conf: "GLIAC", pts: 4003.35, avg: 235.49, year: 2025 },
+  { coach: "StokesCity", team: "Western Wildcats", conf: "FLHS", pts: 4240.15, avg: 249.42, year: 2025 },
 ];
 
 // Leaderboards derived directly from CLUB_300 itself, so they can never
@@ -2443,6 +2515,20 @@ function Club300Mark({ maxW = 40, maxH = 40 }) {
   if (failed) return "300";
   return (
     <img src={CLUB_300_MARK} alt="The 300 Club" onError={() => setFailed(true)}
+         style={{ maxWidth: maxW, maxHeight: maxH, objectFit: "contain" }} />
+  );
+}
+
+// Same pattern as CLUB_300_MARK/Club300Mark above -- no art has been
+// uploaded to this path yet, so it'll show the "4K" text fallback until
+// someone drops a real mark at public/art/club-4000-mark.png, same as
+// every other TEAM_ART-style asset on this site.
+const CLUB_4000_MARK = "/art/club-4000-mark.png";
+function Club4000Mark({ maxW = 40, maxH = 40 }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return "4K";
+  return (
+    <img src={CLUB_4000_MARK} alt="The 4000 Club" onError={() => setFailed(true)}
          style={{ maxWidth: maxW, maxHeight: maxH, objectFit: "contain" }} />
   );
 }
@@ -6488,6 +6574,7 @@ export default function App() {
   const [tierKey, setTierKey] = useState("NFL");
   const [dirQuery, setDirQuery] = useState("");
   const [club300Query, setClub300Query] = useState("");
+  const [club4000Query, setClub4000Query] = useState("");
   const [openRuleSections, setOpenRuleSections] = useState({ general: true });
   const [selectedCoach, setSelectedCoach] = useState(null);
   const [selectedTeam, setSelectedTeam] = useState(null);
@@ -8372,6 +8459,59 @@ export default function App() {
   const club300TopTeams = useMemo(() => tally(club300All, (r) => r.team).slice(0, 8), [club300All]);
   const club300ByConf = useMemo(() => tally(club300All, (r) => r.conf), [club300All]);
 
+  // ── The 4000 Club ── CLUB_4000 is a static module-level constant (like
+  // CLUB_300), so every memo below computes once (empty dep array) rather
+  // than re-running per render.
+  const club4000Ranked = useMemo(
+    () => [...CLUB_4000].sort((a, b) => b.pts - a.pts).map((r, i) => ({ ...r, rank: i + 1 })),
+    []
+  );
+  // "Current" for highlighting purposes is whatever the newest year IN THE
+  // DATA is (2025 right now), not the site's CURRENT_SEASON constant
+  // (2026) -- this is a season-TOTAL club, so it can't have an entry for a
+  // season that's still in progress. Updates itself automatically the next
+  // time this list is refreshed with a new year's data.
+  const club4000CurrentYear = useMemo(() => Math.max(...CLUB_4000.map((r) => r.year)), []);
+  // Coaches/teams who've hit the club more than once. Tie-break (when two
+  // coaches/teams both have the same count) is by most-recent year first --
+  // my own choice to keep this deterministic, not something confirmed
+  // against her original sheet, so flagging it as an assumption.
+  const club4000RepeatCoaches = useMemo(() => {
+    const map = new Map();
+    CLUB_4000.forEach((r) => {
+      if (!map.has(r.coach)) map.set(r.coach, { count: 0, years: new Set() });
+      const e = map.get(r.coach);
+      e.count += 1;
+      e.years.add(r.year);
+    });
+    return Array.from(map.entries())
+      .filter(([, e]) => e.count >= 2)
+      .map(([coach, e]) => ({ coach, count: e.count, years: Array.from(e.years).sort((a, b) => b - a) }))
+      .sort((a, b) => b.count - a.count || b.years[0] - a.years[0]);
+  }, []);
+  const club4000RepeatTeams = useMemo(() => {
+    const map = new Map();
+    CLUB_4000.forEach((r) => {
+      if (!map.has(r.team)) map.set(r.team, { count: 0, years: new Set(), conf: r.conf });
+      const e = map.get(r.team);
+      e.count += 1;
+      e.years.add(r.year);
+    });
+    return Array.from(map.entries())
+      .filter(([, e]) => e.count >= 2)
+      .map(([team, e]) => ({ team, count: e.count, years: Array.from(e.years).sort((a, b) => b - a), conf: e.conf }))
+      .sort((a, b) => b.count - a.count || b.years[0] - a.years[0]);
+  }, []);
+  // Only conferences that actually have a qualifying entry -- matches
+  // club300ByConf's own convention (tally() drops zero-count keys) rather
+  // than the reference mockup, which listed all 15 including zeros.
+  const club4000ByConf = useMemo(() => tally(CLUB_4000, (r) => r.conf), []);
+  const club4000BySeason = useMemo(() => {
+    const map = new Map();
+    CLUB_4000.forEach((r) => map.set(r.year, (map.get(r.year) || 0) + 1));
+    return Array.from(map.entries()).sort((a, b) => b[0] - a[0]); // year, most recent first
+  }, []);
+
   const tagColor = (t) =>
     t === "BREAKING" ? C.ember : t === "ANNOUNCEMENT" ? C.gold : t === "COACHING CAROUSEL" ? C.turf : C.slate;
 
@@ -8703,6 +8843,7 @@ export default function App() {
             <Tab id="directory">Directory</Tab>
             <Tab id="pyramid">Rules</Tab>
             <Tab id="300club">300 Club</Tab>
+            <Tab id="4000club">4000 Club</Tab>
             <Tab id="weeklyawards">Weekly Awards</Tab>
             <Tab id="tournament">Tournament</Tab>
             {isAdmin && <Tab id="admin">Admin</Tab>}
@@ -10012,6 +10153,168 @@ export default function App() {
                         <span className="w-12 shrink-0 uppercase" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, color: C.slate }}>{conf}</span>
                         <div className="flex-1 rounded-sm overflow-hidden" style={{ background: C.ink, height: "0.9rem" }}>
                           <div style={{ width: `${(count / max) * 100}%`, background: C.gold, height: "100%" }} />
+                        </div>
+                        <span className="w-5 text-right shrink-0" style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.chalk }}>{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </aside>
+          </div>
+        )}
+
+        {view === "4000club" && (
+          <div className="flex flex-col lg:flex-row gap-6">
+            <section className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 mb-1">
+                <div
+                  className="shrink-0 flex items-center justify-center overflow-hidden"
+                  style={{
+                    width: 46, height: 46, border: `1px solid ${C.line}`, borderRadius: 4,
+                    background: C.panel,
+                  }}
+                >
+                  <Club4000Mark />
+                </div>
+                <h2 className="text-3xl uppercase leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
+                  The 4000 Club
+                </h2>
+              </div>
+              <p className="text-sm mb-4" style={{ color: C.slate }}>
+                4,000+ combined points across a full regular season, weeks 1–17. {club4000Ranked.length} seasons and counting.
+              </p>
+              <input
+                value={club4000Query}
+                onChange={(e) => setClub4000Query(e.target.value)}
+                placeholder="Search by coach or team…"
+                className="w-full px-3 py-2 text-sm rounded-sm outline-none mb-3"
+                style={{ background: C.panel, border: `1px solid ${C.line}`, color: C.chalk }}
+              />
+              <div className="space-y-1.5 overflow-y-auto" style={{ maxHeight: "42rem" }}>
+                {club4000Ranked.filter((r) => {
+                  const q = club4000Query.trim().toLowerCase();
+                  if (!q) return true;
+                  return r.coach.toLowerCase().includes(q) || r.team.toLowerCase().includes(q);
+                }).map((r) => (
+                  <div key={`${r.coach}-${r.team}-${r.year}`} className="flex items-center gap-3 px-3 py-2 rounded-sm" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
+                    <span className="w-6 shrink-0 text-right text-xs" style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.slate }}>
+                      {r.rank}
+                    </span>
+                    <span className="text-xl leading-none w-20 shrink-0" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, color: C.gold }}>
+                      {fmt(r.pts)}
+                    </span>
+                    <TeamMark team={r.team} tierKey={CONF_TO_TIER_KEY[r.conf] || r.conf} size={38} />
+                    <div className="min-w-0 flex-1">
+                      <button type="button" onClick={() => openCoachProfile(r.coach)} className="text-sm font-semibold truncate block" style={{ color: "inherit" }}>
+                        {r.coach}
+                        <TrophyBadges name={r.coach} size={11} />
+                      </button>
+                      <div className="text-xs truncate" style={{ color: C.slate }}>
+                        <button
+                          type="button"
+                          onClick={() => openTeamProfile({ team: r.team, maxPts: undefined, playerIds: [] }, CONF_TO_TIER_KEY[r.conf] || r.conf)}
+                          style={{ color: "inherit" }}
+                        >
+                          {r.team}
+                        </button>{" "}
+                        · {r.conf} · {fmt(r.avg)} avg/gm ·{" "}
+                        <span style={{ color: r.year === club4000CurrentYear ? C.gold : "inherit", fontWeight: r.year === club4000CurrentYear ? 600 : 400 }}>
+                          {r.year}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <aside className="lg:w-72 shrink-0 space-y-6">
+              <div>
+                <div className="text-xs uppercase tracking-widest mb-2" style={{ color: C.slate, letterSpacing: "0.2em" }}>
+                  Repeat Coaches
+                </div>
+                <div className="space-y-1">
+                  {club4000RepeatCoaches.map((r) => (
+                    <button
+                      type="button"
+                      key={r.coach}
+                      onClick={() => openCoachProfile(r.coach)}
+                      className="w-full px-2.5 py-1.5 rounded-sm text-sm text-left block"
+                      style={{ background: C.panel, border: `1px solid ${C.line}` }}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate">
+                          {r.coach}
+                          <TrophyBadges name={r.coach} size={11} />
+                        </span>
+                        <span className="shrink-0" style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold }}>{r.count}</span>
+                      </div>
+                      <div className="text-xs mt-0.5" style={{ color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>
+                        {r.years.join(" · ")}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs uppercase tracking-widest mb-2" style={{ color: C.slate, letterSpacing: "0.2em" }}>
+                  Repeat Teams
+                </div>
+                <div className="space-y-1">
+                  {club4000RepeatTeams.map((r) => (
+                    <button
+                      type="button"
+                      key={r.team}
+                      onClick={() => openTeamProfile({ team: r.team, maxPts: undefined, playerIds: [] }, CONF_TO_TIER_KEY[r.conf] || r.conf)}
+                      className="w-full px-2.5 py-1.5 rounded-sm text-sm text-left block"
+                      style={{ background: C.panel, border: `1px solid ${C.line}` }}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate" style={{ color: C.chalk }}>{r.team}</span>
+                        <span className="shrink-0" style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold }}>{r.count}</span>
+                      </div>
+                      <div className="text-xs mt-0.5" style={{ color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>
+                        {r.years.join(" · ")}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs uppercase tracking-widest mb-2" style={{ color: C.slate, letterSpacing: "0.2em" }}>
+                  By Conference
+                </div>
+                <div className="space-y-1">
+                  {club4000ByConf.map(([conf, count]) => {
+                    const max = club4000ByConf[0][1];
+                    return (
+                      <div key={conf} className="flex items-center gap-2 text-xs">
+                        <span className="w-12 shrink-0 uppercase" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, color: C.slate }}>{conf}</span>
+                        <div className="flex-1 rounded-sm overflow-hidden" style={{ background: C.ink, height: "0.9rem" }}>
+                          <div style={{ width: `${(count / max) * 100}%`, background: C.gold, height: "100%" }} />
+                        </div>
+                        <span className="w-5 text-right shrink-0" style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.chalk }}>{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs uppercase tracking-widest mb-2" style={{ color: C.slate, letterSpacing: "0.2em" }}>
+                  By Season
+                </div>
+                <div className="space-y-1">
+                  {club4000BySeason.map(([year, count]) => {
+                    const max = Math.max(...club4000BySeason.map(([, c]) => c));
+                    return (
+                      <div key={year} className="flex items-center gap-2 text-xs">
+                        <span className="w-12 shrink-0" style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.slate }}>{year}</span>
+                        <div className="flex-1 rounded-sm overflow-hidden" style={{ background: C.ink, height: "0.9rem" }}>
+                          <div style={{ width: `${(count / max) * 100}%`, background: year === club4000CurrentYear ? C.gold : C.slate, height: "100%" }} />
                         </div>
                         <span className="w-5 text-right shrink-0" style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.chalk }}>{count}</span>
                       </div>
