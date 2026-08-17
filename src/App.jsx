@@ -820,12 +820,32 @@ const BRACKET_PAIRS_R1_4 = [[1, 4], [2, 3]];
 const DRAFT_PICKS_16 = [16, 15, 9, 10, 11, 12, 13, 14, 3, 4, 5, 6, 7, 8, 2, 1];
 const DRAFT_PICKS_20 = [20, 19, 11, 12, 13, 14, 15, 16, 17, 18, 3, 4, 5, 6, 7, 8, 9, 10, 2, 1];
 const DRAFT_PICKS_32 = [32, 31, 29, 30, 25, 26, 27, 28, 17, 18, 19, 20, 21, 22, 23, 24, 9, 10, 11, 12, 13, 14, 15, 16, 3, 4, 5, 6, 7, 8, 2, 1];
+const DRAFT_PICKS_BY_SIZE = { 16: DRAFT_PICKS_16, 20: DRAFT_PICKS_20, 32: DRAFT_PICKS_32 };
 
 // Turns 1/2/3/etc into "1st"/"2nd"/"3rd"/etc.
 function ordinal(n) {
   const suffixes = ["th", "st", "nd", "rd"];
   const v = n % 100;
   return n + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
+}
+
+// Builds the reference rows for the standalone "Draft Order" box (her
+// request 2026-08-17, restoring a version of the box PlacementInfoPanel's
+// own comment below says used to exist before CP took over that spot) --
+// one row per final place, showing which numbered pick that place earns.
+// Reads the SAME DRAFT_PICKS_* tables the bracket boxes already show
+// inline ("9th pick" etc.) -- this is a compact whole-tier list view of
+// that same confirmed data, not a new source of truth. Keyed by SIZE only,
+// not per-tier like CP is: draft order is identical across every league of
+// the same size (confirmed by R3_CHAMP_PICKS/R3_CONSO_PICKS already being
+// one shared hardcoded label set reused for all ten 16-team leagues).
+function draftOrderRows(size) {
+  const picks = DRAFT_PICKS_BY_SIZE[size];
+  const rows = [];
+  for (let place = 1; place <= size; place++) {
+    rows.push({ place, label: ordinal(place), pick: picks ? picks[place - 1] : undefined, fired: place === size });
+  }
+  return rows;
 }
 
 // Builds the reference rows shown beside a bracket: one per final place,
@@ -912,6 +932,44 @@ const cpForPlace = (tKey, place) =>
 // Confirmed for 16 by both CP tables (ranks 12-16 read "ineligible").
 const promotionEligible = (size, place) =>
   size >= 32 ? place <= size - 11 : size >= 20 ? place <= size - 7 : place <= size - 5;
+
+// Compact reference box showing draft-pick order by final place, meant to
+// sit ABOVE the Coaching Points box below in the same left column (her
+// request 2026-08-17). Deliberately its own small component rather than a
+// generalized version of PlacementInfoPanel below -- the two boxes' row
+// shapes differ enough (pick number + fired-only vs CP + fired/ineligible)
+// that sharing one component would mean branching inside it, and the CP
+// box already works and shouldn't need touching to add this.
+function DraftOrderPanel({ rows, title }) {
+  return (
+    <div className="shrink-0 rounded-sm p-3 text-xs" style={{ background: C.panel, border: `1px solid ${C.line}`, minWidth: "12rem" }}>
+      <div className="uppercase tracking-wider mb-2" style={{ color: C.slate, fontSize: "0.65rem", letterSpacing: "0.08em" }}>
+        {title}
+      </div>
+      <div>
+        {rows.map((r) => (
+          <div
+            key={r.label}
+            className="flex items-baseline justify-between gap-2"
+            style={{ padding: "1px 0", color: r.fired ? C.ember : C.chalk }}
+          >
+            <span>{r.label}</span>
+            <span className="whitespace-nowrap">
+              {r.pick !== undefined && (
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{ordinal(r.pick)} pick</span>
+              )}
+              {r.fired && (
+                <span style={{ fontSize: "0.55rem", letterSpacing: "0.04em", marginLeft: r.pick !== undefined ? 4 : 0 }}>
+                  FIRED
+                </span>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // Compact reference box meant to sit beside a bracket rather than as a
 // paragraph underneath it. One box for the whole tier -- it used to be split
@@ -8045,6 +8103,14 @@ export default function App() {
         rows: placementInfoRows(tier.size, tierKey),
         title: "Coaching Points",
       };
+  // Draft Order box, same gating as placementPanel above -- sits ABOVE it in
+  // the left column (her request 2026-08-17).
+  const draftOrderPanel = !bracket
+    ? null
+    : {
+        rows: draftOrderRows(tier.size),
+        title: "Draft Order",
+      };
 
   // Fetch Sleeper's real bracket results for whichever tier/season is on
   // screen, so computeBracket can fill in actual winners instead of only
@@ -9505,6 +9571,11 @@ export default function App() {
                 sets both next season's draft order and each team's coaching points for the season — see the breakdown
                 below.
               </div>
+              {SHOW_BRACKETS && draftOrderPanel && (
+                <div className="hidden lg:block mt-4">
+                  <DraftOrderPanel rows={draftOrderPanel.rows} title={draftOrderPanel.title} />
+                </div>
+              )}
               {SHOW_BRACKETS && placementPanel && (
                 <div className="hidden lg:block mt-4">
                   <PlacementInfoPanel rows={placementPanel.rows} title={placementPanel.title} />
