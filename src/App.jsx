@@ -843,9 +843,34 @@ function draftOrderRows(size) {
   const picks = DRAFT_PICKS_BY_SIZE[size];
   const rows = [];
   for (let place = 1; place <= size; place++) {
-    rows.push({ place, label: ordinal(place), pick: picks ? picks[place - 1] : undefined, fired: place === size });
+    rows.push({
+      label: ordinal(place),
+      value: picks ? `${ordinal(picks[place - 1])} pick` : undefined,
+      mono: true,
+      fired: place === size,
+    });
   }
   return rows;
+}
+
+// For a COMPLETED historical season (her follow-up request 2026-08-17):
+// rather than the generic place -> pick-number table above, cross-
+// references that season's confirmed HISTORICAL_FINAL_ORDER (team by
+// place) with the same DRAFT_PICKS_* table (pick number by place), then
+// re-sorts by pick number so the box reads as an actual draft order --
+// 1st pick's real team first, down through the last pick -- instead of an
+// abstract place/pick mapping. `finalOrder` is HISTORICAL_FINAL_ORDER's own
+// array (index 0 = 1st place). Falls back to the generic table if the
+// season's size doesn't match a known DRAFT_PICKS_* table (shouldn't
+// happen for any confirmed season, kept as a safety net).
+function draftOrderRowsByTeam(finalOrder) {
+  const size = finalOrder.length;
+  const picks = DRAFT_PICKS_BY_SIZE[size];
+  if (!picks) return draftOrderRows(size);
+  return finalOrder
+    .map((team, i) => ({ place: i + 1, pick: picks[i], team }))
+    .sort((a, b) => a.pick - b.pick)
+    .map((r) => ({ label: ordinal(r.pick), value: r.team, mono: false, fired: r.place === size }));
 }
 
 // Builds the reference rows shown beside a bracket: one per final place,
@@ -937,9 +962,13 @@ const promotionEligible = (size, place) =>
 // sit ABOVE the Coaching Points box below in the same left column (her
 // request 2026-08-17). Deliberately its own small component rather than a
 // generalized version of PlacementInfoPanel below -- the two boxes' row
-// shapes differ enough (pick number + fired-only vs CP + fired/ineligible)
+// shapes differ enough (pick/team + fired-only vs CP + fired/ineligible)
 // that sharing one component would mean branching inside it, and the CP
-// box already works and shouldn't need touching to add this.
+// box already works and shouldn't need touching to add this. Rows are
+// pre-normalized to {label, value, mono, fired} by whichever builder made
+// them (draftOrderRows or draftOrderRowsByTeam) so this component itself
+// never needs to know whether `value` is a pick-number string or a team
+// name -- `mono` just says whether to set the numbers-style font.
 function DraftOrderPanel({ rows, title }) {
   return (
     <div className="shrink-0 rounded-sm p-3 text-xs" style={{ background: C.panel, border: `1px solid ${C.line}`, minWidth: "12rem" }}>
@@ -947,19 +976,19 @@ function DraftOrderPanel({ rows, title }) {
         {title}
       </div>
       <div>
-        {rows.map((r) => (
+        {rows.map((r, i) => (
           <div
-            key={r.label}
+            key={i}
             className="flex items-baseline justify-between gap-2"
             style={{ padding: "1px 0", color: r.fired ? C.ember : C.chalk }}
           >
-            <span>{r.label}</span>
-            <span className="whitespace-nowrap">
-              {r.pick !== undefined && (
-                <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{ordinal(r.pick)} pick</span>
+            <span className="shrink-0">{r.label}</span>
+            <span className="whitespace-nowrap truncate text-right" style={{ maxWidth: "9rem" }}>
+              {r.value !== undefined && (
+                <span style={r.mono ? { fontFamily: "'IBM Plex Mono', monospace" } : undefined}>{r.value}</span>
               )}
               {r.fired && (
-                <span style={{ fontSize: "0.55rem", letterSpacing: "0.04em", marginLeft: r.pick !== undefined ? 4 : 0 }}>
+                <span style={{ fontSize: "0.55rem", letterSpacing: "0.04em", marginLeft: r.value !== undefined ? 4 : 0 }}>
                   FIRED
                 </span>
               )}
@@ -8103,14 +8132,24 @@ export default function App() {
         rows: placementInfoRows(tier.size, tierKey),
         title: "Coaching Points",
       };
-  // Draft Order box, same gating as placementPanel above -- sits ABOVE it in
-  // the left column (her request 2026-08-17).
-  const draftOrderPanel = !bracket
-    ? null
-    : {
-        rows: draftOrderRows(tier.size),
-        title: "Draft Order",
-      };
+  // Draft Order box, same left-column slot as placementPanel below, sits
+  // ABOVE it (her request 2026-08-17). For a completed past season with
+  // confirmed HISTORICAL_FINAL_ORDER data, shows the actual teams in real
+  // draft-pick order (her follow-up 2026-08-17) instead of the generic
+  // place -> pick-number table -- gated on standingsSeason/
+  // HISTORICAL_FINAL_ORDER directly rather than on `bracket` (which only
+  // ever reflects the CURRENT season's live state), so this still shows
+  // correctly for a past season even if the site isn't in live mode.
+  const historicalDraftOrder =
+    standingsSeason !== CURRENT_SEASON &&
+    HISTORICAL_FINAL_ORDER[standingsSeason] &&
+    HISTORICAL_FINAL_ORDER[standingsSeason][tierKey];
+  const draftOrderPanel =
+    !bracket && !historicalDraftOrder
+      ? null
+      : historicalDraftOrder
+      ? { rows: draftOrderRowsByTeam(historicalDraftOrder), title: `Draft Order — ${standingsSeason}` }
+      : { rows: draftOrderRows(tier.size), title: "Draft Order" };
 
   // Fetch Sleeper's real bracket results for whichever tier/season is on
   // screen, so computeBracket can fill in actual winners instead of only
