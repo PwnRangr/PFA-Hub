@@ -281,6 +281,15 @@ const HISTORICAL_FINAL_ORDER = {
       "St Louis", "Dallas", "DC", "LAW", "Atlanta", "Boston", "New York", "San Francisco",
       "Las Vegas", "New Jersey", "Brooklyn", "LAX",
     ],
+    // Sixth batch — NFL, 32 teams (the largest single bracket backfilled this
+    // year), transcribed from her PFA_Playoffs_2024 CSV export, confirmed
+    // 2026-08-17.
+    NFL: [
+      "Las Vegas", "Philadelphia", "Tennessee", "Green Bay", "New England", "Dallas", "Baltimore", "Detroit",
+      "Arizona", "Denver", "NY Jets", "New Orleans", "Seattle", "Buffalo", "LA Chargers", "Minnesota",
+      "San Francisco", "Pittsburgh", "LA Rams", "Kansas City", "Cincinnati", "Chicago", "Carolina", "Miami",
+      "Tampa Bay", "Jacksonville", "Indianapolis", "NY Giants", "Cleveland", "Washington", "Houston", "Atlanta",
+    ],
   },
 };
 
@@ -3411,6 +3420,97 @@ const NFL_2025_CONSOLATION = brChampHalf({
   ladderH: 730,
   // Connector lines removed here too, same request/reasoning as the
   // playoffs half above — this is her "19th-31st place" half.
+  ladderPaths: [],
+  places: [
+    [448, 33, "11th pick", "19th place"], [448, 133, "13th pick", "21st place"],
+    [448, 233, "15th pick", "23rd place"], [448, 333, "3rd pick", "25th place"],
+    [448, 433, "5th pick", "27th place"], [448, 533, "7th pick", "29th place"],
+    [448, 633, "2nd pick", "31st place"],
+  ],
+  footer: [336, 680, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
+// --- 2024 NFL, ranks 1-16 (championship half) ------------------------------
+// Transcribed from her PFA_Playoffs_2024 - NFL.csv export, confirmed
+// 2026-08-17. Same BR template as the confirmed 2025 data above. The
+// championship game itself carries a name on her sheet, same as 2025's
+// "PainBowl IV" — this year's was "PainBowl III".
+const NFL_2024_PLAYOFFS = brChampHalf({
+  east: {
+    r1: [["Green Bay", "182.00", "Seattle", "150.05"], ["New Orleans", "149.60", "Dallas", "168.15"],
+         ["Philadelphia", "246.90", "Minnesota", "132.50"], ["Arizona", "224.90", "Detroit", "237.80"]],
+    r2: [["Green Bay", "194.30", "Dallas", "181.25"], ["Philadelphia", "225.00", "Detroit", "163.65"]],
+    r3: ["Green Bay", "199.45", "Philadelphia", "213.00"],
+    lr1: [["Seattle", "146.85", "New Orleans", "170.15"], ["Minnesota", "172.10", "Arizona", "179.75"]],
+    lr2w: ["New Orleans", "137.60", "Arizona", "189.60"],
+    lr2l: ["Seattle", "120.15", "Minnesota", "118.65"],
+    r2lose: ["Dallas", "168.10", "Detroit", "165.20"],
+  },
+  west: {
+    r1: [["Las Vegas", "180.45", "Denver", "112.70"], ["Baltimore", "170.30", "Buffalo", "147.00"],
+         ["New England", "226.80", "LA Chargers", "152.60"], ["Tennessee", "206.65", "NY Jets", "163.85"]],
+    r2: [["Las Vegas", "216.95", "Baltimore", "201.30"], ["New England", "238.65", "Tennessee", "294.10"]],
+    r3: ["Las Vegas", "220.70", "Tennessee", "214.60"],
+    lr1: [["Denver", "225.90", "Buffalo", "212.45"], ["LA Chargers", "176.55", "NY Jets", "235.65"]],
+    lr2w: ["Denver", "168.80", "NY Jets", "138.85"],
+    lr2l: ["Buffalo", "191.50", "LA Chargers", "156.70"],
+    r2lose: ["Baltimore", "191.80", "New England", "206.80"],
+  },
+  champ: ["Philadelphia", "190.85", "Las Vegas", "245.05"],
+  third: ["Green Bay", "125.65", "Tennessee", "184.00"],
+  fifth: ["Dallas", "191.85", "New England", "225.35"],
+  seventh: ["Detroit", "117.70", "Baltimore", "206.70"],
+  ninth: ["Arizona", "171.55", "Denver", "152.20"],
+  eleventh: ["New Orleans", "172.10", "NY Jets", "191.20"],
+  thirteenth: ["Seattle", "159.20", "Buffalo", "134.20"],
+  fifteenth: ["Minnesota", "163.30", "LA Chargers", "189.95"],
+  banners: BR_BANNERS, brMainPaths: BR_MAIN_PATHS, logo: "NFL", logoSrc: NFL_MARK,
+  championSub: "PainBowl III",
+  champSlots: [[448, 16, 100, 150, "Trophy", NFL_TROPHY], [448, 334, 100, 100, "PFA", PFA_MARK]],
+  ladderH: 690,
+  ladderPaths: [],
+  places: [
+    [448, 33, "29th pick", "3rd place"], [448, 133, "25th pick", "5th place"],
+    [448, 233, "27th pick", "7th place"], [448, 333, "17th pick", "9th place"],
+    [448, 433, "19th pick", "11th place"], [448, 533, "21st pick", "13th place"],
+    [448, 633, "23rd pick", "15th place"],
+  ],
+});
+
+// --- 2024 NFL, ranks 17-32 (consolation half) ------------------------------
+const NFL_2024_CONSOLATION = brChampHalf({
+  east: {
+    r1: [["Atlanta", "85.30", "Chicago", "166.70"], ["LA Rams", "129.40", "NY Giants", "93.85"],
+         ["Washington", "97.00", "Carolina", "164.30"], ["San Francisco", "145.15", "Tampa Bay", "74.30"]],
+    r2: [["Chicago", "134.85", "LA Rams", "145.80"], ["Carolina", "160.70", "San Francisco", "201.00"]],
+    r3: ["LA Rams", "116.60", "San Francisco", "221.55"],
+    lr1: [["Atlanta", "99.00", "NY Giants", "109.10"], ["Washington", "149.00", "Tampa Bay", "182.60"]],
+    lr2w: ["NY Giants", "138.80", "Tampa Bay", "160.40"],
+    lr2l: ["Atlanta", "118.40", "Washington", "121.20"],
+    r2lose: ["Chicago", "149.35", "Carolina", "130.15"],
+  },
+  west: {
+    r1: [["Houston", "70.60", "Pittsburgh", "72.70"], ["Cincinnati", "124.05", "Jacksonville", "107.60"],
+         ["Miami", "116.00", "Cleveland", "25.10"], ["Kansas City", "111.30", "Indianapolis", "105.90"]],
+    r2: [["Pittsburgh", "119.40", "Cincinnati", "99.00"], ["Miami", "123.65", "Kansas City", "145.35"]],
+    r3: ["Pittsburgh", "140.00", "Kansas City", "90.70"],
+    lr1: [["Houston", "77.20", "Jacksonville", "104.40"], ["Cleveland", "102.90", "Indianapolis", "129.55"]],
+    lr2w: ["Jacksonville", "125.40", "Indianapolis", "111.55"],
+    lr2l: ["Houston", "55.80", "Cleveland", "126.80"],
+    r2lose: ["Cincinnati", "170.20", "Miami", "149.50"],
+  },
+  champ: ["San Francisco", "203.45", "Pittsburgh", "185.40"],
+  third: ["LA Rams", "175.35", "Kansas City", "138.80"],
+  fifth: ["Chicago", "113.90", "Cincinnati", "191.50"],
+  seventh: ["Carolina", "164.90", "Miami", "130.60"],
+  ninth: ["Tampa Bay", "147.70", "Jacksonville", "123.60"],
+  eleventh: ["NY Giants", "106.75", "Indianapolis", "133.30"],
+  thirteenth: ["Washington", "110.90", "Cleveland", "148.90"],
+  fifteenth: ["Atlanta", "126.30", "Houston", "176.35"],
+  banners: BR_BANNERS, brMainPaths: BR_MAIN_PATHS, logo: "NFL", logoSrc: NFL_MARK,
+  topWinnerY: 171, topPick: "9th pick", topLabel: "17th place",
+  champSlots: [[448, 324, 100, 110, "PFA", PFA_MARK]],
+  ladderH: 730,
   ladderPaths: [],
   places: [
     [448, 33, "11th pick", "19th place"], [448, 133, "13th pick", "21st place"],
@@ -6953,6 +7053,7 @@ const GRID_BRACKETS = {
     SEC: { playoffs: SEC_2024_PLAYOFFS, consolation: SEC_2024_CONSOLATION },
     USFL: { playoffs: USFL_2024_PLAYOFFS, consolation: USFL_2024_CONSOLATION },
     XFL: { playoffs: XFL_2024_PLAYOFFS, consolation: XFL_2024_CONSOLATION },
+    NFL: { playoffs: NFL_2024_PLAYOFFS, consolation: NFL_2024_CONSOLATION },
   },
 };
 
