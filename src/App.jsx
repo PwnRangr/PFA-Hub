@@ -1047,10 +1047,10 @@ function TeamChip({ team, colors }) {
   const clr = (colors && colors[team]) || TEAM_CLR[team] || ["#2A3550", C.chalk];
   return (
     <span
-      className="inline-block whitespace-nowrap overflow-hidden text-ellipsis"
+      className="inline-block whitespace-nowrap overflow-hidden text-ellipsis text-center"
       style={{
         background: clr[0], color: clr[1], fontWeight: 700, fontSize: 11,
-        padding: "2px 6px", borderRadius: 2, maxWidth: "8.5rem", boxSizing: "border-box",
+        padding: "2px 6px", borderRadius: 2, width: "8.5rem", boxSizing: "border-box",
       }}
     >
       {team}
@@ -1084,8 +1084,11 @@ function DraftOrderPanel({ rows, title, colors }) {
             className="grid items-center"
             style={{ gridTemplateColumns: "1fr 1fr", padding: "1px 0", color: r.fired ? C.ember : C.chalk }}
           >
-            <div className="flex justify-center">
+            <div className="flex items-center justify-center gap-1">
               <span>{r.label}</span>
+              {r.fired && (
+                <span style={{ fontSize: "0.55rem", letterSpacing: "0.04em", color: C.ember }}>FIRED</span>
+              )}
             </div>
             <div className="flex items-center justify-center gap-1">
               {r.isTeam ? (
@@ -1096,9 +1099,6 @@ function DraftOrderPanel({ rows, title, colors }) {
                     {r.value}
                   </span>
                 )
-              )}
-              {r.fired && (
-                <span style={{ fontSize: "0.55rem", letterSpacing: "0.04em" }}>FIRED</span>
               )}
             </div>
           </div>
@@ -10501,7 +10501,7 @@ export default function App() {
                         <div className="grid md:grid-cols-2 gap-4">
                           {conf.divisions.map((div) => (
                             <div key={div.name}>
-                              <div className="text-xs uppercase tracking-wider mb-1.5" style={{ color: C.slate }}>{div.name}</div>
+                              <div className="text-xs uppercase tracking-wider mb-1.5" style={{ color: C.chalk }}>{div.name}</div>
                               <StandingsTable tableRows={div.rows} />
                             </div>
                           ))}
@@ -10513,7 +10513,7 @@ export default function App() {
                   <div className={`grid gap-4 ${standingsGroups.groups.length > 1 ? "md:grid-cols-2" : ""}`}>
                     {standingsGroups.groups.map((g) => (
                       <div key={g.name}>
-                        <div className="text-sm font-semibold mb-1.5" style={{ color: C.gold }}>{g.name}</div>
+                        <div className="text-sm font-semibold mb-1.5" style={{ color: C.chalk }}>{g.name}</div>
                         <StandingsTable tableRows={g.rows} />
                       </div>
                     ))}
