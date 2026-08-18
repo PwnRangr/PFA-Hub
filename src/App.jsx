@@ -8959,6 +8959,12 @@ export default function App() {
   // HISTORICAL_FINAL_ORDER directly rather than on `bracket` (which only
   // ever reflects the CURRENT season's live state), so this still shows
   // correctly for a past season even if the site isn't in live mode.
+  //
+  // Title year is the season BEING DRAFTED FOR, not the season whose finish
+  // set it (her correction 2026-08-18) -- a 2024 finish determines the 2025
+  // draft, so viewing 2024's standings shows "Draft Order — 2025", and the
+  // live/current-season fallback (whose finish isn't known yet) likewise
+  // shows CURRENT_SEASON + 1, not CURRENT_SEASON itself.
   const historicalDraftOrder =
     standingsSeason !== CURRENT_SEASON &&
     HISTORICAL_FINAL_ORDER[standingsSeason] &&
@@ -8967,8 +8973,8 @@ export default function App() {
     !bracket && !historicalDraftOrder
       ? null
       : historicalDraftOrder
-      ? { rows: draftOrderRowsByTeam(historicalDraftOrder), title: `Draft Order — ${standingsSeason}` }
-      : { rows: draftOrderRows(tier.size), title: "Draft Order" };
+      ? { rows: draftOrderRowsByTeam(historicalDraftOrder), title: `Draft Order — ${standingsSeason + 1}` }
+      : { rows: draftOrderRows(tier.size), title: `Draft Order — ${CURRENT_SEASON + 1}` };
 
   // Fetch Sleeper's real bracket results for whichever tier/season is on
   // screen, so computeBracket can fill in actual winners instead of only
