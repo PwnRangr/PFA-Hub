@@ -253,6 +253,21 @@ const HISTORICAL_FINAL_ORDER = {
       "UCLA", "Northwestern", "Ohio State", "Penn State", "Cal", "Rutgers", "Purdue", "Wisconsin",
       "Indiana", "Oregon", "Michigan", "USC", "Maryland", "Utah", "Illinois", "Washington",
     ],
+    // Fourth batch — ACC/BIG XII/SEC, transcribed from her PFA_Playoffs_2024
+    // CSV exports, confirmed 2026-08-17 (SEC's 9-16 order corrected by her
+    // after Claude's own read-back write-up transposed 11th/12th).
+    ACC: [
+      "GA Tech", "N Carolina", "Wake Forest", "Louisville", "Virginia Tech", "Florida St", "Clemson", "Notre Dame",
+      "Duke", "Boston College", "Miami", "Pittsburgh", "NC State", "Virginia", "Syracuse", "SMU",
+    ],
+    "BIG XII": [
+      "Baylor", "Arizona", "W Virginia", "N Colorado", "S Dakota", "Kansas State", "TCU", "BYU",
+      "UCF", "Kansas", "OSU", "Iowa State", "Cincinnati", "Texas Tech", "Houston", "Denver",
+    ],
+    SEC: [
+      "Ole Miss", "Missouri", "Kentucky", "Alabama", "Vanderbilt", "Tennessee", "Oklahoma", "Florida",
+      "South Carolina", "Miss State", "Georgia", "Arkansas", "LSU", "Texas", "Auburn", "Texas A&M",
+    ],
   },
 };
 
@@ -4262,6 +4277,7 @@ const XII_CLR = {
   "Baylor": ["#154734", "#FFB81C"], "W Virginia": ["#002855", "#EAAA00"],
   "Kansas": ["#0051BA", "#E8000D"], "Texas Tech": ["#0A0A0A", "#CC0000"],
   "UCF": ["#0A0A0A", "#BA9B37"], "TCU": ["#4D1979", "#FFFFFF"],
+  "Arizona": ["#AB0520", "#0C234B"],
 };
 
 const XII_2025_PLAYOFFS = {
@@ -5535,6 +5551,170 @@ const TEN_2024_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2024 ACC, ranks 1-8 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2024 - ACC.csv export, confirmed 2026-08-17.
+// Note: the qualifying game deciding who'd play for 13th was a 0.05-point
+// margin (Virginia 161.40 over Syracuse 161.35) — flagged to her, confirmed
+// correct as transcribed.
+const ACC_2024_PLAYOFFS = r3ChampHalf({
+  colors: ACC_CLR, logo: "ACC", logoSrc: ACC_MARK, trophy: ACC_TROPHY,
+  banners: ACC_BANNERS,
+  wk15: [
+    ["Clemson", "184.60", "Wake Forest", "198.30"],
+    ["Virginia Tech", "211.90", "N Carolina", "223.05"],
+    ["Louisville", "262.10", "Notre Dame", "201.25"],
+    ["GA Tech", "258.75", "Florida St", "187.55"],
+  ],
+  semis: [
+    ["Wake Forest", "183.10", "N Carolina", "251.80"],
+    ["Louisville", "240.05", "GA Tech", "241.20"],
+  ],
+  final: ["N Carolina", "197.85", "GA Tech", "237.35"],
+  third: ["Wake Forest", "268.60", "Louisville", "171.80"],
+  fifth: {
+    leftQual: ["Clemson", "189.75", "Virginia Tech", "273.10"],
+    rightQual: ["Notre Dame", "227.50", "Florida St", "259.60"],
+    final: ["Virginia Tech", "267.30", "Florida St", "226.50"],
+  },
+  seventh: ["Clemson", "283.15", "Notre Dame", "204.40"],
+});
+
+// --- 2024 ACC, ranks 9-16 (consolation half) --------------------------------
+const ACC_2024_CONSOLATION = r3ConsoHalf({
+  colors: ACC_CLR, logo: "ACC", logoSrc: ACC_MARK,
+  banners: ACC_CONSO_BANNERS,
+  wk15: [
+    ["Boston College", "240.00", "NC State", "229.60"],
+    ["Miami", "227.40", "SMU", "193.15"],
+    ["Duke", "222.15", "Syracuse", "169.00"],
+    ["Virginia", "208.10", "Pittsburgh", "253.35"],
+  ],
+  semis: [
+    ["Boston College", "215.70", "Miami", "202.35"],
+    ["Duke", "246.90", "Pittsburgh", "232.95"],
+  ],
+  final: ["Boston College", "240.95", "Duke", "268.20"],
+  eleventh: ["Miami", "191.75", "Pittsburgh", "169.00"],
+  thirteenth: {
+    leftQual: ["NC State", "205.00", "SMU", "185.60"],
+    rightQual: ["Syracuse", "161.35", "Virginia", "161.40"],
+    final: ["NC State", "173.90", "Virginia", "172.20"],
+  },
+  fifteenth: ["SMU", "168.35", "Syracuse", "255.05"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
+// --- 2024 BIG XII, ranks 1-8 (championship half) -----------------------------
+// Transcribed from her PFA_Playoffs_2024 - XII.csv export, confirmed
+// 2026-08-17. Arizona had no XII_CLR entry at all (a real gap, not a naming
+// mismatch — Arizona joined the Big 12 in 2024) and was added above with
+// its confirmed Wildcats colors.
+const XII_2024_PLAYOFFS = r3ChampHalf({
+  colors: XII_CLR, logo: "XII", logoSrc: XII_MARK, trophy: XII_TROPHY,
+  banners: XII_BANNERS,
+  wk15: [
+    ["Baylor", "220.65", "TCU", "195.70"],
+    ["Kansas State", "217.60", "W Virginia", "232.90"],
+    ["BYU", "283.35", "Arizona", "303.65"],
+    ["S Dakota", "191.30", "N Colorado", "230.75"],
+  ],
+  semis: [
+    ["Baylor", "199.60", "W Virginia", "188.40"],
+    ["Arizona", "214.20", "N Colorado", "185.20"],
+  ],
+  final: ["Baylor", "260.30", "Arizona", "202.65"],
+  third: ["W Virginia", "235.00", "N Colorado", "228.70"],
+  fifth: {
+    leftQual: ["TCU", "197.70", "Kansas State", "277.05"],
+    rightQual: ["BYU", "217.50", "S Dakota", "223.85"],
+    final: ["Kansas State", "165.45", "S Dakota", "243.20"],
+  },
+  seventh: ["TCU", "205.20", "BYU", "178.45"],
+});
+
+// --- 2024 BIG XII, ranks 9-16 (consolation half) -----------------------------
+const XII_2024_CONSOLATION = r3ConsoHalf({
+  colors: XII_CLR, logo: "XII", logoSrc: XII_MARK,
+  banners: XII_CONSO_BANNERS,
+  wk15: [
+    ["Texas Tech", "199.20", "Kansas", "212.05"],
+    ["OSU", "208.80", "Houston", "149.95"],
+    ["Iowa State", "242.00", "Cincinnati", "223.80"],
+    ["Denver", "177.50", "UCF", "180.85"],
+  ],
+  semis: [
+    ["Kansas", "222.05", "OSU", "146.60"],
+    ["Iowa State", "174.55", "UCF", "202.50"],
+  ],
+  final: ["Kansas", "204.80", "UCF", "261.50"],
+  eleventh: ["OSU", "212.20", "Iowa State", "180.25"],
+  thirteenth: {
+    leftQual: ["Texas Tech", "212.70", "Houston", "198.00"],
+    rightQual: ["Cincinnati", "190.45", "Denver", "149.80"],
+    final: ["Texas Tech", "166.90", "Cincinnati", "206.25"],
+  },
+  fifteenth: ["Houston", "300.25", "Denver", "166.60"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
+// --- 2024 SEC, ranks 1-8 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2024 - SEC.csv export, confirmed
+// 2026-08-17. The Week 18 OKKY Bowl (Oklahoma vs Kentucky, 0.00-0.00,
+// unplayed) was skipped per her call, same as TEN's bowls field.
+const SEC_2024_PLAYOFFS = r3ChampHalf({
+  colors: SEC_CLR, logo: "SEC", logoSrc: SEC_MARK, trophy: SEC_TROPHY,
+  banners: SEC_BANNERS,
+  wk15: [
+    ["Ole Miss", "230.55", "Tennessee", "161.45"],
+    ["Florida", "226.95", "Kentucky", "237.45"],
+    ["Oklahoma", "185.80", "Missouri", "237.55"],
+    ["Vanderbilt", "222.10", "Alabama", "226.70"],
+  ],
+  semis: [
+    ["Ole Miss", "260.20", "Kentucky", "207.70"],
+    ["Missouri", "211.80", "Alabama", "170.90"],
+  ],
+  final: ["Ole Miss", "255.05", "Missouri", "225.80"],
+  third: ["Kentucky", "289.55", "Alabama", "170.30"],
+  fifth: {
+    leftQual: ["Tennessee", "229.40", "Florida", "146.40"],
+    rightQual: ["Oklahoma", "199.55", "Vanderbilt", "233.60"],
+    final: ["Tennessee", "119.35", "Vanderbilt", "235.20"],
+  },
+  seventh: ["Florida", "191.40", "Oklahoma", "224.00"],
+});
+
+// --- 2024 SEC, ranks 9-16 (consolation half) --------------------------------
+// Note: the semifinal deciding 9th/10th vs 11th/12th was a 0.05-point
+// margin (South Carolina 232.35 over Georgia 232.30) — flagged to her,
+// confirmed correct as transcribed. She also corrected a transposition
+// in Claude's own read-back write-up (Georgia beat Arkansas 258.65-243.45
+// for 11th, not the reverse) — the underlying scores below were already
+// right; only the earlier prose summary had them swapped.
+const SEC_2024_CONSOLATION = r3ConsoHalf({
+  colors: SEC_CLR, logo: "SEC", logoSrc: SEC_MARK,
+  banners: SEC_CONSO_BANNERS,
+  wk15: [
+    ["South Carolina", "255.40", "Texas", "180.45"],
+    ["Georgia", "230.85", "Texas A&M", "151.70"],
+    ["Arkansas", "238.95", "LSU", "159.05"],
+    ["Auburn", "145.70", "Miss State", "191.20"],
+  ],
+  semis: [
+    ["South Carolina", "232.35", "Georgia", "232.30"],
+    ["Arkansas", "161.60", "Miss State", "204.95"],
+  ],
+  final: ["South Carolina", "262.55", "Miss State", "225.00"],
+  eleventh: ["Georgia", "258.65", "Arkansas", "243.45"],
+  thirteenth: {
+    leftQual: ["Texas", "206.85", "Texas A&M", "184.60"],
+    rightQual: ["LSU", "185.60", "Auburn", "171.65"],
+    final: ["Texas", "142.60", "LSU", "178.90"],
+  },
+  fifteenth: ["Texas A&M", "169.90", "Auburn", "197.35"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // Which tiers render a live R3 bracket. SEC first as the test run; the others
 // need their own short-name check before being added.
 const R3_LIVE = {
@@ -6566,6 +6746,9 @@ const GRID_BRACKETS = {
     SOCO: { playoffs: SOCO_2024_PLAYOFFS, consolation: SOCO_2024_CONSOLATION },
     SUN: { playoffs: SUN_2024_PLAYOFFS, consolation: SUN_2024_CONSOLATION },
     TEN: { playoffs: TEN_2024_PLAYOFFS, consolation: TEN_2024_CONSOLATION },
+    ACC: { playoffs: ACC_2024_PLAYOFFS, consolation: ACC_2024_CONSOLATION },
+    "BIG XII": { playoffs: XII_2024_PLAYOFFS, consolation: XII_2024_CONSOLATION },
+    SEC: { playoffs: SEC_2024_PLAYOFFS, consolation: SEC_2024_CONSOLATION },
   },
 };
 
