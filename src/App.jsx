@@ -222,6 +222,26 @@ const HISTORICAL_FINAL_ORDER = {
       "Capital", "Northwood", "Ohio N", "N Michigan", "Davenport", "Mount Union", "Baldwin", "Wayne State",
       "JCU", "Ferris State", "Muskingum", "Lake Superior", "Parkside", "Wilmington", "Heidelberg", "Purdue NW",
     ],
+    // Second batch beyond FLHS/GLIAC — transcribed from her PFA_Playoffs_2024
+    // CSV exports for SWAC/IVY/SOCO, confirmed with her 2026-08-17. This is
+    // the piece that actually gates the whole "Completed Bracket" section on
+    // the Standings page (see the HISTORICAL_FINAL_ORDER[season][tierKey]
+    // check above it) — GRID_BRACKETS alone isn't enough on its own; both
+    // have to have an entry for a tier/year or nothing renders at all, not
+    // even a fallback. Missed this the first time these three tiers were
+    // added and had to come back for it.
+    SWAC: [
+      "PVAM", "Bethune", "Jackson St", "Grambling", "SC St", "TX Southern", "Morgan St", "Alabama St",
+      "Alcorn", "Alabama A&M", "Norfolk St", "NC Central", "Pine Bluff", "Florida A&M", "Miss Valley", "Southern U",
+    ],
+    IVY: [
+      "Georgetown", "Cornell", "Bucknell", "Brown", "Penn", "Columbia", "Colgate", "Dartmouth",
+      "Lehigh", "Princeton", "Yale", "MIT", "Lafayette", "Holy Cross", "Fordham", "Harvard",
+    ],
+    SOCO: [
+      "Martin", "Citadel", "Chattanooga", "E Tenn", "Belmont", "Mercer", "Austin Peay", "Jax State",
+      "Murray State", "VMI", "Tenn State", "Tenn Tech", "Elon", "Carolina", "Nicholls", "Samford",
+    ],
   },
 };
 
