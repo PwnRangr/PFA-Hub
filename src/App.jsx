@@ -5249,6 +5249,161 @@ const GLIAC_2024_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2024 SWAC, ranks 1-8 (championship half) -------------------------------
+// Transcribed from her PFA_Playoffs_2024 - SWAC.csv export, same mirrored
+// bracket-sheet layout as FLHS/GLIAC 2024 above, confirmed 2026-08-17.
+const SWAC_2024_PLAYOFFS = r3ChampHalf({
+  colors: SWAC_CLR, logo: "SWAC", logoSrc: SWAC_MARK, trophy: SWAC_TROPHY,
+  banners: SWAC_BANNERS,
+  wk15: [
+    ["Bethune", "244.70", "Alabama St", "150.20"],
+    ["Jackson St", "298.85", "SC St", "192.00"],
+    ["PVAM", "308.60", "TX Southern", "174.45"],
+    ["Grambling", "264.00", "Morgan St", "177.15"],
+  ],
+  semis: [
+    ["Bethune", "257.30", "Jackson St", "247.80"],
+    ["PVAM", "267.70", "Grambling", "266.55"],
+  ],
+  final: ["Bethune", "275.80", "PVAM", "278.35"],
+  third: ["Jackson St", "293.10", "Grambling", "220.15"],
+  fifth: {
+    leftQual: ["Alabama St", "156.75", "SC St", "194.95"],
+    rightQual: ["TX Southern", "201.10", "Morgan St", "162.50"],
+    final: ["SC St", "201.05", "TX Southern", "156.55"],
+  },
+  seventh: ["Alabama St", "154.70", "Morgan St", "219.80"],
+});
+
+// --- 2024 SWAC, ranks 9-16 (consolation half) -------------------------------
+const SWAC_2024_CONSOLATION = r3ConsoHalf({
+  colors: SWAC_CLR, logo: "SWAC", logoSrc: SWAC_MARK,
+  banners: SWAC_CONSO_BANNERS,
+  wk15: [
+    ["Florida A&M", "155.55", "Alabama A&M", "220.45"],
+    ["Miss Valley", "214.90", "Norfolk St", "271.40"],
+    ["Pine Bluff", "208.55", "NC Central", "227.05"],
+    ["Southern U", "135.55", "Alcorn", "145.80"],
+  ],
+  semis: [
+    ["Alabama A&M", "232.60", "Norfolk St", "182.25"],
+    ["NC Central", "114.60", "Alcorn", "165.00"],
+  ],
+  final: ["Alabama A&M", "229.15", "Alcorn", "269.90"],
+  eleventh: ["Norfolk St", "203.60", "NC Central", "166.80"],
+  thirteenth: {
+    leftQual: ["Florida A&M", "254.15", "Miss Valley", "198.80"],
+    rightQual: ["Pine Bluff", "196.70", "Southern U", "171.70"],
+    final: ["Florida A&M", "218.80", "Pine Bluff", "220.45"],
+  },
+  fifteenth: ["Miss Valley", "258.10", "Southern U", "142.45"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
+// --- 2024 IVY, ranks 1-8 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2024 - IVY.csv export, confirmed 2026-08-17.
+// Note: 3rd/4th place is a narrow margin (Bucknell 299.10 vs Brown 295.10),
+// flagged to her and confirmed correct as transcribed.
+const IVY_2024_PLAYOFFS = r3ChampHalf({
+  colors: IVY_CLR, logo: "Ivy", logoSrc: IVY_MARK, trophy: IVY_TROPHY,
+  banners: IVY_BANNERS,
+  wk15: [
+    ["Brown", "247.40", "Dartmouth", "205.45"],
+    ["Penn", "219.00", "Cornell", "246.15"],
+    ["Colgate", "198.60", "Bucknell", "224.45"],
+    ["Georgetown", "272.05", "Columbia", "173.80"],
+  ],
+  semis: [
+    ["Brown", "204.75", "Cornell", "206.10"],
+    ["Bucknell", "217.45", "Georgetown", "235.10"],
+  ],
+  final: ["Cornell", "255.95", "Georgetown", "312.75"],
+  third: ["Brown", "295.10", "Bucknell", "299.10"],
+  fifth: {
+    leftQual: ["Dartmouth", "148.05", "Penn", "230.80"],
+    rightQual: ["Colgate", "186.50", "Columbia", "201.15"],
+    final: ["Penn", "263.10", "Columbia", "172.35"],
+  },
+  seventh: ["Dartmouth", "121.70", "Colgate", "182.20"],
+});
+
+// --- 2024 IVY, ranks 9-16 (consolation half) --------------------------------
+const IVY_2024_CONSOLATION = r3ConsoHalf({
+  colors: IVY_CLR, logo: "Ivy", logoSrc: IVY_MARK,
+  banners: IVY_CONSO_BANNERS,
+  wk15: [
+    ["Princeton", "275.65", "Holy Cross", "176.00"],
+    ["Harvard", "160.75", "Yale", "188.35"],
+    ["Fordham", "201.65", "MIT", "272.00"],
+    ["Lehigh", "275.55", "Lafayette", "133.90"],
+  ],
+  semis: [
+    ["Princeton", "251.50", "Yale", "185.20"],
+    ["MIT", "232.05", "Lehigh", "243.60"],
+  ],
+  final: ["Princeton", "174.80", "Lehigh", "248.95"],
+  eleventh: ["Yale", "233.80", "MIT", "199.80"],
+  thirteenth: {
+    leftQual: ["Holy Cross", "245.45", "Harvard", "242.90"],
+    rightQual: ["Fordham", "200.40", "Lafayette", "209.95"],
+    final: ["Holy Cross", "133.50", "Lafayette", "247.15"],
+  },
+  fifteenth: ["Harvard", "188.25", "Fordham", "215.30"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
+// --- 2024 SOCO, ranks 1-8 (championship half) -------------------------------
+// Transcribed from her PFA_Playoffs_2024 - SOCO.csv export, confirmed 2026-08-17.
+const SOCO_2024_PLAYOFFS = r3ChampHalf({
+  colors: SOCO_CLR, logo: "SoCo", logoSrc: SOCO_MARK, trophy: SOCO_TROPHY,
+  banners: SOCO_BANNERS,
+  wk15: [
+    ["Jax State", "194.60", "E Tenn", "220.60"],
+    ["Martin", "254.40", "Mercer", "205.95"],
+    ["Belmont", "254.70", "Chattanooga", "291.30"],
+    ["Citadel", "226.55", "Austin Peay", "217.55"],
+  ],
+  semis: [
+    ["E Tenn", "169.80", "Martin", "232.85"],
+    ["Chattanooga", "242.65", "Citadel", "279.50"],
+  ],
+  final: ["Martin", "245.00", "Citadel", "218.25"],
+  third: ["E Tenn", "227.15", "Chattanooga", "330.95"],
+  fifth: {
+    leftQual: ["Jax State", "238.60", "Mercer", "281.25"],
+    rightQual: ["Belmont", "313.30", "Austin Peay", "220.90"],
+    final: ["Mercer", "247.20", "Belmont", "276.00"],
+  },
+  seventh: ["Jax State", "223.90", "Austin Peay", "253.40"],
+});
+
+// --- 2024 SOCO, ranks 9-16 (consolation half) -------------------------------
+// Note: 13th/14th is a narrow margin (Elon 252.40 vs Carolina 250.45),
+// flagged to her and confirmed correct as transcribed.
+const SOCO_2024_CONSOLATION = r3ConsoHalf({
+  colors: SOCO_CLR, logo: "SoCo", logoSrc: SOCO_MARK,
+  banners: SOCO_CONSO_BANNERS,
+  wk15: [
+    ["Tenn State", "207.40", "Samford", "190.65"],
+    ["VMI", "208.35", "Elon", "176.70"],
+    ["Murray State", "203.40", "Nicholls", "141.45"],
+    ["Tenn Tech", "280.30", "Carolina", "184.35"],
+  ],
+  semis: [
+    ["Tenn State", "207.45", "VMI", "214.40"],
+    ["Murray State", "190.70", "Tenn Tech", "170.90"],
+  ],
+  final: ["VMI", "151.05", "Murray State", "217.05"],
+  eleventh: ["Tenn State", "222.85", "Tenn Tech", "163.40"],
+  thirteenth: {
+    leftQual: ["Samford", "148.50", "Elon", "161.95"],
+    rightQual: ["Nicholls", "183.80", "Carolina", "194.20"],
+    final: ["Elon", "252.40", "Carolina", "250.45"],
+  },
+  fifteenth: ["Samford", "171.40", "Nicholls", "196.65"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // Which tiers render a live R3 bracket. SEC first as the test run; the others
 // need their own short-name check before being added.
 const R3_LIVE = {
@@ -6275,6 +6430,9 @@ const GRID_BRACKETS = {
   2024: {
     FLHS: { playoffs: FLHS_2024_PLAYOFFS, consolation: FLHS_2024_CONSOLATION },
     GLIAC: { playoffs: GLIAC_2024_PLAYOFFS, consolation: GLIAC_2024_CONSOLATION },
+    SWAC: { playoffs: SWAC_2024_PLAYOFFS, consolation: SWAC_2024_CONSOLATION },
+    IVY: { playoffs: IVY_2024_PLAYOFFS, consolation: IVY_2024_CONSOLATION },
+    SOCO: { playoffs: SOCO_2024_PLAYOFFS, consolation: SOCO_2024_CONSOLATION },
   },
 };
 
