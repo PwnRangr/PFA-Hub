@@ -9416,8 +9416,18 @@ export default function App() {
         winPct: parseNum(s["Win %"]),
         totalPts: parseNum(s["Total Points"]),
         record: s["Record"],
-        maxPts: match ? dirEntry.maxPts : undefined,
-        rosterId: match ? dirEntry.rosterId : undefined,
+        maxPts: dirEntry ? dirEntry.maxPts : undefined,
+        rosterId: dirEntry ? dirEntry.rosterId : undefined,
+        // Separate from `tierKey` above on purpose: `tierKey` follows
+        // `chosen` (which can fall back to a PAST tier's stats entry when
+        // there's no CAREER_STATS row for the coach's current tier yet —
+        // e.g. anyone promoted/demoted since their last logged season,
+        // which is most of the Alliance right after an off-season). This
+        // field is always their real, live, CURRENT tier from
+        // coachDirectory — what the manual penalty form actually keys
+        // entries by — so the Season CP hover below matches correctly
+        // even for a row whose displayed stats are a past-tier fallback.
+        currentTierKey: dirEntry ? dirEntry.tierKey : undefined,
       };
     });
   }, [coachDirectory, liveCoachStats]);
@@ -11131,7 +11141,7 @@ export default function App() {
                       </td>
                       <td className="px-3 py-2 text-center relative">
                         {(() => {
-                          const mods = modifiersByRosterKey[`${r.tierKey}_${CURRENT_SEASON}_${r.rosterId}`];
+                          const mods = modifiersByRosterKey[`${r.currentTierKey || r.tierKey}_${CURRENT_SEASON}_${r.rosterId}`];
                           const cpText = r.currentCP === -Infinity ? "—" : `${r.currentCP >= 0 ? "+" : ""}${fmt(r.currentCP)}`;
                           const cpColor = r.currentCP === -Infinity ? C.chalk : r.currentCP > 0 ? C.turf : r.currentCP < 0 ? C.ember : C.slate;
                           if (!mods || !mods.entries.length) {
