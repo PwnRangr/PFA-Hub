@@ -442,6 +442,50 @@ export function watchStreakBonusesLive(cb) {
   return () => unsub();
 }
 
+// ── Manual Coach Penalties/Bonuses ──
+// Unlike streakBonusesLive above (deterministic key, one doc per paying
+// week), these are entered one at a time by an admin for real-life-conduct
+// reasons the site has no way to detect automatically — no natural "one
+// per X" key, so same addDoc/auto-ID shape as chat above, not a setDoc key.
+// entry shape: { tierKey, year, rosterId, coach, team, points, description,
+// addedBy, addedAt }. `points` carries its own sign (negative = penalty,
+// positive = bonus) — the UI presents them as two separate actions, but
+// they're the same collection underneath.
+export function watchManualPenalties(cb) {
+  if (!firebaseReady) {
+    cb(localGet("pfa-manual-penalties") || []);
+    return () => {};
+  }
+  let unsub = () => {};
+  ensureDb().then(() => {
+    unsub = fs.onSnapshot(fs.collection(db, "manualPenalties"), (snap) => cb(snap.docs.map((d) => ({ ...d.data(), id: d.id }))));
+  });
+  return () => unsub();
+}
+
+export async function addManualPenalty(entry) {
+  if (!firebaseReady) {
+    const withId = { ...entry, id: `local-${Date.now()}-${Math.random().toString(36).slice(2)}` };
+    const all = (localGet("pfa-manual-penalties") || []).concat(withId);
+    localSet("pfa-manual-penalties", all);
+    return all;
+  }
+  await ensureDb();
+  await fs.addDoc(fs.collection(db, "manualPenalties"), entry);
+  return null;
+}
+
+export async function removeManualPenalty(id) {
+  if (!firebaseReady) {
+    const all = (localGet("pfa-manual-penalties") || []).filter((p) => p.id !== id);
+    localSet("pfa-manual-penalties", all);
+    return all;
+  }
+  await ensureDb();
+  await fs.deleteDoc(fs.doc(db, "manualPenalties", id));
+  return null;
+}
+
 // ── 4000 Club (live, auto-detected) ──
 // Same shape as club300Live above, but the "score" being checked is a
 // roster's SEASON total (Sleeper's own running fpts/fpts_decimal — the

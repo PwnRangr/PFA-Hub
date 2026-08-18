@@ -31,6 +31,9 @@ import {
   markClub4000ProcessedYear,
   addStreakBonusEntry,
   watchStreakBonusesLive,
+  addManualPenalty,
+  removeManualPenalty,
+  watchManualPenalties,
   getTournamentSeeds,
   setTournamentSeeds,
   getUflProBowlSeeds,
@@ -7698,6 +7701,7 @@ export default function App() {
   const [club300Live, setClub300Live] = useState([]);
   const [club4000Live, setClub4000Live] = useState([]);
   const [streakBonusesLive, setStreakBonusesLive] = useState([]);
+  const [manualPenalties, setManualPenalties] = useState([]);
   const [weeklyAwardsSeason, setWeeklyAwardsSeason] = useState(CURRENT_SEASON);
   const [weeklyAwardsWeek, setWeeklyAwardsWeek] = useState(null);
   const [weeklyAwardsLoading, setWeeklyAwardsLoading] = useState(false);
@@ -8387,6 +8391,7 @@ export default function App() {
     const unsubClub300 = watchClub300Live((entries) => setClub300Live(entries));
     const unsubClub4000 = watchClub4000Live((entries) => setClub4000Live(entries));
     const unsubStreakBonuses = watchStreakBonusesLive((entries) => setStreakBonusesLive(entries));
+    const unsubManualPenalties = watchManualPenalties((entries) => setManualPenalties(entries));
     const unsubHireTimers = watchHireTimers((timers) => setHireTimers(timers));
     return () => {
       unsubChat();
@@ -8396,6 +8401,7 @@ export default function App() {
       unsubClub300();
       unsubClub4000();
       unsubStreakBonuses();
+      unsubManualPenalties();
       unsubHireTimers();
     };
   }, []);
@@ -9435,6 +9441,53 @@ export default function App() {
   const toggleCoachSort = (key) => {
     setCoachSort((prev) => (prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" }));
   };
+
+  // ── Manual Coach Penalties/Bonuses (Admin → Penalties tab) ──
+  // rosterKey ties a form selection to one of THIS season's assigned
+  // coaches (coachDirectory, defined above) — real-life-conduct items only
+  // make sense against a live roster, not a past season's.
+  const [penaltyForm, setPenaltyForm] = useState({ rosterKey: "", type: "penalty", points: "", description: "" });
+
+  const submitManualPenalty = async () => {
+    const [tierKey, rosterIdStr] = penaltyForm.rosterKey.split("|");
+    const rosterId = Number(rosterIdStr);
+    const dirEntry = coachDirectory.find((c) => c.tierKey === tierKey && c.rosterId === rosterId);
+    const magnitude = Math.abs(parseFloat(penaltyForm.points));
+    if (!dirEntry || !Number.isFinite(magnitude) || magnitude === 0 || !penaltyForm.description.trim()) return;
+    const entry = {
+      tierKey,
+      year: CURRENT_SEASON,
+      rosterId,
+      coach: dirEntry.name,
+      team: dirEntry.team,
+      points: penaltyForm.type === "penalty" ? -magnitude : magnitude,
+      description: penaltyForm.description.trim(),
+      addedBy: currentUser?.name || currentUser?.email || "—",
+      addedAt: Date.now(),
+    };
+    const local = await addManualPenalty(entry).catch(() => null);
+    if (local) setManualPenalties(local);
+    setPenaltyForm({ rosterKey: "", type: "penalty", points: "", description: "" });
+  };
+
+  const handleRemovePenalty = async (id) => {
+    const local = await removeManualPenalty(id).catch(() => null);
+    if (local) setManualPenalties(local);
+  };
+
+  // {tierKey_year_rosterId -> {net, entries}} — the Coaches tab hover reads
+  // this to show what's behind a coach's modifier total without re-scanning
+  // the full manualPenalties list on every render.
+  const modifiersByRosterKey = useMemo(() => {
+    const map = {};
+    manualPenalties.forEach((p) => {
+      const key = `${p.tierKey}_${p.year}_${p.rosterId}`;
+      if (!map[key]) map[key] = { net: 0, entries: [] };
+      map[key].net += p.points;
+      map[key].entries.push(p);
+    });
+    return map;
+  }, [manualPenalties]);
 
   const findCoachAvatar = (name) => {
     const hit = coachDirectory.find((c) => c.name.toLowerCase() === (name || "").toLowerCase());
@@ -11076,11 +11129,36 @@ export default function App() {
                       >
                         {r.promotionScore === -Infinity ? "—" : `${r.promotionScore >= 0 ? "+" : ""}${fmt(r.promotionScore)}`}
                       </td>
-                      <td
-                        className="px-3 py-2 text-center"
-                        style={{ color: r.currentCP === -Infinity ? C.chalk : r.currentCP > 0 ? C.turf : r.currentCP < 0 ? C.ember : C.slate }}
-                      >
-                        {r.currentCP === -Infinity ? "—" : `${r.currentCP >= 0 ? "+" : ""}${fmt(r.currentCP)}`}
+                      <td className="px-3 py-2 text-center relative">
+                        {(() => {
+                          const mods = modifiersByRosterKey[`${r.tierKey}_${CURRENT_SEASON}_${r.rosterId}`];
+                          const cpText = r.currentCP === -Infinity ? "—" : `${r.currentCP >= 0 ? "+" : ""}${fmt(r.currentCP)}`;
+                          const cpColor = r.currentCP === -Infinity ? C.chalk : r.currentCP > 0 ? C.turf : r.currentCP < 0 ? C.ember : C.slate;
+                          if (!mods || !mods.entries.length) {
+                            return <span style={{ color: cpColor }}>{cpText}</span>;
+                          }
+                          return (
+                            <span className="group relative inline-block cursor-help" style={{ color: cpColor, borderBottom: `1px dotted ${C.slate}` }}>
+                              {cpText}
+                              <span
+                                className="invisible group-hover:visible absolute z-10 left-1/2 top-full mt-1 w-64 rounded-sm p-3 text-left normal-case"
+                                style={{ transform: "translateX(-50%)", background: C.ink, border: `1px solid ${C.line}`, fontFamily: "'Barlow', sans-serif" }}
+                              >
+                                <div className="text-xs uppercase tracking-wider mb-1.5" style={{ color: C.slate }}>
+                                  Manual modifiers (net {mods.net >= 0 ? "+" : ""}{mods.net}) — Season CP itself is sheet-fed, not adjusted here
+                                </div>
+                                {mods.entries.map((e) => (
+                                  <div key={e.id} className="text-xs mb-1 last:mb-0" style={{ color: C.chalk }}>
+                                    <span style={{ color: e.points >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
+                                      {e.points >= 0 ? "+" : ""}{e.points}
+                                    </span>{" "}
+                                    {e.description}
+                                  </div>
+                                ))}
+                              </span>
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-2 text-center" style={{ color: C.gold, fontWeight: 600 }}>
                         {r.cp === -Infinity ? "—" : fmt(r.cp)}
@@ -12012,6 +12090,7 @@ export default function App() {
             <div className="flex gap-1.5 mb-6">
               {[
                 ["applications", "Applications"],
+                ["penalties", "Penalties"],
                 ["users", "Users"],
               ].map(([id, label]) => (
                 <button
@@ -12221,6 +12300,144 @@ export default function App() {
                 {backfillRunning ? "Running…" : "Backfill 2024/2025 Streak Bonuses"}
               </button>
             </div>
+            {adminSubTab === "penalties" && (
+              <section className="mb-8">
+                <h3 className="text-xl uppercase leading-none mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
+                  Manual Penalties &amp; Bonuses
+                </h3>
+                <p className="text-sm mb-4" style={{ color: C.slate }}>
+                  For real-life conduct issues the site has no way to detect on its own — everything else on the
+                  Rules page's X Points and Penalties tables either comes from the live sheet feed or is
+                  calculated automatically. Every entry here needs a description; it shows on hover over that
+                  coach's Season CP on the Coaches tab.
+                </p>
+
+                <div
+                  className="grid gap-3 mb-6"
+                  style={{ gridTemplateColumns: "1fr auto auto", alignItems: "start", background: C.panel, border: `1px solid ${C.line}`, borderRadius: 6, padding: 14 }}
+                >
+                  <select
+                    value={penaltyForm.rosterKey}
+                    onChange={(e) => setPenaltyForm((f) => ({ ...f, rosterKey: e.target.value }))}
+                    className="px-2.5 py-2 text-sm rounded-sm"
+                    style={{ background: C.ink, border: `1px solid ${C.line}`, color: C.chalk, gridColumn: "1 / -1" }}
+                  >
+                    <option value="">Select a coach…</option>
+                    {[...coachDirectory]
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((c) => (
+                        <option key={`${c.tierKey}|${c.rosterId}`} value={`${c.tierKey}|${c.rosterId}`}>
+                          {c.name} — {c.team} ({c.tierKey})
+                        </option>
+                      ))}
+                  </select>
+
+                  <div className="flex gap-1.5" style={{ gridColumn: "1 / -1" }}>
+                    {[
+                      ["penalty", "Penalty (−)", C.ember],
+                      ["bonus", "Bonus (+)", C.turf],
+                    ].map(([id, label, color]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setPenaltyForm((f) => ({ ...f, type: id }))}
+                        className="px-3 py-1.5 text-xs uppercase tracking-widest rounded-sm"
+                        style={{
+                          fontWeight: 600,
+                          color: penaltyForm.type === id ? C.ink : C.slate,
+                          background: penaltyForm.type === id ? color : "transparent",
+                          border: `1px solid ${penaltyForm.type === id ? color : C.line}`,
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="Points"
+                      value={penaltyForm.points}
+                      onChange={(e) => setPenaltyForm((f) => ({ ...f, points: e.target.value }))}
+                      className="px-2.5 py-1.5 text-sm rounded-sm w-24"
+                      style={{ background: C.ink, border: `1px solid ${C.line}`, color: C.chalk, fontFamily: "'IBM Plex Mono', monospace" }}
+                    />
+                  </div>
+
+                  <textarea
+                    value={penaltyForm.description}
+                    onChange={(e) => setPenaltyForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Description (required — this is what shows on hover)"
+                    rows={2}
+                    className="px-2.5 py-2 text-sm rounded-sm"
+                    style={{ background: C.ink, border: `1px solid ${C.line}`, color: C.chalk, gridColumn: "1 / -1", resize: "vertical" }}
+                  />
+
+                  <button
+                    onClick={submitManualPenalty}
+                    disabled={!penaltyForm.rosterKey || !penaltyForm.points || !penaltyForm.description.trim()}
+                    className="px-4 py-2 text-xs uppercase tracking-widest rounded-sm"
+                    style={{
+                      fontWeight: 600,
+                      gridColumn: "1 / -1",
+                      justifySelf: "start",
+                      background: C.gold,
+                      color: C.ink,
+                      border: `1px solid ${C.gold}`,
+                      opacity: !penaltyForm.rosterKey || !penaltyForm.points || !penaltyForm.description.trim() ? 0.5 : 1,
+                      cursor: !penaltyForm.rosterKey || !penaltyForm.points || !penaltyForm.description.trim() ? "default" : "pointer",
+                    }}
+                  >
+                    Add Entry
+                  </button>
+                </div>
+
+                {manualPenalties.length === 0 ? (
+                  <div className="text-sm" style={{ color: C.slate }}>No manual entries yet.</div>
+                ) : (
+                  <div className="overflow-x-auto rounded-sm" style={{ border: `1px solid ${C.line}` }}>
+                    <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ background: C.panel, color: C.slate }}>
+                          {["Coach", "Team", "Tier", "Points", "Description", "Added", ""].map((h) => (
+                            <th key={h} className="px-3 py-2 text-xs uppercase tracking-wider text-left" style={{ fontWeight: 500 }}>
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                        {[...manualPenalties]
+                          .sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0))
+                          .map((p) => (
+                            <tr key={p.id} style={{ borderTop: `1px solid ${C.line}` }}>
+                              <td className="px-3 py-2 whitespace-nowrap" style={{ fontFamily: "'Barlow', sans-serif" }}>{p.coach}</td>
+                              <td className="px-3 py-2 whitespace-nowrap" style={{ fontFamily: "'Barlow', sans-serif", color: C.slate }}>{p.team}</td>
+                              <td className="px-3 py-2 uppercase text-xs" style={{ color: C.gold }}>{p.tierKey}</td>
+                              <td className="px-3 py-2 whitespace-nowrap" style={{ color: p.points >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
+                                {p.points >= 0 ? "+" : ""}{p.points}
+                              </td>
+                              <td className="px-3 py-2" style={{ fontFamily: "'Barlow', sans-serif", color: C.chalk }}>{p.description}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-xs" style={{ color: C.slate }}>
+                                {p.addedAt ? new Date(p.addedAt).toLocaleDateString() : "—"}
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap text-right">
+                                <button
+                                  onClick={() => handleRemovePenalty(p.id)}
+                                  className="text-xs uppercase tracking-wider"
+                                  style={{ color: C.ember }}
+                                >
+                                  Remove
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            )}
             {adminSubTab === "users" && <AdminPanel currentUser={currentUser} />}
           </>
         )}
