@@ -754,6 +754,15 @@ const C = {
   ember: "#D4604C",
 };
 
+// Genuinely fixed colors — NOT part of the C object, so the rotating
+// accent theme (which mutates C.gold/C.goldDim directly, see THEME_PALETTE
+// below) can never touch these. Per her request 2026-08-18: the champion
+// box/label should always read as gold regardless of the site's current
+// rotation color, and the Relegation Bowl footer should always be
+// red/white/yellow, not whatever the rotation happens to be showing.
+const TROPHY_GOLD = "#E8A33D"; // same value as the rotation's own "amber (the original)" entry
+const BRIGHT_YELLOW = "#FFEB3B";
+
 // ── Rotating accent theme ───────────────────────────────────────────────
 // The site's one accent color (C.gold/C.goldDim -- active tabs, buttons,
 // seed-number highlighting, borders, etc. throughout the whole file, ~94
@@ -2543,7 +2552,7 @@ function BracketBox({ x, y, entry, seed, highlight }) {
   // Championship games auto-highlight gold; the fired/last-place game is
   // flagged explicitly by whichever parent bracket knows it's the last one.
   const mode = highlight || (entry === "Championship" ? "champion" : null);
-  const boxStroke = mode === "champion" ? C.gold : mode === "fired" ? C.ember : C.line;
+  const boxStroke = mode === "champion" ? TROPHY_GOLD : mode === "fired" ? C.ember : C.line;
   const boxFill = mode === "champion" ? "rgba(232,163,61,0.14)" : mode === "fired" ? "rgba(212,96,76,0.14)" : C.panel;
 
   return (
@@ -3033,7 +3042,7 @@ function GridBracket({ data }) {
                 <>
                   <div style={{
                     position: "absolute", left: 448, top: s.champion.y - 22, width: BW, textAlign: "center",
-                    fontSize: 10, fontWeight: 700, letterSpacing: "0.15em", color: C.gold, textTransform: "uppercase",
+                    fontSize: 10, fontWeight: 700, letterSpacing: "0.15em", color: TROPHY_GOLD, textTransform: "uppercase",
                   }}>{s.champion.label}</div>
                   {/* GBox is position:absolute, so it contributes no height --
                       this wrapper used to collapse to its own 4px border and the
@@ -3043,7 +3052,7 @@ function GridBracket({ data }) {
                   <div style={{
                     position: "absolute", left: 448 - 2, top: s.champion.y - 2, width: BW + 4,
                     height: BH + (s.champion.sub ? BH : 0) + 4,
-                    border: `2px solid ${C.gold}`, borderRadius: 3, overflow: "hidden",
+                    border: `2px solid ${TROPHY_GOLD}`, borderRadius: 3, overflow: "hidden",
                     boxSizing: "border-box",
                   }}>
                     <GBox x={0} y={0} team={s.champion.team} colors={data.colors} />
@@ -3051,7 +3060,7 @@ function GridBracket({ data }) {
                       <div style={{
                         position: "absolute", left: 0, top: BH, width: BW,
                         height: BH, lineHeight: `${BH}px`, fontSize: 10, textAlign: "center",
-                        background: "rgba(232,163,61,0.12)", color: C.gold, fontWeight: 700,
+                        background: "rgba(232,163,61,0.12)", color: TROPHY_GOLD, fontWeight: 700,
                       }}>{s.champion.sub}</div>
                     )}
                   </div>
@@ -3060,10 +3069,10 @@ function GridBracket({ data }) {
               {s.footer && (
                 <div style={{
                   position: "absolute", left: s.footer[0], top: s.footer[1], width: s.footer[2],
-                  padding: "5px 0", textAlign: "center", background: C.gold, borderRadius: 3,
+                  padding: "5px 0", textAlign: "center", background: C.ember, borderRadius: 3,
                 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.ink }}>{s.footer[3]}</div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#7A3B00" }}>{s.footer[4]}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.chalk }}>{s.footer[3]}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: BRIGHT_YELLOW }}>{s.footer[4]}</div>
                 </div>
               )}
             </div>
@@ -10488,7 +10497,7 @@ export default function App() {
                   <div className="space-y-6">
                     {standingsGroups.groups.map((conf) => (
                       <div key={conf.name}>
-                        <div className="text-sm font-semibold mb-2" style={{ color: C.gold }}>{conf.name}</div>
+                        <div className="text-sm font-semibold mb-2" style={{ color: C.chalk }}>{conf.name}</div>
                         <div className="grid md:grid-cols-2 gap-4">
                           {conf.divisions.map((div) => (
                             <div key={div.name}>
@@ -10573,7 +10582,7 @@ export default function App() {
                     </div>
                     {groups.map((g) => (
                       <div key={g.key}>
-                        <div className="text-sm font-semibold mb-2" style={{ color: C.gold }}>
+                        <div className="text-sm font-semibold mb-2" style={{ color: C.chalk }}>
                           {g.label} {g.key === "playoffs" ? `— ranks 1–${half}` : `— ranks ${half + 1}–${order.length}`}
                         </div>
                         {GRID_BRACKETS[standingsSeason] && GRID_BRACKETS[standingsSeason][tierKey] ? (
@@ -10626,11 +10635,11 @@ export default function App() {
                     </p>
                   </div>
                   <div>
-                    <div className="text-sm font-semibold mb-2" style={{ color: C.gold }}>Championship — ranks 1–{tier.size / 2}</div>
+                    <div className="text-sm font-semibold mb-2" style={{ color: C.chalk }}>Championship — ranks 1–{tier.size / 2}</div>
                     <GridBracket data={liveGrid.playoffs} />
                   </div>
                   <div>
-                    <div className="text-sm font-semibold mb-2" style={{ color: C.gold }}>Consolation — ranks {tier.size / 2 + 1}–{tier.size}</div>
+                    <div className="text-sm font-semibold mb-2" style={{ color: C.chalk }}>Consolation — ranks {tier.size / 2 + 1}–{tier.size}</div>
                     <GridBracket data={liveGrid.consolation} />
                   </div>
                 </div>
@@ -10648,7 +10657,7 @@ export default function App() {
                   {bracket.format === "division-playin" ? (
                     <div className="space-y-8">
                       <div>
-                        <div className="text-sm font-semibold mb-2" style={{ color: C.gold }}>Championship — ranks 1–10</div>
+                        <div className="text-sm font-semibold mb-2" style={{ color: C.chalk }}>Championship — ranks 1–10</div>
                         <USFLXFLBracket
                           seeds={bracket.seeds}
                           rankLabels={["Championship", "3rd Place", "5th Place", "7th Place", "9th Place"]}
@@ -10656,7 +10665,7 @@ export default function App() {
                       </div>
                       {bracket.consolation && bracket.consolation.length > 0 && (
                         <div>
-                          <div className="text-sm font-semibold mb-2" style={{ color: C.gold }}>Consolation — ranks 11–20</div>
+                          <div className="text-sm font-semibold mb-2" style={{ color: C.chalk }}>Consolation — ranks 11–20</div>
                           <USFLXFLBracket
                             seeds={bracket.consolation}
                             rankLabels={["11th Place", "13th Place", "15th Place", "17th Place", "19th Place"]}
@@ -10668,7 +10677,7 @@ export default function App() {
                   ) : bracket.format === "conference-top4" ? (
                     <div className="space-y-8">
                       <div>
-                        <div className="text-sm font-semibold mb-2" style={{ color: C.gold }}>Playoffs — ranks 1–8</div>
+                        <div className="text-sm font-semibold mb-2" style={{ color: C.chalk }}>Playoffs — ranks 1–8</div>
                         <MirroredPlacementBracket
                           east={bracket.playoffGroup.east}
                           west={bracket.playoffGroup.west}
@@ -10678,7 +10687,7 @@ export default function App() {
                         />
                       </div>
                       <div>
-                        <div className="text-sm font-semibold mb-2" style={{ color: C.gold }}>Consolation — ranks 9–16</div>
+                        <div className="text-sm font-semibold mb-2" style={{ color: C.chalk }}>Consolation — ranks 9–16</div>
                         <MirroredPlacementBracket
                           east={bracket.consolationGroup.east}
                           west={bracket.consolationGroup.west}
@@ -10692,7 +10701,7 @@ export default function App() {
                   ) : bracket.format === "conference-division" ? (
                     <div className="space-y-8">
                       <div>
-                        <div className="text-sm font-semibold mb-2" style={{ color: C.gold }}>Playoffs</div>
+                        <div className="text-sm font-semibold mb-2" style={{ color: C.chalk }}>Playoffs</div>
                         <NFLBracket
                           east={bracket.playoffGroup.east}
                           west={bracket.playoffGroup.west}
@@ -10702,7 +10711,7 @@ export default function App() {
                         />
                       </div>
                       <div>
-                        <div className="text-sm font-semibold mb-2" style={{ color: C.gold }}>Consolation</div>
+                        <div className="text-sm font-semibold mb-2" style={{ color: C.chalk }}>Consolation</div>
                         <NFLBracket
                           east={bracket.consolationGroup.east}
                           west={bracket.consolationGroup.west}
@@ -10716,14 +10725,14 @@ export default function App() {
                   ) : bracket.format === "top8-cascade" || bracket.format === "division-only" ? (
                     <div className="space-y-8">
                       <div>
-                        <div className="text-sm font-semibold mb-2" style={{ color: C.gold }}>Championship — ranks 1–8</div>
+                        <div className="text-sm font-semibold mb-2" style={{ color: C.chalk }}>Championship — ranks 1–8</div>
                         <SingleBracket8
                           seeds={bracket.playoffSeeds}
                           rankLabels={["Championship", "3rd Place", "5th Place", "7th Place"]}
                         />
                       </div>
                       <div>
-                        <div className="text-sm font-semibold mb-2" style={{ color: C.gold }}>Consolation — ranks 9–16</div>
+                        <div className="text-sm font-semibold mb-2" style={{ color: C.chalk }}>Consolation — ranks 9–16</div>
                         <SingleBracket8
                           seeds={bracket.consolationSeeds}
                           rankLabels={["9th Place", "11th Place", "13th Place", "15th Place"]}
