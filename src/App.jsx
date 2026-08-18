@@ -268,6 +268,19 @@ const HISTORICAL_FINAL_ORDER = {
       "Ole Miss", "Missouri", "Kentucky", "Alabama", "Vanderbilt", "Tennessee", "Oklahoma", "Florida",
       "South Carolina", "Miss State", "Georgia", "Arkansas", "LSU", "Texas", "Auburn", "Texas A&M",
     ],
+    // Fifth batch — USFL/XFL, 20-team leagues (not 16), transcribed from her
+    // PFA_Playoffs_2024 CSV exports, confirmed 2026-08-17. Ranks 9/10 and
+    // 19/20 come from the 3-week points series, not a single game.
+    USFL: [
+      "Denver", "Detroit", "Pittsburgh", "Birmingham", "Memphis", "San Antonio", "Los Angeles", "Orlando",
+      "Houston", "Washington", "Boston", "Philadelphia", "Oklahoma", "New Jersey", "Tampa Bay", "Oakland",
+      "Arizona", "Chicago", "Michigan", "Jacksonville",
+    ],
+    XFL: [
+      "Houston", "Birmingham", "Seattle", "Tampa Bay", "Orlando", "Omaha", "Memphis", "Chicago",
+      "St Louis", "Dallas", "DC", "LAW", "Atlanta", "Boston", "New York", "San Francisco",
+      "Las Vegas", "New Jersey", "Brooklyn", "LAX",
+    ],
   },
 };
 
@@ -5715,6 +5728,194 @@ const SEC_2024_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2024 USFL, ranks 1-10 (championship half) ------------------------------
+// Transcribed from her PFA_Playoffs_2024 - USFL.csv export, confirmed
+// 2026-08-17. Same 20-team shape as the 2025 data: a Week 14 play-in feeds
+// the top game of the winners' bracket; the two play-in losers instead play
+// a 3-week points series deciding 9th/10th.
+const USFL_2024_PLAYOFFS = {
+  colors: USFL_CLR, logoSrc: USFL_MARK,
+  sections: [
+    {
+      banners: USFL_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "USFL",
+      slots: [[448, 4, 100, 84, "Trophy", USFL_TROPHY], [448, 200, 100, 96, "PFA", PFA_MARK]],
+      champion: { y: 114, label: "Champion", team: r3Winner(["Denver", "235.40", "Detroit", "159.30"]), sub: "1st place" },
+      boxes: usflXflMainBoxes({
+        playInLeft: ["Birmingham", "199.80", "Washington", "195.30"],
+        byeTop: ["Orlando", "172.90", "Birmingham", "239.85"],
+        byeBot: ["Denver", "254.30", "Memphis", "249.60"],
+        semiLeft: ["Birmingham", "208.70", "Denver", "211.15"],
+        final: ["Denver", "235.40", "Detroit", "159.30"],
+        semiRight: ["Detroit", "222.20", "Pittsburgh", "173.45"],
+        byeTopR: ["Detroit", "229.35", "Los Angeles", "156.00"],
+        byeBotR: ["San Antonio", "187.55", "Pittsburgh", "224.90"],
+        playInRight: ["Los Angeles", "202.70", "Houston", "145.30"],
+      }),
+    },
+    {
+      h: 420,
+      paths: USFLXFL_PLACE_PATHS_LIVE,
+      boxes: [
+        ...r3Split(336, 33, 560, 33, ["Birmingham", "255.90", "Pittsburgh", "286.10"]),
+        ...r3Stack(224, 95, ["Orlando", "211.20", "Memphis", "324.90"]),
+        ...r3Stack(672, 95, ["Los Angeles", "157.45", "San Antonio", "229.00"]),
+        ...r3Split(336, 114, 560, 114, ["Memphis", "241.60", "San Antonio", "228.05"]),
+        ...r3Split(336, 209, 560, 209, ["Orlando", "173.75", "Los Angeles", "180.45"]),
+        [112, 360, "Washington", "175.05"], [784, 360, "Houston", "235.70"],
+      ],
+      series: [
+        [224, 341, "396.05", "Washington", "221.00"], [336, 341, "586.35", "Washington", "190.30", 0, true],
+        [560, 341, "722.9", "Houston", "270.40", 1, true], [672, 341, "452.5", "Houston", "216.80"],
+      ],
+      winners: [
+        [448, 14, "Pittsburgh"], [448, 95, "Memphis"],
+        [448, 190, "Los Angeles"], [448, 341, "Houston"],
+      ],
+      places: USFLXFL_CHAMP_PLACES,
+    },
+  ],
+};
+
+// --- 2024 USFL, ranks 11-20 (consolation half) -------------------------------
+const USFL_2024_CONSOLATION = {
+  colors: USFL_CLR, logoSrc: USFL_MARK,
+  sections: [
+    {
+      banners: USFL_CONSO_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "USFL",
+      slots: [[448, 226, 100, 70, "PFA", PFA_MARK]],
+      winners: [[448, 95, r3Winner(["Boston", "260.65", "Philadelphia", "177.50"])]],
+      places: [[448, 114, "3rd pick", "11th place"]],
+      boxes: usflXflMainBoxes({
+        playInLeft: ["Tampa Bay", "187.50", "Michigan", "169.65"],
+        byeTop: ["Boston", "259.30", "Tampa Bay", "197.60"],
+        byeBot: ["Arizona", "155.30", "Oklahoma", "195.65"],
+        semiLeft: ["Boston", "195.25", "Oklahoma", "150.00"],
+        final: ["Boston", "260.65", "Philadelphia", "177.50"],
+        semiRight: ["Philadelphia", "207.45", "New Jersey", "179.00"],
+        byeTopR: ["Chicago", "134.70", "Philadelphia", "199.85"],
+        byeBotR: ["New Jersey", "212.70", "Oakland", "169.10"],
+        playInRight: ["Jacksonville", "143.10", "Philadelphia", "170.85"],
+      }),
+    },
+    {
+      h: 470,
+      paths: USFLXFL_PLACE_PATHS_LIVE,
+      boxes: [
+        ...r3Split(336, 33, 560, 33, ["Oklahoma", "228.45", "New Jersey", "205.85"]),
+        ...r3Stack(224, 95, ["Tampa Bay", "162.50", "Arizona", "153.90"]),
+        ...r3Stack(672, 95, ["Chicago", "149.30", "Oakland", "200.40"]),
+        ...r3Split(336, 114, 560, 114, ["Tampa Bay", "174.25", "Oakland", "143.10"]),
+        ...r3Split(336, 209, 560, 209, ["Arizona", "190.00", "Chicago", "105.10"]),
+        [112, 360, "Michigan", "150.20"], [784, 360, "Jacksonville", "185.55"],
+      ],
+      series: [
+        [224, 341, "318.8", "Michigan", "168.60"], [336, 341, "512.55", "Michigan", "193.75", 1, true],
+        [560, 341, "498.2", "Jacksonville", "155.75", 0, true], [672, 341, "342.45", "Jacksonville", "156.90"],
+      ],
+      winners: [
+        [448, 14, "Oklahoma"], [448, 95, "Tampa Bay"],
+        [448, 190, "Arizona"], [448, 341, "Michigan"],
+      ],
+      places: USFLXFL_CONSO_PLACES,
+      footer: [112, 420, 772, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+    },
+  ],
+};
+
+// --- 2024 XFL, ranks 1-10 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2024 - XFL.csv export, confirmed
+// 2026-08-17. Note: the qualifying game deciding who'd play for 5th was a
+// 0.45-point margin (Orlando 218.10 over Memphis 217.65) — flagged to her,
+// confirmed correct as transcribed.
+const XFL_2024_PLAYOFFS = {
+  colors: XFL_CLR, logoSrc: XFL_MARK,
+  sections: [
+    {
+      banners: XFL_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "XFL",
+      slots: [[448, 4, 100, 84, "Trophy", XFL_TROPHY], [448, 200, 100, 96, "PFA", PFA_MARK]],
+      champion: { y: 114, label: "Champion", team: r3Winner(["Houston", "283.90", "Birmingham", "205.50"]), sub: "1st place" },
+      boxes: usflXflMainBoxes({
+        playInLeft: ["St Louis", "183.80", "Seattle", "234.85"],
+        byeTop: ["Chicago", "192.70", "Seattle", "290.15"],
+        byeBot: ["Omaha", "178.60", "Houston", "268.90"],
+        semiLeft: ["Seattle", "201.10", "Houston", "242.70"],
+        final: ["Houston", "283.90", "Birmingham", "205.50"],
+        semiRight: ["Tampa Bay", "141.30", "Birmingham", "166.45"],
+        byeTopR: ["Orlando", "209.65", "Tampa Bay", "212.65"],
+        byeBotR: ["Memphis", "214.65", "Birmingham", "221.30"],
+        playInRight: ["Tampa Bay", "200.50", "Dallas", "150.75"],
+      }),
+    },
+    {
+      h: 420,
+      paths: USFLXFL_PLACE_PATHS_LIVE,
+      boxes: [
+        ...r3Split(336, 33, 560, 33, ["Seattle", "229.00", "Tampa Bay", "211.80"]),
+        ...r3Stack(224, 95, ["Chicago", "226.60", "Omaha", "236.65"]),
+        ...r3Stack(672, 95, ["Orlando", "218.10", "Memphis", "217.65"]),
+        ...r3Split(336, 114, 560, 114, ["Omaha", "174.95", "Orlando", "236.25"]),
+        ...r3Split(336, 209, 560, 209, ["Chicago", "155.10", "Memphis", "194.00"]),
+        [112, 360, "St Louis", "236.30"], [784, 360, "Dallas", "227.45"],
+      ],
+      series: [
+        [224, 341, "438.85", "St Louis", "202.55"], [336, 341, "653.7", "St Louis", "214.85", 1, true],
+        [560, 341, "630.9", "Dallas", "194.85", 0, true], [672, 341, "436.05", "Dallas", "208.60"],
+      ],
+      winners: [
+        [448, 14, "Seattle"], [448, 95, "Orlando"],
+        [448, 190, "Memphis"], [448, 341, "St Louis"],
+      ],
+      places: USFLXFL_CHAMP_PLACES,
+    },
+  ],
+};
+
+// --- 2024 XFL, ranks 11-20 (consolation half) --------------------------------
+const XFL_2024_CONSOLATION = {
+  colors: XFL_CLR, logoSrc: XFL_MARK,
+  sections: [
+    {
+      banners: XFL_CONSO_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "XFL",
+      slots: [[448, 226, 100, 70, "PFA", PFA_MARK]],
+      winners: [[448, 95, r3Winner(["DC", "276.45", "LAW", "174.25"])]],
+      places: [[448, 114, "3rd pick", "11th place"]],
+      boxes: usflXflMainBoxes({
+        playInLeft: ["Brooklyn", "122.30", "San Francisco", "179.40"],
+        byeTop: ["DC", "263.60", "San Francisco", "155.15"],
+        byeBot: ["New Jersey", "107.60", "Atlanta", "206.35"],
+        semiLeft: ["DC", "271.40", "Atlanta", "152.00"],
+        final: ["DC", "276.45", "LAW", "174.25"],
+        semiRight: ["Boston", "213.70", "LAW", "240.05"],
+        byeTopR: ["Boston", "254.30", "New York", "179.60"],
+        byeBotR: ["LAW", "229.70", "Las Vegas", "180.55"],
+        playInRight: ["LAX", "107.20", "New York", "169.85"],
+      }),
+    },
+    {
+      h: 470,
+      paths: USFLXFL_PLACE_PATHS_LIVE,
+      boxes: [
+        ...r3Split(336, 33, 560, 33, ["Atlanta", "219.35", "Boston", "177.50"]),
+        ...r3Stack(224, 95, ["San Francisco", "176.50", "New Jersey", "174.80"]),
+        ...r3Stack(672, 95, ["New York", "208.65", "Las Vegas", "163.80"]),
+        ...r3Split(336, 114, 560, 114, ["San Francisco", "178.85", "New York", "235.45"]),
+        ...r3Split(336, 209, 560, 209, ["New Jersey", "138.50", "Las Vegas", "149.70"]),
+        [112, 360, "Brooklyn", "152.35"], [784, 360, "LAX", "140.85"],
+      ],
+      series: [
+        [224, 341, "335.7", "Brooklyn", "183.35"], [336, 341, "547.5", "Brooklyn", "211.80", 1, true],
+        [560, 341, "425.95", "LAX", "159.00", 0, true], [672, 341, "266.95", "LAX", "126.10"],
+      ],
+      winners: [
+        [448, 14, "Atlanta"], [448, 95, "New York"],
+        [448, 190, "Las Vegas"], [448, 341, "Brooklyn"],
+      ],
+      places: USFLXFL_CONSO_PLACES,
+      footer: [112, 420, 772, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+    },
+  ],
+};
+
 // Which tiers render a live R3 bracket. SEC first as the test run; the others
 // need their own short-name check before being added.
 const R3_LIVE = {
@@ -6749,6 +6950,8 @@ const GRID_BRACKETS = {
     ACC: { playoffs: ACC_2024_PLAYOFFS, consolation: ACC_2024_CONSOLATION },
     "BIG XII": { playoffs: XII_2024_PLAYOFFS, consolation: XII_2024_CONSOLATION },
     SEC: { playoffs: SEC_2024_PLAYOFFS, consolation: SEC_2024_CONSOLATION },
+    USFL: { playoffs: USFL_2024_PLAYOFFS, consolation: USFL_2024_CONSOLATION },
+    XFL: { playoffs: XFL_2024_PLAYOFFS, consolation: XFL_2024_CONSOLATION },
   },
 };
 
