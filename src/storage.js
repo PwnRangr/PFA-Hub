@@ -403,6 +403,45 @@ export function watchClub300Live(cb) {
   return () => unsub();
 }
 
+// ── Streak Bonuses (X Points, live/auto-computed) ──
+// Same shape as club300Live above: one doc per qualifying WEEK, not one doc
+// per roster-season. A roster on an 8-game win streak earns a bonus on
+// weeks 4 through 8 (5 separate paying weeks under the tiered table), so
+// each of those weeks is its own doc — deterministic key means re-running
+// the sweep (e.g. after a new week's games go final) just overwrites that
+// week's doc instead of duplicating it. Season totals are a SUM over every
+// doc matching a given {tierKey, year, rosterId}, computed by whoever reads
+// this collection (see watchStreakBonusesLive) rather than stored anywhere
+// separately, so there's never a stale cached total to fall out of sync.
+function streakBonusKey(tierKey, year, week, rosterId) {
+  return `${tierKey}_${year}_${week}_${rosterId}`;
+}
+
+export async function addStreakBonusEntry(tierKey, year, week, rosterId, entry) {
+  const key = streakBonusKey(tierKey, year, week, rosterId);
+  if (!firebaseReady) {
+    const all = localGet("pfa-streak-bonuses-live") || {};
+    all[key] = entry;
+    localSet("pfa-streak-bonuses-live", all);
+    return Object.values(all); // local fallback only; Firebase updates via watchStreakBonusesLive's snapshot
+  }
+  await ensureDb();
+  await fs.setDoc(fs.doc(db, "streakBonusesLive", key), entry);
+  return null;
+}
+
+export function watchStreakBonusesLive(cb) {
+  if (!firebaseReady) {
+    cb(Object.values(localGet("pfa-streak-bonuses-live") || {}));
+    return () => {};
+  }
+  let unsub = () => {};
+  ensureDb().then(() => {
+    unsub = fs.onSnapshot(fs.collection(db, "streakBonusesLive"), (snap) => cb(snap.docs.map((d) => d.data())));
+  });
+  return () => unsub();
+}
+
 // ── 4000 Club (live, auto-detected) ──
 // Same shape as club300Live above, but the "score" being checked is a
 // roster's SEASON total (Sleeper's own running fpts/fpts_decimal — the
