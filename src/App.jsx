@@ -242,6 +242,17 @@ const HISTORICAL_FINAL_ORDER = {
       "Martin", "Citadel", "Chattanooga", "E Tenn", "Belmont", "Mercer", "Austin Peay", "Jax State",
       "Murray State", "VMI", "Tenn State", "Tenn Tech", "Elon", "Carolina", "Nicholls", "Samford",
     ],
+    // Third batch — SUN/TEN, transcribed from her PFA_Playoffs_2024 CSV
+    // exports, confirmed 2026-08-17. Added here in the SAME session as
+    // GRID_BRACKETS this time (see the gotcha noted in the skill file).
+    SUN: [
+      "AK State", "Old Dominion", "App State", "Little Rock", "GA Southern", "Troy", "GA State", "Texas State",
+      "S Miss", "Arlington", "S Alabama", "Carolina", "Marshall", "ULM", "Louisiana", "JMU",
+    ],
+    TEN: [
+      "UCLA", "Northwestern", "Ohio State", "Penn State", "Cal", "Rutgers", "Purdue", "Wisconsin",
+      "Indiana", "Oregon", "Michigan", "USC", "Maryland", "Utah", "Illinois", "Washington",
+    ],
   },
 };
 
@@ -5424,6 +5435,106 @@ const SOCO_2024_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2024 SUN, ranks 1-8 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2024 - SUN.csv export, confirmed 2026-08-17.
+const SUN_2024_PLAYOFFS = r3ChampHalf({
+  colors: SUN_CLR, logo: "Sun Belt", logoSrc: SUN_MARK, trophy: SUN_TROPHY,
+  banners: SUN_BANNERS,
+  wk15: [
+    ["GA State", "207.60", "Old Dominion", "219.15"],
+    ["App State", "287.70", "GA Southern", "205.70"],
+    ["AK State", "222.20", "Troy", "204.35"],
+    ["Little Rock", "226.95", "Texas State", "192.00"],
+  ],
+  semis: [
+    ["Old Dominion", "198.50", "App State", "177.25"],
+    ["AK State", "236.70", "Little Rock", "208.30"],
+  ],
+  final: ["Old Dominion", "246.50", "AK State", "313.50"],
+  third: ["App State", "282.50", "Little Rock", "176.45"],
+  fifth: {
+    leftQual: ["GA State", "215.60", "GA Southern", "263.00"],
+    rightQual: ["Troy", "200.50", "Texas State", "123.85"],
+    final: ["GA Southern", "207.80", "Troy", "191.40"],
+  },
+  seventh: ["GA State", "243.70", "Texas State", "137.85"],
+});
+
+// --- 2024 SUN, ranks 9-16 (consolation half) --------------------------------
+const SUN_2024_CONSOLATION = r3ConsoHalf({
+  colors: SUN_CLR, logo: "Sun Belt", logoSrc: SUN_MARK,
+  banners: SUN_CONSO_BANNERS,
+  wk15: [
+    ["Arlington", "202.60", "Marshall", "174.05"],
+    ["Carolina", "236.85", "JMU", "100.80"],
+    ["S Alabama", "189.85", "Louisiana", "164.75"],
+    ["S Miss", "263.05", "ULM", "166.50"],
+  ],
+  semis: [
+    ["Arlington", "209.25", "Carolina", "205.80"],
+    ["S Alabama", "201.35", "S Miss", "283.00"],
+  ],
+  final: ["Arlington", "214.20", "S Miss", "263.20"],
+  eleventh: ["Carolina", "172.30", "S Alabama", "248.80"],
+  thirteenth: {
+    leftQual: ["Marshall", "154.00", "JMU", "111.50"],
+    rightQual: ["Louisiana", "166.55", "ULM", "227.25"],
+    final: ["Marshall", "169.55", "ULM", "167.35"],
+  },
+  fifteenth: ["JMU", "109.50", "Louisiana", "126.30"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
+// --- 2024 TEN, ranks 1-8 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2024 - TEN.csv export, confirmed 2026-08-17.
+const TEN_2024_PLAYOFFS = r3ChampHalf({
+  colors: TEN_CLR, logo: "B1G", logoSrc: TEN_MARK, trophy: TEN_TROPHY,
+  banners: TEN_BANNERS,
+  wk15: [
+    ["Northwestern", "263.75", "Wisconsin", "228.40"],
+    ["Rutgers", "225.80", "Penn State", "290.05"],
+    ["Ohio State", "261.60", "Purdue", "162.20"],
+    ["Cal", "179.65", "UCLA", "235.80"],
+  ],
+  semis: [
+    ["Northwestern", "260.60", "Penn State", "230.50"],
+    ["Ohio State", "213.75", "UCLA", "288.10"],
+  ],
+  final: ["Northwestern", "228.45", "UCLA", "308.30"],
+  third: ["Penn State", "195.70", "Ohio State", "276.85"],
+  fifth: {
+    leftQual: ["Wisconsin", "157.35", "Rutgers", "222.95"],
+    rightQual: ["Purdue", "140.95", "Cal", "236.90"],
+    final: ["Rutgers", "134.55", "Cal", "246.95"],
+  },
+  seventh: ["Wisconsin", "198.20", "Purdue", "218.50"],
+});
+
+// --- 2024 TEN, ranks 9-16 (consolation half) --------------------------------
+const TEN_2024_CONSOLATION = r3ConsoHalf({
+  colors: TEN_CLR, logo: "B1G", logoSrc: TEN_MARK,
+  banners: TEN_CONSO_BANNERS,
+  wk15: [
+    ["Michigan", "178.20", "Utah", "172.00"],
+    ["Washington", "187.40", "Oregon", "216.05"],
+    ["Illinois", "156.80", "USC", "233.40"],
+    ["Maryland", "178.15", "Indiana", "192.00"],
+  ],
+  semis: [
+    ["Michigan", "146.25", "Oregon", "226.50"],
+    ["USC", "174.20", "Indiana", "227.00"],
+  ],
+  final: ["Oregon", "209.15", "Indiana", "225.80"],
+  eleventh: ["Michigan", "198.00", "USC", "185.50"],
+  thirteenth: {
+    leftQual: ["Utah", "163.40", "Washington", "142.50"],
+    rightQual: ["Illinois", "168.60", "Maryland", "186.50"],
+    final: ["Utah", "202.10", "Maryland", "223.35"],
+  },
+  fifteenth: ["Washington", "140.10", "Illinois", "156.70"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // Which tiers render a live R3 bracket. SEC first as the test run; the others
 // need their own short-name check before being added.
 const R3_LIVE = {
@@ -6453,6 +6564,8 @@ const GRID_BRACKETS = {
     SWAC: { playoffs: SWAC_2024_PLAYOFFS, consolation: SWAC_2024_CONSOLATION },
     IVY: { playoffs: IVY_2024_PLAYOFFS, consolation: IVY_2024_CONSOLATION },
     SOCO: { playoffs: SOCO_2024_PLAYOFFS, consolation: SOCO_2024_CONSOLATION },
+    SUN: { playoffs: SUN_2024_PLAYOFFS, consolation: SUN_2024_CONSOLATION },
+    TEN: { playoffs: TEN_2024_PLAYOFFS, consolation: TEN_2024_CONSOLATION },
   },
 };
 
