@@ -29,6 +29,8 @@ import {
   watchClub4000Live,
   getClub4000ProcessedYear,
   markClub4000ProcessedYear,
+  addStreakBonusEntry,
+  watchStreakBonusesLive,
   getTournamentSeeds,
   setTournamentSeeds,
   getUflProBowlSeeds,
@@ -1027,6 +1029,44 @@ const cpForPlace = (tKey, place) =>
     : place <= 10
     ? CHAMPION_CP_16[tKey] - CP_OFFSETS_1_10[place - 1]
     : CP_TAIL_16[place - 11];
+
+// ── X Points: win/loss streak bonuses ──
+// Per-game tiers confirmed with Lainey 2026-08-18:
+//   Wins:   4-7 -> +1/gm | 8-11 -> +2/gm | 12-15 -> +3/gm | 16+ -> +5/gm
+//   Losses: 4-7 -> -1/gm | 8-11 -> -2/gm | 12-15 -> -3/gm | 16+ -> -5/gm
+// A tie resets BOTH streaks to zero. Streaks run continuously across the
+// full season, regular season + playoff/placement weeks together (also
+// confirmed) -- PFA's placement-cascade format means every roster plays a
+// real graded game every week through Week 17, so there's no "playoffs
+// don't count" special case here; a week is a week.
+const streakTierBonus = (type, length) => {
+  if (length < 4) return 0;
+  const mag = length >= 16 ? 5 : length >= 12 ? 3 : length >= 8 ? 2 : 1;
+  return type === "W" ? mag : -mag;
+};
+
+// results: ordered "W" | "L" | "T" per week (index 0 = week 1) for ONE
+// roster. Returns { total, weekly: [{week, result, streakType, streakLength, bonus}] }.
+// Verified in isolation against hand-built seasons (8/16/20-game streaks,
+// a streak broken by a tie, alternating results that never pay out) before
+// this was wired into any live data -- see mistakes.md discipline.
+const computeStreakBonuses = (results) => {
+  let streak = { type: null, length: 0 };
+  let total = 0;
+  const weekly = [];
+  results.forEach((result, i) => {
+    if (result === "T") {
+      streak = { type: null, length: 0 };
+      weekly.push({ week: i + 1, result, streakType: null, streakLength: 0, bonus: 0 });
+      return;
+    }
+    streak = streak.type === result ? { type: result, length: streak.length + 1 } : { type: result, length: 1 };
+    const bonus = streakTierBonus(streak.type, streak.length);
+    total += bonus;
+    weekly.push({ week: i + 1, result, streakType: streak.type, streakLength: streak.length, bonus });
+  });
+  return { total, weekly };
+};
 
 // Ineligible for a promotion or demotion: the last 5 places in a 16-team
 // league, the last 7 in a 20-team league, the last 11 in the 32-team NFL --
@@ -7679,6 +7719,7 @@ export default function App() {
   const [weeklyResultsCache, setWeeklyResultsCache] = useState({});
   const [club300Live, setClub300Live] = useState([]);
   const [club4000Live, setClub4000Live] = useState([]);
+  const [streakBonusesLive, setStreakBonusesLive] = useState([]);
   const [weeklyAwardsSeason, setWeeklyAwardsSeason] = useState(CURRENT_SEASON);
   const [weeklyAwardsWeek, setWeeklyAwardsWeek] = useState(null);
   const [weeklyAwardsLoading, setWeeklyAwardsLoading] = useState(false);
@@ -8034,6 +8075,7 @@ export default function App() {
     });
   };
 
+
   const loadLeague = useCallback(async (leagueId, week, tKey, isCurrentSeason = true) => {
     const [users, rosters] = await Promise.all([
       j(`${SLEEPER}/league/${leagueId}/users`),
@@ -8160,6 +8202,146 @@ export default function App() {
     [nflState]
   );
 
+  // Turns one week's `pairs` (see buildPairsWithBench) into a per-roster
+  // "W"/"L"/"T" for that week. Equal points = tie, the same signal Sleeper's
+  // own roster `settings.ties` field tracks — not something invented here.
+  const weekResultsByRoster = (pairs) => {
+    const out = {};
+    pairs.forEach(({ a, b }) => {
+      if (a.rosterId == null || b.rosterId == null) return;
+      if (a.points === b.points) {
+        out[a.rosterId] = "T";
+        out[b.rosterId] = "T";
+      } else if (a.points > b.points) {
+        out[a.rosterId] = "W";
+        out[b.rosterId] = "L";
+      } else {
+        out[a.rosterId] = "L";
+        out[b.rosterId] = "W";
+      }
+    });
+    return out;
+  };
+
+  // ── X Points: streak bonus sweep (shared by the live 2026 effect below
+  // AND the one-time 2024/2025 backfill button) ──
+  // Walks weeks 1..throughWeek for one tier/year, reconstructing every
+  // roster's win/loss/tie sequence via getWeeklyResultCached (cache-first,
+  // so already-fetched weeks are free), runs computeStreakBonuses per
+  // roster, and writes one streakBonusesLive doc for every week that pays a
+  // nonzero bonus. Deterministic doc IDs make this safe to re-run on weeks
+  // already written — same values, no duplicates.
+  //
+  // Coach/team names for a CURRENT-season fetch are the site's real display
+  // names (sheet-tag override applies). For a PAST season they're whatever
+  // raw name Sleeper has on file — buildStandings intentionally skips the
+  // sheet-tag override for non-current seasons (see getWeeklyResultCached's
+  // own comment on this), so the same class of mismatch the 2024 bracket
+  // backfill had to fix by hand (Murray St -> Murray State, etc.) can show
+  // up here too. rosterId is the reliable join key either way; flagging
+  // this now rather than presenting backfilled names as already-verified.
+  const sweepStreakBonuses = useCallback(
+    async (tierKeyArg, leagueId, year, throughWeek) => {
+      const resultsByRoster = {}; // rosterId -> ordered ["W"|"L"|"T", ...]
+      const nameByRoster = {}; // rosterId -> {coach, team}, from the latest week seen
+
+      for (let week = 1; week <= throughWeek; week++) {
+        const stored = await getWeeklyResultCached(tierKeyArg, leagueId, year, week);
+        if (!stored || !stored.pairs || !stored.pairs.length) break; // week not played / fetch failed — stop, don't let a gap silently corrupt every later streak length
+        stored.pairs.forEach(({ a, b }) => {
+          [a, b].forEach((s) => {
+            if (s.rosterId == null) return;
+            nameByRoster[s.rosterId] = { coach: s.coach || "—", team: s.team || "—" };
+          });
+        });
+        const weekResults = weekResultsByRoster(stored.pairs);
+        Object.entries(weekResults).forEach(([rosterId, result]) => {
+          (resultsByRoster[rosterId] = resultsByRoster[rosterId] || []).push(result);
+        });
+      }
+
+      const writes = [];
+      Object.entries(resultsByRoster).forEach(([rosterId, results]) => {
+        const { weekly } = computeStreakBonuses(results);
+        const name = nameByRoster[rosterId] || {};
+        weekly.forEach((w) => {
+          if (w.bonus === 0) return;
+          const entry = {
+            coach: name.coach || "—",
+            team: name.team || "—",
+            conf: tierKeyArg,
+            year,
+            week: w.week,
+            streakType: w.streakType,
+            streakLength: w.streakLength,
+            bonus: w.bonus,
+          };
+          writes.push(
+            addStreakBonusEntry(tierKeyArg, year, w.week, Number(rosterId), entry).then((local) => {
+              if (local) setStreakBonusesLive(local);
+            })
+          );
+        });
+      });
+      await Promise.all(writes);
+    },
+    [getWeeklyResultCached]
+  );
+
+  // ── Streak Bonuses: live sweep, 2026 going forward ──
+  // Fires whenever the live NFL week advances. Sweeps every tier's
+  // COMPLETED weeks only (1 through nflState.week - 1) — the current
+  // in-progress week is deliberately excluded, since its win/loss can still
+  // flip while scores are moving (same reasoning loadLeague already uses
+  // for why it skips the permanent weeklyResults cache on a live week).
+  // Doesn't wait for anyone to visit a particular tier's page, same
+  // "sweep everything already resolved in leagueMap" approach as the 4000
+  // Club sweep above. No separate processed-guard doc needed here the way
+  // 4000 Club has one — every write is keyed by {tier,year,week,roster}, so
+  // a repeat sweep of an already-written week just overwrites identically.
+  useEffect(() => {
+    if (mode !== "live" || !nflState || nflState.week <= 1) return;
+    const throughWeek = nflState.week - 1;
+    let cancelled = false;
+    (async () => {
+      for (const [tierKey, leagueId] of Object.entries(leagueMap)) {
+        if (cancelled) return;
+        try {
+          await sweepStreakBonuses(tierKey, leagueId, CURRENT_SEASON, throughWeek);
+        } catch (e) {
+          console.error(`Streak bonus sweep failed for ${tierKey}`, e);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, nflState, leagueMap, sweepStreakBonuses]);
+
+  // ── Streak Bonuses: one-time 2024/2025 backfill ──
+  // Manual trigger only (see the temporary Admin button below) — not
+  // wired to run automatically, since it's a one-off. Loops every tier for
+  // both completed seasons, weeks 1-17 each (confirmed: streaks run through
+  // playoff/placement weeks too, so no early cutoff before 17). Reuses the
+  // exact same sweepStreakBonuses core as the live 2026 path above.
+  const [backfillRunning, setBackfillRunning] = useState(false);
+  const runStreakBonusBackfill = useCallback(async () => {
+    setBackfillRunning(true);
+    try {
+      for (const year of [2024, 2025]) {
+        for (const [tierKey, leagueId] of Object.entries(LEAGUE_HISTORY[year] || {})) {
+          try {
+            await sweepStreakBonuses(tierKey, leagueId, year, 17);
+          } catch (e) {
+            console.error(`Streak bonus backfill failed for ${tierKey} ${year}`, e);
+          }
+        }
+      }
+    } finally {
+      setBackfillRunning(false);
+    }
+  }, [sweepStreakBonuses]);
+
   // Sleeper's own playoff bracket — this is the actual round-by-round
   // winner/loser data (roster IDs, not just seeding), separate from the
   // standings fetch above. Whether this lines up cleanly with our custom
@@ -8226,6 +8408,7 @@ export default function App() {
     const unsubPromo = watchPromotionWindow((open) => setPromotionWindowOpen(open));
     const unsubClub300 = watchClub300Live((entries) => setClub300Live(entries));
     const unsubClub4000 = watchClub4000Live((entries) => setClub4000Live(entries));
+    const unsubStreakBonuses = watchStreakBonusesLive((entries) => setStreakBonusesLive(entries));
     const unsubHireTimers = watchHireTimers((timers) => setHireTimers(timers));
     return () => {
       unsubChat();
@@ -8234,6 +8417,7 @@ export default function App() {
       unsubPromo();
       unsubClub300();
       unsubClub4000();
+      unsubStreakBonuses();
       unsubHireTimers();
     };
   }, []);
@@ -12035,6 +12219,30 @@ export default function App() {
               )}
             </section>
             )}
+            {/* TEMPORARY — one-time 2024/2025 streak bonus backfill. Remove
+                this block once she's run it; the live 2026 sweep needs no
+                button (it's the useEffect above, tied to nflState). */}
+            <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
+              <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                One-time: reconstruct win/loss streak X Points for the completed 2024 and 2025 seasons,
+                all 13 tiers. Safe to click more than once (deterministic doc IDs just overwrite).
+              </div>
+              <button
+                onClick={runStreakBonusBackfill}
+                disabled={backfillRunning}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 4,
+                  border: `1px solid ${C.gold}`,
+                  background: backfillRunning ? "transparent" : C.gold,
+                  color: backfillRunning ? C.slate : C.ink,
+                  fontWeight: 600,
+                  cursor: backfillRunning ? "default" : "pointer",
+                }}
+              >
+                {backfillRunning ? "Running…" : "Backfill 2024/2025 Streak Bonuses"}
+              </button>
+            </div>
             {adminSubTab === "users" && <AdminPanel currentUser={currentUser} />}
           </>
         )}
