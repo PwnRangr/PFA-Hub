@@ -8252,6 +8252,7 @@ export default function App() {
             coach: name.coach || "—",
             team: name.team || "—",
             conf: tierKeyArg,
+            rosterId: Number(rosterId),
             year,
             week: w.week,
             streakType: w.streakType,
@@ -9389,6 +9390,36 @@ export default function App() {
 
   const [coachSort, setCoachSort] = useState({ key: "cp", dir: "desc" });
 
+  // {tierKey_year_rosterId -> total} — summed once here rather than
+  // re-scanning streakBonusesLive/manualPenalties inside allCoachesTable's
+  // own map over every coach.
+  const streakTotalsByRosterKey = useMemo(() => {
+    const map = {};
+    streakBonusesLive.forEach((b) => {
+      const key = `${b.conf}_${b.year}_${b.rosterId}`;
+      if (!map[key]) map[key] = { net: 0, entries: [] };
+      map[key].net += b.bonus || 0;
+      map[key].entries.push(b);
+    });
+    return map;
+  }, [streakBonusesLive]);
+
+  // {tierKey_year_rosterId -> {net, entries}} — the Coaches tab hover reads
+  // this to show what's behind a coach's modifier total without re-scanning
+  // the full manualPenalties list on every render. Moved above
+  // allCoachesTable (was below it) now that allCoachesTable's currentCP
+  // needs this too, not just the hover.
+  const modifiersByRosterKey = useMemo(() => {
+    const map = {};
+    manualPenalties.forEach((p) => {
+      const key = `${p.tierKey}_${p.year}_${p.rosterId}`;
+      if (!map[key]) map[key] = { net: 0, entries: [] };
+      map[key].net += p.points;
+      map[key].entries.push(p);
+    });
+    return map;
+  }, [manualPenalties]);
+
   // Every coach with career data on file, resolved to whichever team they
   // currently hold (same rule as the profile popup) — never a mix-and-match
   // of a different league's numbers.
@@ -9404,13 +9435,25 @@ export default function App() {
       };
       const [wStr, lStr] = (s["Record"] || "").split("-");
       const live = liveCoachStats[lowerName];
+      // Season CP is now computed in-site, not read from the sheet — a
+      // genuine running total starting at 0 for 2026, built from whatever
+      // components are actually wired up so far (streak bonuses + manual
+      // penalties/bonuses). Place, Wins, Points, FAAB, and League
+      // Difficulty aren't built yet, so this total is real but partial —
+      // it'll only grow to match the full Rules-page formula as those land.
+      // Career CP (`cp` below) is untouched — that one keeps the sheet's
+      // history as its baseline, per her call on 2026-08-19.
+      const rosterKey = dirEntry ? `${dirEntry.tierKey}_${CURRENT_SEASON}_${dirEntry.rosterId}` : null;
+      const currentCP = dirEntry
+        ? (streakTotalsByRosterKey[rosterKey]?.net || 0) + (modifiersByRosterKey[rosterKey]?.net || 0)
+        : -Infinity;
       return {
         name: dirEntry ? dirEntry.name : lowerName,
         team: chosen.team,
         tierKey: chosen.tierKey,
         cp: parseNum(s["Career CP"]),
         promotionScore: live && live.promotionScore !== null ? live.promotionScore : -Infinity,
-        currentCP: live && live.currentCP !== null ? live.currentCP : -Infinity,
+        currentCP,
         wins: parseNum(wStr),
         losses: parseNum(lStr),
         winPct: parseNum(s["Win %"]),
@@ -9430,7 +9473,7 @@ export default function App() {
         currentTierKey: dirEntry ? dirEntry.tierKey : undefined,
       };
     });
-  }, [coachDirectory, liveCoachStats]);
+  }, [coachDirectory, liveCoachStats, streakTotalsByRosterKey, modifiersByRosterKey]);
 
   const sortedCoachesTable = useMemo(() => {
     const arr = [...allCoachesTable];
@@ -9484,20 +9527,6 @@ export default function App() {
     const local = await removeManualPenalty(id).catch(() => null);
     if (local) setManualPenalties(local);
   };
-
-  // {tierKey_year_rosterId -> {net, entries}} — the Coaches tab hover reads
-  // this to show what's behind a coach's modifier total without re-scanning
-  // the full manualPenalties list on every render.
-  const modifiersByRosterKey = useMemo(() => {
-    const map = {};
-    manualPenalties.forEach((p) => {
-      const key = `${p.tierKey}_${p.year}_${p.rosterId}`;
-      if (!map[key]) map[key] = { net: 0, entries: [] };
-      map[key].net += p.points;
-      map[key].entries.push(p);
-    });
-    return map;
-  }, [manualPenalties]);
 
   const findCoachAvatar = (name) => {
     const hit = coachDirectory.find((c) => c.name.toLowerCase() === (name || "").toLowerCase());
@@ -11091,6 +11120,8 @@ export default function App() {
             <p className="text-sm mb-4" style={{ color: C.slate }}>
               Every coach with career data on file, resolved to their current team. Coaching points are earned by team
               performance, weighted by tier, and accrue season over season — never spent, only built on. Click any column to sort.
+              Season CP is a live running total for {CURRENT_SEASON}, starting at 0 — hover a value with a dotted underline
+              to see what's behind it.
             </p>
             <div className="overflow-x-auto rounded-sm" style={{ border: `1px solid ${C.line}` }}>
               <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
@@ -11141,10 +11172,24 @@ export default function App() {
                       </td>
                       <td className="px-3 py-2 text-center relative">
                         {(() => {
-                          const mods = modifiersByRosterKey[`${r.currentTierKey || r.tierKey}_${CURRENT_SEASON}_${r.rosterId}`];
+                          const key = `${r.currentTierKey || r.tierKey}_${CURRENT_SEASON}_${r.rosterId}`;
+                          const streakMods = streakTotalsByRosterKey[key];
+                          const manualMods = modifiersByRosterKey[key];
+                          const combined = [
+                            ...((streakMods && streakMods.entries) || []).map((e) => ({
+                              id: `streak_${e.week}`,
+                              points: e.bonus,
+                              label: `Week ${e.week}: ${e.streakLength}-game ${e.streakType === "W" ? "win" : "loss"} streak`,
+                            })),
+                            ...((manualMods && manualMods.entries) || []).map((e) => ({
+                              id: e.id,
+                              points: e.points,
+                              label: e.description,
+                            })),
+                          ];
                           const cpText = r.currentCP === -Infinity ? "—" : `${r.currentCP >= 0 ? "+" : ""}${fmt(r.currentCP)}`;
                           const cpColor = r.currentCP === -Infinity ? C.chalk : r.currentCP > 0 ? C.turf : r.currentCP < 0 ? C.ember : C.slate;
-                          if (!mods || !mods.entries.length) {
+                          if (!combined.length) {
                             return <span style={{ color: cpColor }}>{cpText}</span>;
                           }
                           return (
@@ -11155,14 +11200,14 @@ export default function App() {
                                 style={{ transform: "translateX(-50%)", background: C.ink, border: `1px solid ${C.line}`, fontFamily: "'Barlow', sans-serif" }}
                               >
                                 <div className="text-xs uppercase tracking-wider mb-1.5" style={{ color: C.slate }}>
-                                  Manual modifiers (net {mods.net >= 0 ? "+" : ""}{mods.net}) — Season CP itself is sheet-fed, not adjusted here
+                                  Running total — Place, Wins, Points, FAAB &amp; League Difficulty aren't calculated yet
                                 </div>
-                                {mods.entries.map((e) => (
+                                {combined.map((e) => (
                                   <div key={e.id} className="text-xs mb-1 last:mb-0" style={{ color: C.chalk }}>
                                     <span style={{ color: e.points >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
                                       {e.points >= 0 ? "+" : ""}{e.points}
                                     </span>{" "}
-                                    {e.description}
+                                    {e.label}
                                   </div>
                                 ))}
                               </span>
