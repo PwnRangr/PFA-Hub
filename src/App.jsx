@@ -11250,11 +11250,13 @@ export default function App() {
                           const streakMods = streakTotalsByRosterKey[key];
                           const manualMods = modifiersByRosterKey[key];
                           const combined = [
+                            { id: "place", points: null, label: "Place" },
                             { id: "wins", points: r.winPoints, label: "Wins" },
                             { id: "avpts", points: r.pointsComponent, label: "Av Pts" },
                             { id: "faab", points: r.faabComponent, label: "FAAB" },
                             { id: "xpts", points: (streakMods && streakMods.net) || 0, label: "X Pts" },
                             { id: "penalties", points: (manualMods && manualMods.net) || 0, label: "Penalties/Bonuses" },
+                            { id: "league", points: null, label: "League Strength" },
                           ];
                           const cpText = r.currentCP === -Infinity ? "—" : `${r.currentCP >= 0 ? "+" : ""}${fmt(r.currentCP)}`;
                           const cpColor = r.currentCP === -Infinity ? C.chalk : r.currentCP > 0 ? C.turf : r.currentCP < 0 ? C.ember : C.slate;
@@ -11269,16 +11271,27 @@ export default function App() {
                                 style={{ transform: "translateX(-50%)", background: C.ink, border: `1px solid ${C.line}`, fontFamily: "'Barlow', sans-serif" }}
                               >
                                 <div className="text-xs uppercase tracking-wider mb-1.5" style={{ color: C.slate }}>
-                                  Running total — Place &amp; League Difficulty aren't calculated yet
+                                  Season CP breakdown
                                 </div>
                                 {combined.map((e) => (
                                   <div key={e.id} className="text-xs mb-1 last:mb-0 flex justify-between gap-3" style={{ color: C.chalk }}>
                                     <span>{e.label}</span>
-                                    <span style={{ color: e.points >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
-                                      {e.points >= 0 ? "+" : ""}{fmt(e.points)}
-                                    </span>
+                                    {e.points === null ? (
+                                      <span style={{ color: C.slate }}>—</span>
+                                    ) : (
+                                      <span style={{ color: e.points >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
+                                        {e.points >= 0 ? "+" : ""}{fmt(e.points)}
+                                      </span>
+                                    )}
                                   </div>
                                 ))}
+                                <div
+                                  className="text-xs mt-1.5 pt-1.5 flex justify-between gap-3"
+                                  style={{ color: C.chalk, borderTop: `1px solid ${C.line}` }}
+                                >
+                                  <span>× Pts/Max</span>
+                                  <span style={{ color: C.slate, fontWeight: 600 }}>{fmt(r.ptsMaxRatio)}</span>
+                                </div>
                               </span>
                             </span>
                           );
