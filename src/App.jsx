@@ -11252,11 +11252,9 @@ export default function App() {
                           const combined = [
                             { id: "wins", points: r.winPoints, label: "Wins" },
                             { id: "avpts", points: r.pointsComponent, label: "Av Pts" },
-                            ...(r.faabRemaining != null ? [{ id: "faab", points: r.faabComponent, label: "FAAB" }] : []),
-                            ...(streakMods && streakMods.entries.length ? [{ id: "xpts", points: streakMods.net, label: "X Pts" }] : []),
-                            ...(manualMods && manualMods.entries.length
-                              ? [{ id: "penalties", points: manualMods.net, label: "Penalties/Bonuses" }]
-                              : []),
+                            { id: "faab", points: r.faabComponent, label: "FAAB" },
+                            { id: "xpts", points: (streakMods && streakMods.net) || 0, label: "X Pts" },
+                            { id: "penalties", points: (manualMods && manualMods.net) || 0, label: "Penalties/Bonuses" },
                           ];
                           const cpText = r.currentCP === -Infinity ? "—" : `${r.currentCP >= 0 ? "+" : ""}${fmt(r.currentCP)}`;
                           const cpColor = r.currentCP === -Infinity ? C.chalk : r.currentCP > 0 ? C.turf : r.currentCP < 0 ? C.ember : C.slate;
