@@ -125,6 +125,13 @@ const LEAGUE_HISTORY = {
   // 2022: { ... },
 };
 
+// Bumping this each new season? FAAB_STARTING_BUDGET (below, near
+// WIN_POINTS_BY_TIER) needs a new entry for the new year too — it changes
+// every season to mirror the real NFL's actual free agency cap, confirmed
+// with Lainey 2026-08-19. Missing it doesn't crash anything (the FAAB
+// component of Season CP just contributes 0 until it's set), but there's a
+// warning banner on the Admin tab specifically so this doesn't go unnoticed
+// for weeks.
 const CURRENT_SEASON = 2026;
 const NFL_LEAGUE_ID = LEAGUE_HISTORY[CURRENT_SEASON].NFL;
 
@@ -1042,6 +1049,17 @@ const WIN_POINTS_BY_TIER = {
   SWAC: 3,
   GLIAC: 3,
   FLHS: 2,
+};
+
+// FAAB component of Season CP = (starting budget − waiver_budget_used) / 50.
+// Same across all 13 tiers within a season (unlike WIN_POINTS_BY_TIER),
+// but the STARTING NUMBER changes every season to mirror the real NFL's
+// actual free agency cap for that year — confirmed with Lainey 2026-08-19.
+// A missing entry for CURRENT_SEASON doesn't crash anything (FAAB just
+// contributes 0 to Season CP until it's set), but see the Admin tab warning
+// banner and the reminder comment on CURRENT_SEASON above.
+const FAAB_STARTING_BUDGET = {
+  2026: 275,
 };
 
 const cpForPlace = (tKey, place) =>
@@ -7998,6 +8016,7 @@ export default function App() {
         w: s.wins || 0,
         l: s.losses || 0,
         pts: (s.fpts || 0) + (s.fpts_decimal || 0) / 100,
+        faabUsed: s.waiver_budget_used || 0,
         maxPts: (s.ppts || 0) + (s.ppts_decimal || 0) / 100,
         rosterId: r.roster_id,
         userId: u.user_id || null,
@@ -9383,6 +9402,8 @@ export default function App() {
             tierName: t.name,
             w: r.w,
             l: r.l,
+            pts: r.pts,
+            faabUsed: r.faabUsed,
             maxPts: r.maxPts,
             playerIds: r.playerIds,
             rosterId: r.rosterId,
@@ -9456,15 +9477,34 @@ export default function App() {
       // Season CP is now computed in-site, not read from the sheet — a
       // genuine running total starting at 0 for 2026, built from whatever
       // components are actually wired up so far (streak bonuses + manual
-      // penalties/bonuses + wins). Place, Points, FAAB, and League
+      // penalties/bonuses + wins + points + FAAB). Place and League
       // Difficulty aren't built yet, so this total is real but partial —
       // it'll only grow to match the full Rules-page formula as those land.
       // Career CP (`cp` below) is untouched — that one keeps the sheet's
       // history as its baseline, per her call on 2026-08-19.
       const rosterKey = dirEntry ? `${dirEntry.tierKey}_${CURRENT_SEASON}_${dirEntry.rosterId}` : null;
       const winPoints = dirEntry ? (WIN_POINTS_BY_TIER[dirEntry.tierKey] || 0) * (dirEntry.w || 0) : 0;
+      // Average Points Per Game / 4 (confirmed 2026-08-19). "Per game" means
+      // games actually played so far (w+l) — before Week 1 that's 0, so this
+      // is 0 rather than NaN/Infinity, same "starts at 0, not undefined"
+      // rule as everything else in this running total.
+      const gamesPlayed = dirEntry ? (dirEntry.w || 0) + (dirEntry.l || 0) : 0;
+      const avgPPG = dirEntry && gamesPlayed > 0 ? dirEntry.pts / gamesPlayed : 0;
+      const pointsComponent = avgPPG / 4;
+      // (starting FAAB budget − used) / 50, confirmed 2026-08-19. If
+      // FAAB_STARTING_BUDGET has no entry for CURRENT_SEASON (missed
+      // updating it — see the reminder comment there), contribute 0 rather
+      // than NaN; the Admin tab warning banner is the actual reminder, not
+      // a silently wrong CP number.
+      const faabBudget = FAAB_STARTING_BUDGET[CURRENT_SEASON];
+      const faabRemaining = dirEntry && faabBudget != null ? faabBudget - (dirEntry.faabUsed || 0) : null;
+      const faabComponent = faabRemaining != null ? faabRemaining / 50 : 0;
       const currentCP = dirEntry
-        ? winPoints + (streakTotalsByRosterKey[rosterKey]?.net || 0) + (modifiersByRosterKey[rosterKey]?.net || 0)
+        ? winPoints +
+          pointsComponent +
+          faabComponent +
+          (streakTotalsByRosterKey[rosterKey]?.net || 0) +
+          (modifiersByRosterKey[rosterKey]?.net || 0)
         : -Infinity;
       return {
         name: dirEntry ? dirEntry.name : lowerName,
@@ -9475,6 +9515,10 @@ export default function App() {
         currentCP,
         winPoints,
         currentSeasonWins: dirEntry ? dirEntry.w : undefined,
+        pointsComponent,
+        avgPPG,
+        faabComponent,
+        faabRemaining,
         wins: parseNum(wStr),
         losses: parseNum(lStr),
         winPct: parseNum(s["Win %"]),
@@ -11204,6 +11248,20 @@ export default function App() {
                                   label: `${r.currentSeasonWins} win${r.currentSeasonWins === 1 ? "" : "s"} × ${WIN_POINTS_BY_TIER[r.currentTierKey || r.tierKey] || 0}pt`,
                                 }]
                               : []),
+                            ...(r.pointsComponent
+                              ? [{
+                                  id: "points",
+                                  points: r.pointsComponent,
+                                  label: `${fmt(r.avgPPG)} avg PPG ÷ 4`,
+                                }]
+                              : []),
+                            ...(r.faabRemaining != null
+                              ? [{
+                                  id: "faab",
+                                  points: r.faabComponent,
+                                  label: `$${fmt(r.faabRemaining, 0)} FAAB remaining ÷ 50`,
+                                }]
+                              : []),
                             ...((streakMods && streakMods.entries) || []).map((e) => ({
                               id: `streak_${e.week}`,
                               points: e.bonus,
@@ -11228,12 +11286,12 @@ export default function App() {
                                 style={{ transform: "translateX(-50%)", background: C.ink, border: `1px solid ${C.line}`, fontFamily: "'Barlow', sans-serif" }}
                               >
                                 <div className="text-xs uppercase tracking-wider mb-1.5" style={{ color: C.slate }}>
-                                  Running total — Place, Points, FAAB &amp; League Difficulty aren't calculated yet
+                                  Running total — Place &amp; League Difficulty aren't calculated yet
                                 </div>
                                 {combined.map((e) => (
                                   <div key={e.id} className="text-xs mb-1 last:mb-0" style={{ color: C.chalk }}>
                                     <span style={{ color: e.points >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
-                                      {e.points >= 0 ? "+" : ""}{e.points}
+                                      {e.points >= 0 ? "+" : ""}{fmt(e.points)}
                                     </span>{" "}
                                     {e.label}
                                   </div>
@@ -12170,6 +12228,17 @@ export default function App() {
 
         {view === "admin" && isAdmin && (
           <>
+            {FAAB_STARTING_BUDGET[CURRENT_SEASON] == null && (
+              <div
+                className="mb-6 px-4 py-3 rounded-sm text-sm"
+                style={{ background: "rgba(230,126,34,0.12)", border: `1px solid ${C.ember}`, color: C.chalk }}
+              >
+                <strong style={{ color: C.ember }}>New season reminder:</strong> no FAAB starting budget is set for{" "}
+                {CURRENT_SEASON} yet. It changes every year to mirror the real NFL's cap — add an entry to{" "}
+                <code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>FAAB_STARTING_BUDGET</code> in App.jsx. Until then,
+                the FAAB component of everyone's Season CP is silently contributing 0.
+              </div>
+            )}
             <div className="flex gap-1.5 mb-6">
               {[
                 ["applications", "Applications"],
