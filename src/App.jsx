@@ -34,6 +34,8 @@ import {
   addManualPenalty,
   removeManualPenalty,
   watchManualPenalties,
+  writeSeasonCPFinalEntry,
+  watchSeasonCPFinal,
   getTournamentSeeds,
   setTournamentSeeds,
   getUflProBowlSeeds,
@@ -1060,6 +1062,9 @@ const WIN_POINTS_BY_TIER = {
 // banner and the reminder comment on CURRENT_SEASON above.
 const FAAB_STARTING_BUDGET = {
   2026: 275,
+  2025: 275,
+  2024: 250,
+  2023: 225,
 };
 
 const cpForPlace = (tKey, place) =>
@@ -7738,6 +7743,11 @@ export default function App() {
   const [club4000Live, setClub4000Live] = useState([]);
   const [streakBonusesLive, setStreakBonusesLive] = useState([]);
   const [manualPenalties, setManualPenalties] = useState([]);
+  // The permanent, locked Season CP record for completed tier/years — see
+  // storage.js's seasonCPFinal comment. Empty until the Admin "Lock Final
+  // Season CP" action has been run at least once; no UI reads this yet
+  // (2026-08-19: storing the record now, display comes later).
+  const [seasonCPFinal, setSeasonCPFinal] = useState([]);
   const [weeklyAwardsSeason, setWeeklyAwardsSeason] = useState(CURRENT_SEASON);
   const [weeklyAwardsWeek, setWeeklyAwardsWeek] = useState(null);
   const [weeklyAwardsLoading, setWeeklyAwardsLoading] = useState(false);
@@ -8345,6 +8355,7 @@ export default function App() {
   // playoff/placement weeks too, so no early cutoff before 17). Reuses the
   // exact same sweepStreakBonuses core as the live 2026 path above.
   const [backfillRunning, setBackfillRunning] = useState(false);
+  const [cpLockRunning, setCpLockRunning] = useState(false);
   const runStreakBonusBackfill = useCallback(async () => {
     setBackfillRunning(true);
     try {
@@ -8361,6 +8372,109 @@ export default function App() {
       setBackfillRunning(false);
     }
   }, [sweepStreakBonuses]);
+
+  // ── Season CP — final lock ──
+  // Computes and permanently writes each roster's final Season CP breakdown
+  // for a completed tier/year, reusing the exact same building blocks the
+  // live Coaches-tab hover uses today rather than a parallel calculation:
+  // buildStandings (season-total w/l/pts/maxPts/faabUsed for ANY league ID,
+  // historical or current — the `isCurrentSeason=false` flag it already
+  // takes for this purpose), findRowByName (the same fuzzy matcher the
+  // Completed Bracket section already uses to resolve a HISTORICAL_FINAL_
+  // ORDER team-name string to its real roster row), and cpForPlace.
+  //
+  // League Strength is deliberately left null here — her call 2026-08-19,
+  // "hold off on historical League Strength scores... not a pressing issue."
+  // Conference Strength's live formula only works off `standingsCache`
+  // (this season's data), so a historical version needs its own data pull;
+  // until that's built, `pending` flags which components a record is still
+  // missing rather than silently baking an incomplete total in as final.
+  // Same rule for FAAB: contributes 0 and gets flagged if a year's starting
+  // budget is ever missing from FAAB_STARTING_BUDGET, rather than NaN.
+  //
+  // Safe to re-run for a tier/year already locked — the deterministic key
+  // (tierKey_year_rosterId) means this just overwrites with a fresh
+  // (hopefully more complete) record, same principle as the streak
+  // backfill above and everything else in storage.js.
+  const runSeasonCPFinalLock = useCallback(async () => {
+    setCpLockRunning(true);
+    try {
+      for (const year of [2024, 2025]) {
+        for (const [tierKey, leagueId] of Object.entries(LEAGUE_HISTORY[year] || {})) {
+          const order = HISTORICAL_FINAL_ORDER[year] && HISTORICAL_FINAL_ORDER[year][tierKey];
+          if (!order) continue; // no confirmed final placement yet — can't compute Place, skip rather than lock an incomplete record
+          try {
+            const [users, rosters] = await Promise.all([
+              j(`${SLEEPER}/league/${leagueId}/users`),
+              j(`${SLEEPER}/league/${leagueId}/rosters`),
+            ]);
+            const rows = buildStandings(users, rosters, leagueId, tierKey, false);
+            const faabBudget = FAAB_STARTING_BUDGET[year];
+
+            for (let i = 0; i < order.length; i++) {
+              const place = i + 1;
+              const row = findRowByName(rows, order[i]);
+              if (!row || row.rosterId == null) {
+                console.error(`Season CP lock: no roster match for "${order[i]}" in ${tierKey} ${year}`);
+                continue;
+              }
+              const gamesPlayed = (row.w || 0) + (row.l || 0);
+              const winPoints = (WIN_POINTS_BY_TIER[tierKey] || 0) * (row.w || 0);
+              const avgPPG = gamesPlayed > 0 ? row.pts / gamesPlayed : 0;
+              const pointsComponent = avgPPG / 4;
+              const faabComponent = faabBudget != null ? (faabBudget - (row.faabUsed || 0)) / 50 : 0;
+              const placeCP = cpForPlace(tierKey, place);
+
+              const rosterEntries = streakBonusesLive.filter(
+                (b) => b.conf === tierKey && b.year === year && Number(b.rosterId) === Number(row.rosterId)
+              );
+              const xPointsTotal = rosterEntries.reduce((sum, b) => sum + (b.bonus || 0), 0);
+
+              const penaltyEntries = manualPenalties.filter(
+                (p) => p.tierKey === tierKey && p.year === year && Number(p.rosterId) === Number(row.rosterId)
+              );
+              const penaltiesBonusesTotal = penaltyEntries.reduce((sum, p) => sum + (p.points || 0), 0);
+
+              const ptsMaxRatio = row.maxPts > 0 ? row.pts / row.maxPts : 1;
+
+              const pending = ["leagueStrength"]; // always, until the historical formula exists
+              if (faabBudget == null) pending.push("faab");
+
+              const total =
+                (winPoints + pointsComponent + faabComponent + xPointsTotal + penaltiesBonusesTotal + placeCP) *
+                ptsMaxRatio;
+
+              const entry = {
+                coach: row.coach,
+                team: row.team,
+                tierKey,
+                year,
+                rosterId: row.rosterId,
+                place,
+                winPoints,
+                pointsComponent,
+                faabComponent,
+                xPointsTotal,
+                penaltiesBonusesTotal,
+                placeCP,
+                leagueStrengthCP: null,
+                ptsMaxRatio,
+                total,
+                pending,
+              };
+              await writeSeasonCPFinalEntry(tierKey, year, row.rosterId, entry).then((local) => {
+                if (local) setSeasonCPFinal(local);
+              });
+            }
+          } catch (e) {
+            console.error(`Season CP lock failed for ${tierKey} ${year}`, e);
+          }
+        }
+      }
+    } finally {
+      setCpLockRunning(false);
+    }
+  }, [streakBonusesLive, manualPenalties]);
 
   // Sleeper's own playoff bracket — this is the actual round-by-round
   // winner/loser data (roster IDs, not just seeding), separate from the
@@ -8430,6 +8544,7 @@ export default function App() {
     const unsubClub4000 = watchClub4000Live((entries) => setClub4000Live(entries));
     const unsubStreakBonuses = watchStreakBonusesLive((entries) => setStreakBonusesLive(entries));
     const unsubManualPenalties = watchManualPenalties((entries) => setManualPenalties(entries));
+    const unsubSeasonCPFinal = watchSeasonCPFinal((entries) => setSeasonCPFinal(entries));
     const unsubHireTimers = watchHireTimers((timers) => setHireTimers(timers));
     return () => {
       unsubChat();
@@ -8440,6 +8555,7 @@ export default function App() {
       unsubClub4000();
       unsubStreakBonuses();
       unsubManualPenalties();
+      unsubSeasonCPFinal();
       unsubHireTimers();
     };
   }, []);
@@ -12457,6 +12573,36 @@ export default function App() {
                 }}
               >
                 {backfillRunning ? "Running…" : "Backfill 2024/2025 Streak Bonuses"}
+              </button>
+            </div>
+            {/* Season CP final lock — a lasting Admin utility, not a one-time
+                removable block like the streak backfill above: it needs to
+                run again once 2026 finishes (once HISTORICAL_FINAL_ORDER[2026]
+                is confirmed), and again whenever the historical League
+                Strength formula lands, to fill in the leagueStrengthCP
+                that's currently locked as null. Safe to re-click any time —
+                deterministic doc IDs just overwrite with a fresher record. */}
+            <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
+              <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                Lock the final Season CP breakdown (Wins, Points, FAAB, X Points, Penalties/Bonuses, Place) for
+                every tier with a confirmed final order — currently 2024 and 2025, all 13 tiers. League Strength
+                is left blank for now (its historical formula isn't built yet); safe to re-run later to fill it
+                in without disturbing anything else already locked.
+              </div>
+              <button
+                onClick={runSeasonCPFinalLock}
+                disabled={cpLockRunning}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 4,
+                  border: `1px solid ${C.gold}`,
+                  background: cpLockRunning ? "transparent" : C.gold,
+                  color: cpLockRunning ? C.slate : C.ink,
+                  fontWeight: 600,
+                  cursor: cpLockRunning ? "default" : "pointer",
+                }}
+              >
+                {cpLockRunning ? "Running…" : "Lock Final Season CP (2024/2025)"}
               </button>
             </div>
             {adminSubTab === "penalties" && (

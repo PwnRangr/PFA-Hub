@@ -486,6 +486,52 @@ export async function removeManualPenalty(id) {
   return null;
 }
 
+// ── Season CP — final locked record ──
+// The permanent, official Season CP snapshot for a completed tier/year,
+// written once by the Admin "Lock Final Season CP" action (App.jsx) instead
+// of ever being recomputed live like the current season's running total is.
+// Deterministic key (same pattern as streakBonusesLive above) — safe to
+// re-run the lock for a tier/year already written, e.g. after League
+// Strength's historical formula lands and needs to fill in a value that was
+// previously null; it just overwrites, never duplicates.
+//
+// entry shape: { coach, team, tierKey, year, rosterId, place, winPoints,
+// pointsComponent, faabComponent, xPointsTotal, penaltiesBonusesTotal,
+// placeCP, leagueStrengthCP, ptsMaxRatio, total, pending }. `leagueStrengthCP`
+// is null until the historical League Strength formula is built (on hold as
+// of 2026-08-19); `pending` is an array of component names still missing
+// from `total` (e.g. ["leagueStrength"], or ["leagueStrength","faab"] for a
+// year with no confirmed FAAB starting budget) — so a partial record says so
+// plainly instead of presenting an incomplete total as final.
+function seasonCPFinalKey(tierKey, year, rosterId) {
+  return `${tierKey}_${year}_${rosterId}`;
+}
+
+export async function writeSeasonCPFinalEntry(tierKey, year, rosterId, entry) {
+  const key = seasonCPFinalKey(tierKey, year, rosterId);
+  if (!firebaseReady) {
+    const all = localGet("pfa-season-cp-final") || {};
+    all[key] = entry;
+    localSet("pfa-season-cp-final", all);
+    return Object.values(all);
+  }
+  await ensureDb();
+  await fs.setDoc(fs.doc(db, "seasonCPFinal", key), entry);
+  return null;
+}
+
+export function watchSeasonCPFinal(cb) {
+  if (!firebaseReady) {
+    cb(Object.values(localGet("pfa-season-cp-final") || {}));
+    return () => {};
+  }
+  let unsub = () => {};
+  ensureDb().then(() => {
+    unsub = fs.onSnapshot(fs.collection(db, "seasonCPFinal"), (snap) => cb(snap.docs.map((d) => d.data())));
+  });
+  return () => unsub();
+}
+
 // ── 4000 Club (live, auto-detected) ──
 // Same shape as club300Live above, but the "score" being checked is a
 // roster's SEASON total (Sleeper's own running fpts/fpts_decimal — the
