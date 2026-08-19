@@ -11237,7 +11237,18 @@ export default function App() {
                           {r.team}
                         </button>
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap uppercase text-xs text-center" style={{ color: C.gold }}>{r.tierKey}</td>
+                      <td className="px-3 py-2 whitespace-nowrap uppercase text-xs text-center" style={{ color: C.slate }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTierKey(r.tierKey);
+                            setView("standings");
+                          }}
+                          style={{ color: "inherit" }}
+                        >
+                          {r.tierKey}
+                        </button>
+                      </td>
                       <td
                         className="px-3 py-2 text-center"
                         style={{ color: r.promotionScore === -Infinity ? C.chalk : r.promotionScore > 0 ? C.turf : r.promotionScore < 0 ? C.ember : C.slate }}
