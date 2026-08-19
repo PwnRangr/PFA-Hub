@@ -9499,13 +9499,20 @@ export default function App() {
       const faabBudget = FAAB_STARTING_BUDGET[CURRENT_SEASON];
       const faabRemaining = dirEntry && faabBudget != null ? faabBudget - (dirEntry.faabUsed || 0) : null;
       const faabComponent = faabRemaining != null ? faabRemaining / 50 : 0;
-      const currentCP = dirEntry
-        ? winPoints +
-          pointsComponent +
-          faabComponent +
-          (streakTotalsByRosterKey[rosterKey]?.net || 0) +
-          (modifiersByRosterKey[rosterKey]?.net || 0)
-        : -Infinity;
+      const subtotal =
+        winPoints + pointsComponent + faabComponent + (streakTotalsByRosterKey[rosterKey]?.net || 0) + (modifiersByRosterKey[rosterKey]?.net || 0);
+      // Pts/Max multiplier, confirmed 2026-08-19: dirEntry.pts / dirEntry.maxPts,
+      // both already sourced from Sleeper's settings.fpts/fpts_decimal and
+      // settings.ppts/ppts_decimal (the same fields the Points component and
+      // TeamProfileModal's "Max Total Points" already use). Pre-season,
+      // maxPts is 0 (no games played) — 0/0 is undefined, so this defaults
+      // to a NEUTRAL 1× rather than NaN or 0×, so a real component that's
+      // already meaningful pre-season (FAAB) isn't zeroed out by a ratio
+      // that genuinely doesn't exist yet. ASSUMPTION, not confirmed with
+      // her — flagging in case she wants pre-season CP to show as 0 or "—"
+      // instead until maxPts is real.
+      const ptsMaxRatio = dirEntry && dirEntry.maxPts > 0 ? dirEntry.pts / dirEntry.maxPts : 1;
+      const currentCP = dirEntry ? subtotal * ptsMaxRatio : -Infinity;
       return {
         name: dirEntry ? dirEntry.name : lowerName,
         team: chosen.team,
@@ -9513,6 +9520,8 @@ export default function App() {
         cp: parseNum(s["Career CP"]),
         promotionScore: live && live.promotionScore !== null ? live.promotionScore : -Infinity,
         currentCP,
+        subtotal,
+        ptsMaxRatio,
         winPoints,
         currentSeasonWins: dirEntry ? dirEntry.w : undefined,
         pointsComponent,
@@ -11296,6 +11305,9 @@ export default function App() {
                                     {e.label}
                                   </div>
                                 ))}
+                                <div className="text-xs mt-2 pt-2" style={{ color: C.slate, borderTop: `1px solid ${C.line}` }}>
+                                  Subtotal {r.subtotal >= 0 ? "+" : ""}{fmt(r.subtotal)} × Pts/Max ({fmt(r.ptsMaxRatio)}) = {cpText}
+                                </div>
                               </span>
                             </span>
                           );
