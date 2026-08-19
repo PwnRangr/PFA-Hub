@@ -1026,6 +1026,24 @@ const CP_BY_PLACE_XFL = [
 ];
 const CP_BY_PLACE = { NFL: CP_BY_PLACE_NFL, USFL: CP_BY_PLACE_USFL, XFL: CP_BY_PLACE_XFL };
 
+// Season CP: points per regular-season win, flat rate (not tiered like the
+// streak bonuses) — confirmed with Lainey 2026-08-19.
+const WIN_POINTS_BY_TIER = {
+  NFL: 7,
+  USFL: 5,
+  XFL: 5,
+  SEC: 4,
+  "BIG XII": 4,
+  ACC: 4,
+  TEN: 4, // Big 10
+  SUN: 4, // Sun Belt
+  SOCO: 3, // SoCon
+  IVY: 3,
+  SWAC: 3,
+  GLIAC: 3,
+  FLHS: 2,
+};
+
 const cpForPlace = (tKey, place) =>
   CP_BY_PLACE[tKey]
     ? CP_BY_PLACE[tKey][place - 1]
@@ -9438,14 +9456,15 @@ export default function App() {
       // Season CP is now computed in-site, not read from the sheet — a
       // genuine running total starting at 0 for 2026, built from whatever
       // components are actually wired up so far (streak bonuses + manual
-      // penalties/bonuses). Place, Wins, Points, FAAB, and League
+      // penalties/bonuses + wins). Place, Points, FAAB, and League
       // Difficulty aren't built yet, so this total is real but partial —
       // it'll only grow to match the full Rules-page formula as those land.
       // Career CP (`cp` below) is untouched — that one keeps the sheet's
       // history as its baseline, per her call on 2026-08-19.
       const rosterKey = dirEntry ? `${dirEntry.tierKey}_${CURRENT_SEASON}_${dirEntry.rosterId}` : null;
+      const winPoints = dirEntry ? (WIN_POINTS_BY_TIER[dirEntry.tierKey] || 0) * (dirEntry.w || 0) : 0;
       const currentCP = dirEntry
-        ? (streakTotalsByRosterKey[rosterKey]?.net || 0) + (modifiersByRosterKey[rosterKey]?.net || 0)
+        ? winPoints + (streakTotalsByRosterKey[rosterKey]?.net || 0) + (modifiersByRosterKey[rosterKey]?.net || 0)
         : -Infinity;
       return {
         name: dirEntry ? dirEntry.name : lowerName,
@@ -9454,6 +9473,8 @@ export default function App() {
         cp: parseNum(s["Career CP"]),
         promotionScore: live && live.promotionScore !== null ? live.promotionScore : -Infinity,
         currentCP,
+        winPoints,
+        currentSeasonWins: dirEntry ? dirEntry.w : undefined,
         wins: parseNum(wStr),
         losses: parseNum(lStr),
         winPct: parseNum(s["Win %"]),
@@ -11176,6 +11197,13 @@ export default function App() {
                           const streakMods = streakTotalsByRosterKey[key];
                           const manualMods = modifiersByRosterKey[key];
                           const combined = [
+                            ...(r.winPoints
+                              ? [{
+                                  id: "wins",
+                                  points: r.winPoints,
+                                  label: `${r.currentSeasonWins} win${r.currentSeasonWins === 1 ? "" : "s"} × ${WIN_POINTS_BY_TIER[r.currentTierKey || r.tierKey] || 0}pt`,
+                                }]
+                              : []),
                             ...((streakMods && streakMods.entries) || []).map((e) => ({
                               id: `streak_${e.week}`,
                               points: e.bonus,
@@ -11200,7 +11228,7 @@ export default function App() {
                                 style={{ transform: "translateX(-50%)", background: C.ink, border: `1px solid ${C.line}`, fontFamily: "'Barlow', sans-serif" }}
                               >
                                 <div className="text-xs uppercase tracking-wider mb-1.5" style={{ color: C.slate }}>
-                                  Running total — Place, Wins, Points, FAAB &amp; League Difficulty aren't calculated yet
+                                  Running total — Place, Points, FAAB &amp; League Difficulty aren't calculated yet
                                 </div>
                                 {combined.map((e) => (
                                   <div key={e.id} className="text-xs mb-1 last:mb-0" style={{ color: C.chalk }}>
