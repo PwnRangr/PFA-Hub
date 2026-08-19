@@ -11250,64 +11250,37 @@ export default function App() {
                           const streakMods = streakTotalsByRosterKey[key];
                           const manualMods = modifiersByRosterKey[key];
                           const combined = [
-                            ...(r.winPoints
-                              ? [{
-                                  id: "wins",
-                                  points: r.winPoints,
-                                  label: `${r.currentSeasonWins} win${r.currentSeasonWins === 1 ? "" : "s"} × ${WIN_POINTS_BY_TIER[r.currentTierKey || r.tierKey] || 0}pt`,
-                                }]
+                            { id: "wins", points: r.winPoints, label: "Wins" },
+                            { id: "avpts", points: r.pointsComponent, label: "Av Pts" },
+                            ...(r.faabRemaining != null ? [{ id: "faab", points: r.faabComponent, label: "FAAB" }] : []),
+                            ...(streakMods && streakMods.entries.length ? [{ id: "xpts", points: streakMods.net, label: "X Pts" }] : []),
+                            ...(manualMods && manualMods.entries.length
+                              ? [{ id: "penalties", points: manualMods.net, label: "Penalties/Bonuses" }]
                               : []),
-                            ...(r.pointsComponent
-                              ? [{
-                                  id: "points",
-                                  points: r.pointsComponent,
-                                  label: `${fmt(r.avgPPG)} avg PPG ÷ 4`,
-                                }]
-                              : []),
-                            ...(r.faabRemaining != null
-                              ? [{
-                                  id: "faab",
-                                  points: r.faabComponent,
-                                  label: `$${fmt(r.faabRemaining, 0)} FAAB remaining ÷ 50`,
-                                }]
-                              : []),
-                            ...((streakMods && streakMods.entries) || []).map((e) => ({
-                              id: `streak_${e.week}`,
-                              points: e.bonus,
-                              label: `Week ${e.week}: ${e.streakLength}-game ${e.streakType === "W" ? "win" : "loss"} streak`,
-                            })),
-                            ...((manualMods && manualMods.entries) || []).map((e) => ({
-                              id: e.id,
-                              points: e.points,
-                              label: e.description,
-                            })),
                           ];
                           const cpText = r.currentCP === -Infinity ? "—" : `${r.currentCP >= 0 ? "+" : ""}${fmt(r.currentCP)}`;
                           const cpColor = r.currentCP === -Infinity ? C.chalk : r.currentCP > 0 ? C.turf : r.currentCP < 0 ? C.ember : C.slate;
-                          if (!combined.length) {
+                          if (r.currentCP === -Infinity) {
                             return <span style={{ color: cpColor }}>{cpText}</span>;
                           }
                           return (
                             <span className="group relative inline-block cursor-help" style={{ color: cpColor, borderBottom: `1px dotted ${C.slate}` }}>
                               {cpText}
                               <span
-                                className="invisible group-hover:visible absolute z-10 left-1/2 top-full mt-1 w-64 rounded-sm p-3 text-left normal-case"
+                                className="invisible group-hover:visible absolute z-10 left-1/2 top-full mt-1 w-56 rounded-sm p-3 text-left normal-case"
                                 style={{ transform: "translateX(-50%)", background: C.ink, border: `1px solid ${C.line}`, fontFamily: "'Barlow', sans-serif" }}
                               >
                                 <div className="text-xs uppercase tracking-wider mb-1.5" style={{ color: C.slate }}>
                                   Running total — Place &amp; League Difficulty aren't calculated yet
                                 </div>
                                 {combined.map((e) => (
-                                  <div key={e.id} className="text-xs mb-1 last:mb-0" style={{ color: C.chalk }}>
+                                  <div key={e.id} className="text-xs mb-1 last:mb-0 flex justify-between gap-3" style={{ color: C.chalk }}>
+                                    <span>{e.label}</span>
                                     <span style={{ color: e.points >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
                                       {e.points >= 0 ? "+" : ""}{fmt(e.points)}
-                                    </span>{" "}
-                                    {e.label}
+                                    </span>
                                   </div>
                                 ))}
-                                <div className="text-xs mt-2 pt-2" style={{ color: C.slate, borderTop: `1px solid ${C.line}` }}>
-                                  Subtotal {r.subtotal >= 0 ? "+" : ""}{fmt(r.subtotal)} × Pts/Max ({fmt(r.ptsMaxRatio)}) = {cpText}
-                                </div>
                               </span>
                             </span>
                           );
