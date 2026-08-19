@@ -7709,7 +7709,291 @@ function SingleBracket8({ seeds, rankLabels, fired }) {
   );
 }
 
+function RulesAndSettingsContent({ openRuleSections, setOpenRuleSections }) {
+  return (
+
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+          <section className="max-w-2xl">
+            <h2 className="text-3xl uppercase mb-3" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
+              Rules
+            </h2>
+            <div className="space-y-3 text-sm leading-relaxed">
+              <p>
+                The Alliance is thirteen dynasty leagues in ranked tiers, from the NFL down to Florida High School. All leagues
+                share the same roster, waivers, draft, and scoring settings, and use only NFL players.
+              </p>
+              <p>
+                Your team's performance earns you a <span style={{ color: C.gold }}>coaching score</span>. Leagues are weighted so
+                coaches in higher tiers earn more coaching points than coaches in lower tiers, and points accumulate season over
+                season — long-term success is rewarded over any one great year.
+              </p>
+              <p>
+                You'll use that coaching score to compete against other coaches to promote into higher leagues or more desirable
+                teams. Coaches who finish last or underperform may be <span style={{ color: C.ember }}>fired</span> — unassigned,
+                not removed. Your team becomes available for other coaches to take, and you'll have to go look for an opportunity
+                with another team, possibly in a lower tier.
+              </p>
+            </div>
+
+            <div className="mt-5 flex flex-col items-start gap-1">
+              {TIERS.map((t) => (
+                <div
+                  key={t.key}
+                  className="flex items-center gap-3 px-3 py-1 rounded-sm"
+                  style={{
+                    background: t.tier === 1 ? "rgba(232,163,61,0.14)" : C.panel,
+                    border: `1px solid ${t.tier === 1 ? C.goldDim : C.line}`,
+                    width: `${100 - (t.tier - 1) * 4.5}%`,
+                    minWidth: "13rem",
+                  }}
+                >
+                  <span className="text-xs w-5 text-right" style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.slate }}>{t.tier}</span>
+                  <span className="uppercase text-sm" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.08em", color: t.tier === 1 ? C.gold : C.chalk }}>
+                    {t.name}
+                  </span>
+                  <span className="ml-auto text-xs shrink-0" style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.slate }}>
+                    {t.size} roster
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-xs" style={{ color: C.slate }}>
+              232 teams total. Every roster carries a 20-man bench and an 8-player taxi squad — eligibility varies by
+              tier, see Taxi Squad in Settings.
+            </p>
+
+            <div className="mt-8 space-y-2">
+              {RULES_SECTIONS.map((sec) => {
+                const open = Boolean(openRuleSections[sec.id]);
+                return (
+                  <div key={sec.id} className="rounded-sm overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenRuleSections((prev) => ({ ...prev, [sec.id]: !prev[sec.id] }))}
+                      className="w-full flex items-center justify-between px-3 py-2.5 text-left"
+                      style={{ background: C.panel }}
+                    >
+                      <span className="uppercase text-sm" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.06em" }}>
+                        {sec.title}
+                      </span>
+                      <span className="text-xs" style={{ color: C.gold }}>{open ? "−" : "+"}</span>
+                    </button>
+                    {open && (
+                      <div className="px-4 py-3" style={{ background: C.ink }}>
+                        {sec.intro && (
+                          <p className="text-xs mb-3" style={{ color: C.slate }}>{sec.intro}</p>
+                        )}
+                        {sec.items && (
+                          <ul className="space-y-2 text-sm leading-relaxed list-disc pl-4">
+                            {sec.items.map((item, i) => (
+                              <li key={i} style={{ color: C.chalk }}>{item}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {sec.rows && (
+                          <div className="space-y-1">
+                            {sec.rows.map((row, i) => (
+                              <div key={i} className="flex items-center gap-3 py-1" style={{ borderTop: i > 0 ? `1px solid ${C.line}` : "none" }}>
+                                <span
+                                  className="text-xs shrink-0 px-2 py-0.5 rounded-sm text-right"
+                                  style={{
+                                    minWidth: "4.5rem",
+                                    fontFamily: "'IBM Plex Mono', monospace",
+                                    fontWeight: 600,
+                                    color: row.value.trim().startsWith("-") ? C.ember : C.turf,
+                                    background: row.value.trim().startsWith("-") ? "rgba(212,96,76,0.1)" : "rgba(87,180,120,0.1)",
+                                  }}
+                                >
+                                  {row.value}
+                                </span>
+                                <span className="text-sm" style={{ color: C.chalk }}>{row.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-8 pt-4 text-xs" style={{ borderTop: `1px solid ${C.line}`, color: C.slate }}>
+              <div>Alliance creator: <span style={{ color: C.chalk, fontWeight: 600 }}>PwnRangr</span></div>
+              <div className="mt-1">Contributors: Davidsstone, Deevel, Gavdjedi, Vastettler</div>
+            </div>
+          </section>
+
+          <section className="flex-1 min-w-0">
+            <h2 className="text-3xl uppercase mb-3" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
+              Settings
+            </h2>
+            <p className="text-sm mb-5" style={{ color: C.slate }}>
+              Every league runs the same roster, scoring, and league settings — pulled directly from the Alliance's
+              Sleeper configuration.
+            </p>
+
+            <div className="rounded-sm p-3.5 mb-6" style={{ border: `1px solid ${C.line}`, background: C.panel }}>
+              <div
+                className="uppercase text-sm mb-2"
+                style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.06em" }}
+              >
+                Roster
+              </div>
+              <p className="text-sm leading-relaxed" style={{ color: C.chalk }}>
+                {SETTINGS_ROSTER.starters.length} starters — {SETTINGS_ROSTER.starters.join(", ")}
+              </p>
+              <p className="text-xs mt-2" style={{ color: C.slate }}>
+                Plus a {SETTINGS_ROSTER.bench}-man bench, {SETTINGS_ROSTER.ir}-man IR, and {SETTINGS_ROSTER.taxi}-man
+                taxi squad (eligibility below).
+              </p>
+            </div>
+
+            <div
+              className="uppercase text-sm mb-2"
+              style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.06em" }}
+            >
+              Scoring
+            </div>
+            <div className="space-y-2 mb-6">
+              {SETTINGS_SCORING_SECTIONS.map((sec) => {
+                const open = Boolean(openRuleSections[sec.id]);
+                return (
+                  <div key={sec.id} className="rounded-sm overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenRuleSections((prev) => ({ ...prev, [sec.id]: !prev[sec.id] }))}
+                      className="w-full flex items-center justify-between px-3 py-2.5 text-left"
+                      style={{ background: C.panel }}
+                    >
+                      <span className="uppercase text-sm" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.06em" }}>
+                        {sec.title}
+                      </span>
+                      <span className="text-xs" style={{ color: C.gold }}>{open ? "\u2212" : "+"}</span>
+                    </button>
+                    {open && (
+                      <div className="px-4 py-3" style={{ background: C.ink }}>
+                        {sec.intro && <p className="text-xs mb-3" style={{ color: C.slate }}>{sec.intro}</p>}
+                        <div className="space-y-1">
+                          {sec.rows.map((row, i) => (
+                            <div key={i} className="flex items-center gap-3 py-1" style={{ borderTop: i > 0 ? `1px solid ${C.line}` : "none" }}>
+                              <span
+                                className="text-xs shrink-0 px-2 py-0.5 rounded-sm text-right"
+                                style={{
+                                  minWidth: "3.5rem",
+                                  fontFamily: "'IBM Plex Mono', monospace",
+                                  fontWeight: 600,
+                                  color: row.value.trim().startsWith("-") ? C.ember : C.turf,
+                                  background: row.value.trim().startsWith("-") ? "rgba(212,96,76,0.1)" : "rgba(87,180,120,0.1)",
+                                }}
+                              >
+                                {row.value}
+                              </span>
+                              <span className="text-sm" style={{ color: C.chalk }}>
+                                {row.label}
+                                {row.note && <span style={{ color: C.slate }}> \u2014 {row.note}</span>}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div
+              className="uppercase text-sm mb-2"
+              style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.06em" }}
+            >
+              League Settings
+            </div>
+            <div className="space-y-2">
+              {SETTINGS_LEAGUE_SECTIONS.map((sec) => {
+                const open = Boolean(openRuleSections[sec.id]);
+                return (
+                  <div key={sec.id} className="rounded-sm overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenRuleSections((prev) => ({ ...prev, [sec.id]: !prev[sec.id] }))}
+                      className="w-full flex items-center justify-between px-3 py-2.5 text-left"
+                      style={{ background: C.panel }}
+                    >
+                      <span className="uppercase text-sm" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.06em" }}>
+                        {sec.title}
+                      </span>
+                      <span className="text-xs" style={{ color: C.gold }}>{open ? "\u2212" : "+"}</span>
+                    </button>
+                    {open && (
+                      <div className="px-4 py-3" style={{ background: C.ink }}>
+                        <ul className="space-y-2 text-sm leading-relaxed list-disc pl-4">
+                          {sec.items.map((item, i) => (
+                            <li key={i} style={{ color: C.chalk }}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+          </div>
+          );
+}
+
+// Standalone, no-login-required Rules & Settings page for prospective
+// coaches who haven't signed up yet — shared with the in-app Rules tab via
+// RulesAndSettingsContent above, so the two can never drift out of sync.
+// Reached via App()'s very first check (before any hooks/auth/AgeGate),
+// so a ?rules visit never spins up Firebase listeners or Sleeper fetches.
+function PublicRules() {
+  const [openRuleSections, setOpenRuleSections] = useState({ general: true });
+  return (
+    <div className="min-h-screen w-full" style={{ background: C.ink, color: C.chalk, fontFamily: "'Barlow', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+      `}</style>
+      <header className="px-4 sm:px-6 pt-6 pb-4" style={{ borderBottom: `1px solid ${C.line}` }}>
+        <div className="max-w-6xl mx-auto flex items-center gap-3">
+          <Logo size={52} />
+          <div>
+            <div
+              className="text-2xl sm:text-3xl leading-none uppercase"
+              style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: "0.02em" }}
+            >
+              Painless <span style={{ color: C.gold }}>Football</span> Alliance
+            </div>
+            <div className="text-xs mt-1 uppercase tracking-wider" style={{ color: C.slate }}>
+              Rules &amp; Settings — for prospective coaches
+            </div>
+          </div>
+        </div>
+      </header>
+      <main className="px-4 sm:px-6 py-8 max-w-6xl mx-auto">
+        <RulesAndSettingsContent openRuleSections={openRuleSections} setOpenRuleSections={setOpenRuleSections} />
+        <div className="mt-10 pt-6 text-center" style={{ borderTop: `1px solid ${C.line}` }}>
+          <a href="/" style={{ color: C.gold, fontWeight: 600, fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: "0.04em", textDecoration: "underline" }}>
+            Ready to join? Head to the PFA Hub to apply →
+          </a>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export default function App() {
+  // Standalone public Rules page — checked before ANY hooks, so a ?rules
+  // visit never touches AgeGate, auth, Firebase listeners, or Sleeper
+  // fetches at all. Shareable link: <site-url>/?rules. Safe as an early
+  // return ahead of every hook below because window.location.search is
+  // fixed for the lifetime of a mounted App instance here (this app has no
+  // client-side route navigation that would change it mid-session).
+  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("rules")) {
+    return <PublicRules />;
+  }
+
   const [mode, setMode] = useState("loading");
   const [view, setView] = useState("home");
   const [adminSubTab, setAdminSubTab] = useState("applications");
@@ -11543,234 +11827,7 @@ export default function App() {
         )}
 
         {view === "pyramid" && (
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
-          <section className="max-w-2xl">
-            <h2 className="text-3xl uppercase mb-3" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
-              Rules
-            </h2>
-            <div className="space-y-3 text-sm leading-relaxed">
-              <p>
-                The Alliance is thirteen dynasty leagues in ranked tiers, from the NFL down to Florida High School. All leagues
-                share the same roster, waivers, draft, and scoring settings, and use only NFL players.
-              </p>
-              <p>
-                Your team's performance earns you a <span style={{ color: C.gold }}>coaching score</span>. Leagues are weighted so
-                coaches in higher tiers earn more coaching points than coaches in lower tiers, and points accumulate season over
-                season — long-term success is rewarded over any one great year.
-              </p>
-              <p>
-                You'll use that coaching score to compete against other coaches to promote into higher leagues or more desirable
-                teams. Coaches who finish last or underperform may be <span style={{ color: C.ember }}>fired</span> — unassigned,
-                not removed. Your team becomes available for other coaches to take, and you'll have to go look for an opportunity
-                with another team, possibly in a lower tier.
-              </p>
-            </div>
-
-            <div className="mt-5 flex flex-col items-start gap-1">
-              {TIERS.map((t) => (
-                <div
-                  key={t.key}
-                  className="flex items-center gap-3 px-3 py-1 rounded-sm"
-                  style={{
-                    background: t.tier === 1 ? "rgba(232,163,61,0.14)" : C.panel,
-                    border: `1px solid ${t.tier === 1 ? C.goldDim : C.line}`,
-                    width: `${100 - (t.tier - 1) * 4.5}%`,
-                    minWidth: "13rem",
-                  }}
-                >
-                  <span className="text-xs w-5 text-right" style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.slate }}>{t.tier}</span>
-                  <span className="uppercase text-sm" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.08em", color: t.tier === 1 ? C.gold : C.chalk }}>
-                    {t.name}
-                  </span>
-                  <span className="ml-auto text-xs shrink-0" style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.slate }}>
-                    {t.size} roster
-                  </span>
-                </div>
-              ))}
-            </div>
-            <p className="mt-2 text-xs" style={{ color: C.slate }}>
-              232 teams total. Every roster carries a 20-man bench and an 8-player taxi squad — eligibility varies by
-              tier, see Taxi Squad in Settings.
-            </p>
-
-            <div className="mt-8 space-y-2">
-              {RULES_SECTIONS.map((sec) => {
-                const open = Boolean(openRuleSections[sec.id]);
-                return (
-                  <div key={sec.id} className="rounded-sm overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
-                    <button
-                      type="button"
-                      onClick={() => setOpenRuleSections((prev) => ({ ...prev, [sec.id]: !prev[sec.id] }))}
-                      className="w-full flex items-center justify-between px-3 py-2.5 text-left"
-                      style={{ background: C.panel }}
-                    >
-                      <span className="uppercase text-sm" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.06em" }}>
-                        {sec.title}
-                      </span>
-                      <span className="text-xs" style={{ color: C.gold }}>{open ? "−" : "+"}</span>
-                    </button>
-                    {open && (
-                      <div className="px-4 py-3" style={{ background: C.ink }}>
-                        {sec.intro && (
-                          <p className="text-xs mb-3" style={{ color: C.slate }}>{sec.intro}</p>
-                        )}
-                        {sec.items && (
-                          <ul className="space-y-2 text-sm leading-relaxed list-disc pl-4">
-                            {sec.items.map((item, i) => (
-                              <li key={i} style={{ color: C.chalk }}>{item}</li>
-                            ))}
-                          </ul>
-                        )}
-                        {sec.rows && (
-                          <div className="space-y-1">
-                            {sec.rows.map((row, i) => (
-                              <div key={i} className="flex items-center gap-3 py-1" style={{ borderTop: i > 0 ? `1px solid ${C.line}` : "none" }}>
-                                <span
-                                  className="text-xs shrink-0 px-2 py-0.5 rounded-sm text-right"
-                                  style={{
-                                    minWidth: "4.5rem",
-                                    fontFamily: "'IBM Plex Mono', monospace",
-                                    fontWeight: 600,
-                                    color: row.value.trim().startsWith("-") ? C.ember : C.turf,
-                                    background: row.value.trim().startsWith("-") ? "rgba(212,96,76,0.1)" : "rgba(87,180,120,0.1)",
-                                  }}
-                                >
-                                  {row.value}
-                                </span>
-                                <span className="text-sm" style={{ color: C.chalk }}>{row.label}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-8 pt-4 text-xs" style={{ borderTop: `1px solid ${C.line}`, color: C.slate }}>
-              <div>Alliance creator: <span style={{ color: C.chalk, fontWeight: 600 }}>PwnRangr</span></div>
-              <div className="mt-1">Contributors: Davidsstone, Deevel, Gavdjedi, Vastettler</div>
-            </div>
-          </section>
-
-          <section className="flex-1 min-w-0">
-            <h2 className="text-3xl uppercase mb-3" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
-              Settings
-            </h2>
-            <p className="text-sm mb-5" style={{ color: C.slate }}>
-              Every league runs the same roster, scoring, and league settings — pulled directly from the Alliance's
-              Sleeper configuration.
-            </p>
-
-            <div className="rounded-sm p-3.5 mb-6" style={{ border: `1px solid ${C.line}`, background: C.panel }}>
-              <div
-                className="uppercase text-sm mb-2"
-                style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.06em" }}
-              >
-                Roster
-              </div>
-              <p className="text-sm leading-relaxed" style={{ color: C.chalk }}>
-                {SETTINGS_ROSTER.starters.length} starters — {SETTINGS_ROSTER.starters.join(", ")}
-              </p>
-              <p className="text-xs mt-2" style={{ color: C.slate }}>
-                Plus a {SETTINGS_ROSTER.bench}-man bench, {SETTINGS_ROSTER.ir}-man IR, and {SETTINGS_ROSTER.taxi}-man
-                taxi squad (eligibility below).
-              </p>
-            </div>
-
-            <div
-              className="uppercase text-sm mb-2"
-              style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.06em" }}
-            >
-              Scoring
-            </div>
-            <div className="space-y-2 mb-6">
-              {SETTINGS_SCORING_SECTIONS.map((sec) => {
-                const open = Boolean(openRuleSections[sec.id]);
-                return (
-                  <div key={sec.id} className="rounded-sm overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
-                    <button
-                      type="button"
-                      onClick={() => setOpenRuleSections((prev) => ({ ...prev, [sec.id]: !prev[sec.id] }))}
-                      className="w-full flex items-center justify-between px-3 py-2.5 text-left"
-                      style={{ background: C.panel }}
-                    >
-                      <span className="uppercase text-sm" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.06em" }}>
-                        {sec.title}
-                      </span>
-                      <span className="text-xs" style={{ color: C.gold }}>{open ? "\u2212" : "+"}</span>
-                    </button>
-                    {open && (
-                      <div className="px-4 py-3" style={{ background: C.ink }}>
-                        {sec.intro && <p className="text-xs mb-3" style={{ color: C.slate }}>{sec.intro}</p>}
-                        <div className="space-y-1">
-                          {sec.rows.map((row, i) => (
-                            <div key={i} className="flex items-center gap-3 py-1" style={{ borderTop: i > 0 ? `1px solid ${C.line}` : "none" }}>
-                              <span
-                                className="text-xs shrink-0 px-2 py-0.5 rounded-sm text-right"
-                                style={{
-                                  minWidth: "3.5rem",
-                                  fontFamily: "'IBM Plex Mono', monospace",
-                                  fontWeight: 600,
-                                  color: row.value.trim().startsWith("-") ? C.ember : C.turf,
-                                  background: row.value.trim().startsWith("-") ? "rgba(212,96,76,0.1)" : "rgba(87,180,120,0.1)",
-                                }}
-                              >
-                                {row.value}
-                              </span>
-                              <span className="text-sm" style={{ color: C.chalk }}>
-                                {row.label}
-                                {row.note && <span style={{ color: C.slate }}> \u2014 {row.note}</span>}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div
-              className="uppercase text-sm mb-2"
-              style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.06em" }}
-            >
-              League Settings
-            </div>
-            <div className="space-y-2">
-              {SETTINGS_LEAGUE_SECTIONS.map((sec) => {
-                const open = Boolean(openRuleSections[sec.id]);
-                return (
-                  <div key={sec.id} className="rounded-sm overflow-hidden" style={{ border: `1px solid ${C.line}` }}>
-                    <button
-                      type="button"
-                      onClick={() => setOpenRuleSections((prev) => ({ ...prev, [sec.id]: !prev[sec.id] }))}
-                      className="w-full flex items-center justify-between px-3 py-2.5 text-left"
-                      style={{ background: C.panel }}
-                    >
-                      <span className="uppercase text-sm" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, letterSpacing: "0.06em" }}>
-                        {sec.title}
-                      </span>
-                      <span className="text-xs" style={{ color: C.gold }}>{open ? "\u2212" : "+"}</span>
-                    </button>
-                    {open && (
-                      <div className="px-4 py-3" style={{ background: C.ink }}>
-                        <ul className="space-y-2 text-sm leading-relaxed list-disc pl-4">
-                          {sec.items.map((item, i) => (
-                            <li key={i} style={{ color: C.chalk }}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-          </div>
+          <RulesAndSettingsContent openRuleSections={openRuleSections} setOpenRuleSections={setOpenRuleSections} />
         )}
 
         {view === "300club" && (
