@@ -12366,6 +12366,7 @@ export default function App() {
               {[
                 ["applications", "Applications"],
                 ["penalties", "Penalties"],
+                ["finalize", "Finalize Season"],
                 ["users", "Users"],
               ].map(([id, label]) => (
                 <button
@@ -12551,60 +12552,69 @@ export default function App() {
               )}
             </section>
             )}
-            {/* TEMPORARY — one-time 2024/2025 streak bonus backfill. Remove
-                this block once she's run it; the live 2026 sweep needs no
-                button (it's the useEffect above, tied to nflState). */}
-            <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
-              <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
-                One-time: reconstruct win/loss streak X Points for the completed 2024 and 2025 seasons,
-                all 13 tiers. Safe to click more than once (deterministic doc IDs just overwrite).
-              </div>
-              <button
-                onClick={runStreakBonusBackfill}
-                disabled={backfillRunning}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 4,
-                  border: `1px solid ${C.gold}`,
-                  background: backfillRunning ? "transparent" : C.gold,
-                  color: backfillRunning ? C.slate : C.ink,
-                  fontWeight: 600,
-                  cursor: backfillRunning ? "default" : "pointer",
-                }}
-              >
-                {backfillRunning ? "Running…" : "Backfill 2024/2025 Streak Bonuses"}
-              </button>
-            </div>
-            {/* Season CP final lock — a lasting Admin utility, not a one-time
-                removable block like the streak backfill above: it needs to
-                run again once 2026 finishes (once HISTORICAL_FINAL_ORDER[2026]
-                is confirmed), and again whenever the historical League
-                Strength formula lands, to fill in the leagueStrengthCP
-                that's currently locked as null. Safe to re-click any time —
-                deterministic doc IDs just overwrite with a fresher record. */}
-            <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
-              <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
-                Lock the final Season CP breakdown (Wins, Points, FAAB, X Points, Penalties/Bonuses, Place) for
-                every tier with a confirmed final order — currently 2024 and 2025, all 13 tiers. League Strength
-                is left blank for now (its historical formula isn't built yet); safe to re-run later to fill it
-                in without disturbing anything else already locked.
-              </div>
-              <button
-                onClick={runSeasonCPFinalLock}
-                disabled={cpLockRunning}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 4,
-                  border: `1px solid ${C.gold}`,
-                  background: cpLockRunning ? "transparent" : C.gold,
-                  color: cpLockRunning ? C.slate : C.ink,
-                  fontWeight: 600,
-                  cursor: cpLockRunning ? "default" : "pointer",
-                }}
-              >
-                {cpLockRunning ? "Running…" : "Lock Final Season CP (2024/2025)"}
-              </button>
-            </div>
+            {/* Backfill 2024/2025 Streak Bonuses and Lock Final Season CP live
+                here together — moved into their own sub-tab 2026-08-19
+                (previously rendered unconditionally under Applications).
+                Neither is truly one-time: the lock needs re-running once
+                2026 finishes and again once historical League Strength
+                exists; the streak backfill is safe to re-click any time a
+                past season's underlying data changes. */}
+            {adminSubTab === "finalize" && (
+              <section className="mb-8">
+                <h3 className="text-xl uppercase leading-none mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
+                  Finalize Season
+                </h3>
+                <p className="text-sm mb-4" style={{ color: C.slate }}>
+                  Run these in order for a completed season: backfill streak bonuses first, then lock the final
+                  Season CP breakdown (it sums the streak total in as one of its components). Both are safe to
+                  re-click any time — deterministic doc IDs just overwrite with a fresher record.
+                </p>
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                    Reconstruct win/loss streak X Points for the completed 2024 and 2025 seasons, all 13 tiers.
+                    Safe to click more than once (deterministic doc IDs just overwrite).
+                  </div>
+                  <button
+                    onClick={runStreakBonusBackfill}
+                    disabled={backfillRunning}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 4,
+                      border: `1px solid ${C.gold}`,
+                      background: backfillRunning ? "transparent" : C.gold,
+                      color: backfillRunning ? C.slate : C.ink,
+                      fontWeight: 600,
+                      cursor: backfillRunning ? "default" : "pointer",
+                    }}
+                  >
+                    {backfillRunning ? "Running…" : "Backfill 2024/2025 Streak Bonuses"}
+                  </button>
+                </div>
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                    Lock the final Season CP breakdown (Wins, Points, FAAB, X Points, Penalties/Bonuses, Place) for
+                    every tier with a confirmed final order — currently 2024 and 2025, all 13 tiers. League Strength
+                    is left blank for now (its historical formula isn't built yet); safe to re-run later to fill it
+                    in without disturbing anything else already locked.
+                  </div>
+                  <button
+                    onClick={runSeasonCPFinalLock}
+                    disabled={cpLockRunning}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 4,
+                      border: `1px solid ${C.gold}`,
+                      background: cpLockRunning ? "transparent" : C.gold,
+                      color: cpLockRunning ? C.slate : C.ink,
+                      fontWeight: 600,
+                      cursor: cpLockRunning ? "default" : "pointer",
+                    }}
+                  >
+                    {cpLockRunning ? "Running…" : "Lock Final Season CP (2024/2025)"}
+                  </button>
+                </div>
+              </section>
+            )}
             {adminSubTab === "penalties" && (
               <section className="mb-8">
                 <h3 className="text-xl uppercase leading-none mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
