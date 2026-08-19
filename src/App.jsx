@@ -11376,6 +11376,16 @@ export default function App() {
                           const key = `${r.currentTierKey || r.tierKey}_${CURRENT_SEASON}_${r.rosterId}`;
                           const streakMods = streakTotalsByRosterKey[key];
                           const manualMods = modifiersByRosterKey[key];
+                          // Live preview only — reuses the exact same confirmed
+                          // score already shown on the tier nav pills/Directory
+                          // bands. Deliberately NOT folded into currentCP below;
+                          // it's shown here so it's visible ahead of the actual
+                          // season-end lock (see runSeasonCPFinalLock), per her
+                          // 2026-08-19 call: "keep a running total for display
+                          // but it locks in at season's end like most of the
+                          // stats." ?? null (not undefined) for tiers with no
+                          // pool (NFL) so it renders "—", not NaN.
+                          const leagueStrengthPreview = conferenceStrength[r.currentTierKey || r.tierKey]?.score ?? null;
                           const combined = [
                             { id: "place", points: null, label: "Place" },
                             { id: "wins", points: r.winPoints, label: "Wins" },
@@ -11383,7 +11393,7 @@ export default function App() {
                             { id: "faab", points: r.faabComponent, label: "FAAB" },
                             { id: "xpts", points: (streakMods && streakMods.net) || 0, label: "X Pts" },
                             { id: "penalties", points: (manualMods && manualMods.net) || 0, label: "Penalties/Bonuses" },
-                            { id: "league", points: null, label: "League Strength" },
+                            { id: "league", points: leagueStrengthPreview, label: "League Strength" },
                           ];
                           const cpText = r.currentCP === -Infinity ? "—" : `${r.currentCP >= 0 ? "+" : ""}${fmt(r.currentCP)}`;
                           const cpColor = r.currentCP === -Infinity ? C.chalk : r.currentCP > 0 ? C.turf : r.currentCP < 0 ? C.ember : C.slate;
