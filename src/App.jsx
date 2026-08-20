@@ -256,6 +256,10 @@ const HISTORICAL_FINAL_ORDER = {
       "AK State", "App State", "GA State", "Little Rock", "Louisiana", "Carolina", "Marshall", "Troy",
       "Texas State", "GA Southern", "S Alabama", "Arlington", "JMU", "S Miss", "Old Dominion", "ULM",
     ],
+    TEN: [
+      "UCLA", "Washington State", "Washington", "Arizona State", "Eastern Washington", "Arizona", "Portland State", "Colorado",
+      "Oregon State", "Boise State", "Cal", "Utah", "Stanford", "Cal Poly", "Oregon", "San Diego State",
+    ],
   },
   2024: {
     FLHS: [
@@ -2870,6 +2874,14 @@ const OKKY_MARK = "/art/okky-mark.png";
 const HOGS_MARK = "/art/hogs-mark.png";
 const TEN_MARK = "/art/ten-mark.png";
 const TEN_TROPHY = "/art/ten-trophy.png";
+// This tier was branded "PAC-12" for 2022-2023 before the real conference
+// dissolved and she rebranded it to Big Ten (team names changed, same
+// underlying Sleeper league) for 2024 on -- so it stays wired as tierKey
+// "TEN" everywhere, but 2023's data needs its own art/colors/banners since
+// none of it matches the Big Ten identity. She needs to add these two files
+// to public/art/ (same as every other tier's mark/trophy) for them to render.
+const PAC12_MARK = "/art/pac12-mark.png";
+const PAC12_TROPHY = "/art/pac12-trophy.png";
 const SWAC_MARK = "/art/swac-mark.png";
 const SWAC_TROPHY = "/art/swac-trophy.png";
 const INDIANA_MARK = "/art/indiana-mark.png";
@@ -4382,6 +4394,33 @@ const TEN_CLR = {
   "Michigan": ["#00274C", "#FFCB05"], "Maryland": ["#E03A3E", "#FFD520"],
   "Illinois": ["#E84A27", "#FFFFFF"], "USC": ["#990000", "#FFC72C"],
 };
+
+// --- 2023 PAC-12 (this tier's identity before the 2024 Big Ten rebrand) ----
+// Confirmed with her 2026-08-19: this tierKey ("TEN") was branded "PAC-12"
+// for 2022-2023 -- same underlying Sleeper league, team names swapped when
+// the real PAC-12 dissolved and she rebranded to Big Ten for 2024 on. Kept
+// completely separate from TEN_CLR/TEN_MARK/TEN_TROPHY/TEN_BANNERS above,
+// which stay exactly as they are for 2024/2025's Big Ten identity.
+// Banner navy (#00274D) matches the real Pac-12 shield's "Prussian Blue".
+const PAC12_BANNERS = [[112, 324, "PAC-12 Conference", "#00274D"], [560, 324, "Championship", "#00274D"]];
+const PAC12_CONSO_BANNERS = [[112, 324, "PAC-12 Conference", "#00274D"], [560, 324, "Consolation", "#00274D"]];
+
+// 5 of these 16 (Washington, UCLA, Oregon, Cal, Utah) are real schools that
+// later joined the actual Big Ten, so they reuse TEN_CLR's exact values --
+// same brand colors, just also relevant to this tier's earlier identity.
+// The other 11 are new entries, confirmed with her 2026-08-19.
+const PAC12_CLR = {
+  "Washington": ["#4B2E83", "#E8E3D3"], "UCLA": ["#2D68C4", "#FFFFFF"],
+  "Oregon": ["#154733", "#FEE123"], "Cal": ["#041E42", "#FDB515"],
+  "Utah": ["#CC0000", "#FFFFFF"],
+  "Arizona": ["#AB0520", "#0C234B"], "Arizona State": ["#8C1D40", "#FFC627"],
+  "Colorado": ["#000000", "#CFB87C"], "Oregon State": ["#DC4405", "#000000"],
+  "Stanford": ["#8C1515", "#FFFFFF"], "Boise State": ["#0033A0", "#D64309"],
+  "San Diego State": ["#A6192E", "#000000"], "Washington State": ["#981E32", "#5E6A71"],
+  "Eastern Washington": ["#A10022", "#FFFFFF"], "Portland State": ["#154734", "#FFFFFF"],
+  "Cal Poly": ["#003831", "#FFE395"],
+};
+
 
 const TEN_2025_PLAYOFFS = {
   colors: TEN_CLR,
@@ -6208,6 +6247,60 @@ const TEN_2024_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2023 PAC-12 (tierKey TEN), ranks 1-8 (championship half) --------------
+// Transcribed from her PFA_Playoffs_2023 - PAC.csv export. This tier was
+// branded "PAC-12" before her 2024 Big Ten rebrand -- see the note on
+// PAC12_CLR above. Full read-back confirmed with her 2026-08-19 (one
+// correction on her end mid-read-back: Arizona State, not Arizona, won the
+// week 15 game 233.40 to 212.55).
+const PAC12_2023_PLAYOFFS = r3ChampHalf({
+  colors: PAC12_CLR, logo: "PAC-12", logoSrc: PAC12_MARK, trophy: PAC12_TROPHY,
+  banners: PAC12_BANNERS,
+  wk15: [
+    ["Eastern Washington", "194.45", "Washington State", "207.60"],
+    ["Washington", "198.70", "Portland State", "191.95"],
+    ["Arizona", "212.55", "Arizona State", "233.40"],
+    ["UCLA", "244.80", "Colorado", "193.70"],
+  ],
+  semis: [
+    ["Washington State", "259.70", "Washington", "187.25"],
+    ["Arizona State", "188.20", "UCLA", "190.35"],
+  ],
+  final: ["Washington State", "199.35", "UCLA", "217.00"],
+  third: ["Washington", "212.80", "Arizona State", "126.65"],
+  fifth: {
+    leftQual: ["Eastern Washington", "282.70", "Portland State", "229.90"],
+    rightQual: ["Arizona", "251.60", "Colorado", "249.65"],
+    final: ["Eastern Washington", "251.20", "Arizona", "223.15"],
+  },
+  seventh: ["Portland State", "188.70", "Colorado", "113.80"],
+});
+
+// --- 2023 PAC-12 (tierKey TEN), ranks 9-16 (consolation half) --------------
+const PAC12_2023_CONSOLATION = r3ConsoHalf({
+  colors: PAC12_CLR, logo: "PAC-12", logoSrc: PAC12_MARK,
+  banners: PAC12_CONSO_BANNERS,
+  wk15: [
+    ["Cal", "272.60", "Cal Poly", "174.80"],
+    ["Oregon State", "288.90", "San Diego State", "200.65"],
+    ["Utah", "162.65", "Stanford", "152.90"],
+    ["Oregon", "166.75", "Boise State", "174.50"],
+  ],
+  semis: [
+    ["Cal", "153.55", "Oregon State", "199.75"],
+    ["Utah", "194.70", "Boise State", "209.60"],
+  ],
+  final: ["Oregon State", "274.15", "Boise State", "186.05"],
+  eleventh: ["Cal", "227.50", "Utah", "146.05"],
+  thirteenth: {
+    leftQual: ["Cal Poly", "166.50", "San Diego State", "150.90"],
+    rightQual: ["Stanford", "162.75", "Oregon", "153.95"],
+    final: ["Cal Poly", "170.10", "Stanford", "249.20"],
+  },
+  fifteenth: ["San Diego State", "158.40", "Oregon", "181.10"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // --- 2024 ACC, ranks 1-8 (championship half) --------------------------------
 // Transcribed from her PFA_Playoffs_2024 - ACC.csv export, confirmed 2026-08-17.
 // Note: the qualifying game deciding who'd play for 13th was a 0.05-point
@@ -7608,6 +7701,9 @@ const GRID_BRACKETS = {
     IVY: { playoffs: IVY_2023_PLAYOFFS, consolation: IVY_2023_CONSOLATION },
     SOCO: { playoffs: SOCO_2023_PLAYOFFS, consolation: SOCO_2023_CONSOLATION },
     SUN: { playoffs: SUN_2023_PLAYOFFS, consolation: SUN_2023_CONSOLATION },
+    // Branded "PAC-12" for 2023, before her 2024 Big Ten rebrand -- see the
+    // note on PAC12_CLR. Still tierKey TEN, same underlying league.
+    TEN: { playoffs: PAC12_2023_PLAYOFFS, consolation: PAC12_2023_CONSOLATION },
   },
 };
 
