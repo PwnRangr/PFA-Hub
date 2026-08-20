@@ -236,6 +236,10 @@ const HISTORICAL_FINAL_ORDER = {
       "Miami Beach", "Coral Springs", "Palmetto", "Coral Glades", "Deerfield", "Cypress Bay", "Western", "Boca Raton",
       "Taravella", "Southwest", "West Broward", "Dr Krop", "Miami Senior", "Stoneman", "West Boca", "Miami Dade",
     ],
+    GLIAC: [
+      "Davenport", "Mount Union", "Muskingum", "Purdue NW", "Ferris State", "Ohio N", "Baldwin", "Wayne State",
+      "Heidelberg", "Lake Superior", "Northwood", "Capital", "N Michigan", "JCU", "Parkside", "Wilmington",
+    ],
   },
   2024: {
     FLHS: [
@@ -5616,6 +5620,62 @@ const GLIAC_2024_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2023 GLIAC, ranks 1-8 (championship half) ------------------------------
+// Transcribed from her PFA_Playoffs_2023 - GLIAC.csv export, full read-back
+// confirmed with her 2026-08-19. Two spelling/naming normalizations, same
+// pattern as the 2024 GLIAC note above: sheet has "Heidelburg" -> confirmed
+// "Heidelberg"; sheet has "Ohio Northern" -> confirmed "Ohio N" (its short
+// form used everywhere else in GLIAC_CLR/the 2024-25 data); sheet has bare
+// "Purdue" -> confirmed "Purdue NW", the only Purdue that's an actual GLIAC
+// member across every other season's data.
+const GLIAC_2023_PLAYOFFS = r3ChampHalf({
+  colors: GLIAC_CLR, logo: "GLIAC", logoSrc: GLIAC_MARK, trophy: GLIAC_TROPHY,
+  banners: GLIAC_BANNERS,
+  wk15: [
+    ["Baldwin", "206.95", "Mount Union", "214.40"],
+    ["Ohio N", "178.60", "Muskingum", "230.60"],
+    ["Ferris State", "198.60", "Purdue NW", "274.75"],
+    ["Davenport", "244.75", "Wayne State", "238.95"],
+  ],
+  semis: [
+    ["Mount Union", "210.90", "Muskingum", "191.05"],
+    ["Purdue NW", "157.90", "Davenport", "273.80"],
+  ],
+  final: ["Davenport", "202.70", "Mount Union", "178.45"],
+  third: ["Muskingum", "257.35", "Purdue NW", "198.15"],
+  fifth: {
+    leftQual: ["Baldwin", "185.20", "Ohio N", "300.45"],
+    rightQual: ["Ferris State", "220.55", "Wayne State", "219.80"],
+    final: ["Ohio N", "200.20", "Ferris State", "235.70"],
+  },
+  seventh: ["Baldwin", "243.25", "Wayne State", "222.65"],
+});
+
+// --- 2023 GLIAC, ranks 9-16 (consolation half) -------------------------------
+const GLIAC_2023_CONSOLATION = r3ConsoHalf({
+  colors: GLIAC_CLR, logo: "GLIAC", logoSrc: GLIAC_MARK,
+  banners: GLIAC_CONSO_BANNERS,
+  wk15: [
+    ["Heidelberg", "222.75", "Wilmington", "71.05"],
+    ["JCU", "160.10", "Capital", "217.15"],
+    ["Parkside", "158.80", "Lake Superior", "234.75"],
+    ["Northwood", "196.60", "N Michigan", "183.70"],
+  ],
+  semis: [
+    ["Heidelberg", "223.80", "Capital", "179.90"],
+    ["Lake Superior", "227.10", "Northwood", "170.30"],
+  ],
+  final: ["Heidelberg", "235.65", "Lake Superior", "161.20"],
+  eleventh: ["Capital", "156.55", "Northwood", "203.90"],
+  thirteenth: {
+    leftQual: ["Wilmington", "130.65", "JCU", "167.50"],
+    rightQual: ["Parkside", "212.85", "N Michigan", "258.55"],
+    final: ["JCU", "110.45", "N Michigan", "217.40"],
+  },
+  fifteenth: ["Wilmington", "120.30", "Parkside", "214.75"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // --- 2024 SWAC, ranks 1-8 (championship half) -------------------------------
 // Transcribed from her PFA_Playoffs_2024 - SWAC.csv export, same mirrored
 // bracket-sheet layout as FLHS/GLIAC 2024 above, confirmed 2026-08-17.
@@ -7263,9 +7323,10 @@ const GRID_BRACKETS = {
     NFL: { playoffs: NFL_2024_PLAYOFFS, consolation: NFL_2024_CONSOLATION },
   },
   2023: {
-    // First pre-2024 tier — FLHS 2023 shipped 2026-08-19. Confirmed against
-    // her PFA_Playoffs_2023 - FLHS.csv, full read-back approved 2026-08-19.
+    // Pre-2024 tiers, transcribed from her PFA_Playoffs_2023 CSV exports,
+    // full read-backs confirmed 2026-08-19.
     FLHS: { playoffs: FLHS_2023_PLAYOFFS, consolation: FLHS_2023_CONSOLATION },
+    GLIAC: { playoffs: GLIAC_2023_PLAYOFFS, consolation: GLIAC_2023_CONSOLATION },
   },
 };
 
