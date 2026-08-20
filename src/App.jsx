@@ -275,6 +275,10 @@ const HISTORICAL_FINAL_ORDER = {
       "Oklahoma", "Georgia", "Kentucky", "Auburn", "South Carolina", "Arkansas", "Alabama", "Ole Miss",
       "Missouri", "Texas A&M", "Texas", "Tennessee", "Vanderbilt", "Miss State", "Florida", "LSU",
     ],
+    XFL: [
+      "DC", "San Francisco", "Houston", "Seattle", "Dallas", "Memphis", "Orlando", "Boston", "Chicago", "Las Vegas",
+      "St Louis", "New Jersey", "Brooklyn", "Omaha", "LAX", "Birmingham", "Tampa Bay", "LAW", "New York", "Atlanta",
+    ],
   },
   2024: {
     FLHS: [
@@ -7167,8 +7171,106 @@ const XFL_2024_CONSOLATION = {
   ],
 };
 
+// --- 2023 XFL, ranks 1-10 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2023 - XFL.csv export. Genuinely more
+// complex than the 16-team R3 tiers -- 20 teams, week-14 play-ins, byes,
+// and a 3-week series for 9th/19th -- so this was decoded column-by-column
+// and cross-checked against every anchor label before any read-back was
+// sent. Full read-back confirmed with her 2026-08-19, with one correction
+// mid-read-back: semiRight was Houston 226.95 vs San Francisco 241.20 (SF
+// wins), not the score Claude first transposed from the final's column.
+// Same usflXflMainBoxes/USFLXFL_CHAMP_PLACES helpers as 2024/2025 -- no new
+// geometry, this is a pure data addition.
+const XFL_2023_PLAYOFFS = {
+  colors: XFL_CLR, logoSrc: XFL_MARK,
+  sections: [
+    {
+      banners: XFL_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "XFL",
+      slots: [[448, 4, 100, 84, "Trophy", XFL_TROPHY], [448, 200, 100, 96, "PFA", PFA_MARK]],
+      champion: { y: 114, label: "Champion", team: r3Winner(["DC", "236.95", "San Francisco", "185.55"]), sub: "1st place" },
+      boxes: usflXflMainBoxes({
+        playInLeft: ["Las Vegas", "191.65", "Dallas", "235.40"],
+        byeTop: ["Seattle", "204.50", "Dallas", "190.05"],
+        byeBot: ["Boston", "143.90", "DC", "158.35"],
+        semiLeft: ["Seattle", "222.45", "DC", "238.25"],
+        final: ["DC", "236.95", "San Francisco", "185.55"],
+        semiRight: ["Houston", "226.95", "San Francisco", "241.20"],
+        byeTopR: ["Houston", "261.30", "Orlando", "162.30"],
+        byeBotR: ["Memphis", "177.80", "San Francisco", "212.05"],
+        playInRight: ["Orlando", "247.65", "Chicago", "228.05"],
+      }),
+    },
+    {
+      h: 420,
+      paths: USFLXFL_PLACE_PATHS_LIVE,
+      boxes: [
+        ...r3Split(336, 33, 560, 33, ["Seattle", "198.60", "Houston", "210.00"]),
+        ...r3Stack(224, 95, ["Dallas", "177.25", "Boston", "169.25"]),
+        ...r3Stack(672, 95, ["Orlando", "190.65", "Memphis", "222.35"]),
+        ...r3Split(336, 114, 560, 114, ["Dallas", "230.65", "Memphis", "154.45"]),
+        ...r3Split(336, 209, 560, 209, ["Boston", "175.50", "Orlando", "226.70"]),
+        [112, 360, "Las Vegas", "180.30"], [784, 360, "Chicago", "192.00"],
+      ],
+      series: [
+        [224, 341, "330.20", "Las Vegas", "149.90"], [336, 341, "495.45", "Las Vegas", "165.25", 0, true],
+        [560, 341, "670.85", "Chicago", "251.95", 1, true], [672, 341, "418.90", "Chicago", "226.90"],
+      ],
+      winners: [
+        [448, 14, "Houston"], [448, 95, "Dallas"],
+        [448, 190, "Orlando"], [448, 341, "Chicago"],
+      ],
+      places: USFLXFL_CHAMP_PLACES,
+    },
+  ],
+};
 
-// seeds: the tier's flat 1-10 ranked rows (index 0 = seed 1). Unlike R3/BR,
+// --- 2023 XFL, ranks 11-20 (consolation half) --------------------------------
+const XFL_2023_CONSOLATION = {
+  colors: XFL_CLR, logoSrc: XFL_MARK,
+  sections: [
+    {
+      banners: XFL_CONSO_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "XFL",
+      slots: [[448, 226, 100, 70, "PFA", PFA_MARK]],
+      winners: [[448, 95, r3Winner(["St Louis", "262.20", "New Jersey", "157.50"])]],
+      places: [[448, 114, "3rd pick", "11th place"]],
+      boxes: usflXflMainBoxes({
+        playInLeft: ["Tampa Bay", "196.00", "Atlanta", "177.35"],
+        byeTop: ["St Louis", "202.95", "Tampa Bay", "194.05"],
+        byeBot: ["Brooklyn", "185.15", "Birmingham", "127.70"],
+        semiLeft: ["St Louis", "233.50", "Brooklyn", "211.90"],
+        final: ["St Louis", "262.20", "New Jersey", "157.50"],
+        semiRight: ["Omaha", "143.80", "New Jersey", "207.35"],
+        byeTopR: ["Omaha", "235.05", "LAW", "178.50"],
+        byeBotR: ["LAX", "150.20", "New Jersey", "151.95"],
+        playInRight: ["LAW", "218.10", "New York", "181.20"],
+      }),
+    },
+    {
+      h: 470,
+      paths: USFLXFL_PLACE_PATHS_LIVE,
+      boxes: [
+        ...r3Split(336, 33, 560, 33, ["Brooklyn", "195.70", "Omaha", "181.55"]),
+        ...r3Stack(224, 95, ["Tampa Bay", "166.60", "Birmingham", "171.40"]),
+        ...r3Stack(672, 95, ["LAW", "155.90", "LAX", "213.90"]),
+        ...r3Split(336, 114, 560, 114, ["Birmingham", "111.90", "LAX", "121.30"]),
+        ...r3Split(336, 209, 560, 209, ["Tampa Bay", "290.95", "LAW", "188.35"]),
+        [112, 360, "Atlanta", "230.80"], [784, 360, "New York", "157.65"],
+      ],
+      series: [
+        [224, 341, "375.25", "Atlanta", "144.45"], [336, 341, "583.60", "Atlanta", "208.35", 0, true],
+        [560, 341, "586.55", "New York", "203.60", 1, true], [672, 341, "382.95", "New York", "225.30"],
+      ],
+      winners: [
+        [448, 14, "Brooklyn"], [448, 95, "LAX"],
+        [448, 190, "Tampa Bay"], [448, 341, "New York"],
+      ],
+      places: USFLXFL_CONSO_PLACES,
+      footer: [112, 420, 772, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+    },
+  ],
+};
+
+
 // "division-playin" returns a single flat array — the half split (which
 // seeds sit left vs right) is baked into the slotting below, not a live
 // division field.
@@ -7896,6 +7998,7 @@ const GRID_BRACKETS = {
     ACC: { playoffs: ACC_2023_PLAYOFFS, consolation: ACC_2023_CONSOLATION },
     "BIG XII": { playoffs: XII_2023_PLAYOFFS, consolation: XII_2023_CONSOLATION },
     SEC: { playoffs: SEC_2023_PLAYOFFS, consolation: SEC_2023_CONSOLATION },
+    XFL: { playoffs: XFL_2023_PLAYOFFS, consolation: XFL_2023_CONSOLATION },
   },
 };
 
