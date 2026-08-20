@@ -498,11 +498,11 @@ export async function removeManualPenalty(id) {
 // entry shape: { coach, team, tierKey, year, rosterId, place, winPoints,
 // pointsComponent, faabComponent, xPointsTotal, penaltiesBonusesTotal,
 // placeCP, leagueStrengthCP, ptsMaxRatio, total, pending }. `leagueStrengthCP`
-// is null until the historical League Strength formula is built (on hold as
-// of 2026-08-19); `pending` is an array of component names still missing
-// from `total` (e.g. ["leagueStrength"], or ["leagueStrength","faab"] for a
-// year with no confirmed FAAB starting budget) — so a partial record says so
-// plainly instead of presenting an incomplete total as final.
+// is null and `pending` includes "leagueStrength" until a tier/year's score
+// has been computed and stored in conferenceStrengthHistorical below (see
+// that collection's comment) — re-running this lock after that collection
+// has a fresh entry picks it up automatically and patches the existing
+// record, same overwrite-in-place behavior as everything else here.
 function seasonCPFinalKey(tierKey, year, rosterId) {
   return `${tierKey}_${year}_${rosterId}`;
 }
@@ -528,6 +528,48 @@ export function watchSeasonCPFinal(cb) {
   let unsub = () => {};
   ensureDb().then(() => {
     unsub = fs.onSnapshot(fs.collection(db, "seasonCPFinal"), (snap) => cb(snap.docs.map((d) => d.data())));
+  });
+  return () => unsub();
+}
+
+// ── Conference Strength / League Strength — historical scores ──
+// A tier's League Strength score for a completed year, computed by the
+// Admin "Compute Historical League Strength" action (App.jsx) using the
+// exact same confirmed formula as the live badge, just fed from that year's
+// own standings instead of the current season's. Deliberately its OWN
+// collection, separate from seasonCPFinal, because it doesn't depend on
+// HISTORICAL_FINAL_ORDER (Place) the way the full lock does — a year can
+// have its League Strength computed and stored here well before that
+// year's bracket backfill is done and the full Season CP lock can run.
+// Deterministic key `tierKey_year` (one score per tier per year, not per
+// roster — every coach in a tier shares the same value). Safe to re-run.
+//
+// entry shape: { tierKey, year, score, poolSize }.
+function conferenceStrengthHistoricalKey(tierKey, year) {
+  return `${tierKey}_${year}`;
+}
+
+export async function writeConferenceStrengthHistoricalEntry(tierKey, year, entry) {
+  const key = conferenceStrengthHistoricalKey(tierKey, year);
+  if (!firebaseReady) {
+    const all = localGet("pfa-conference-strength-historical") || {};
+    all[key] = entry;
+    localSet("pfa-conference-strength-historical", all);
+    return Object.values(all);
+  }
+  await ensureDb();
+  await fs.setDoc(fs.doc(db, "conferenceStrengthHistorical", key), entry);
+  return null;
+}
+
+export function watchConferenceStrengthHistorical(cb) {
+  if (!firebaseReady) {
+    cb(Object.values(localGet("pfa-conference-strength-historical") || {}));
+    return () => {};
+  }
+  let unsub = () => {};
+  ensureDb().then(() => {
+    unsub = fs.onSnapshot(fs.collection(db, "conferenceStrengthHistorical"), (snap) => cb(snap.docs.map((d) => d.data())));
   });
   return () => unsub();
 }

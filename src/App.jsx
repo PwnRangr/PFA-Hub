@@ -36,6 +36,8 @@ import {
   watchManualPenalties,
   writeSeasonCPFinalEntry,
   watchSeasonCPFinal,
+  writeConferenceStrengthHistoricalEntry,
+  watchConferenceStrengthHistorical,
   getTournamentSeeds,
   setTournamentSeeds,
   getUflProBowlSeeds,
@@ -1885,6 +1887,75 @@ const median = (arr) => {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 };
 const average = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+
+// ── Conference Strength / League Strength / League Difficulty scoring —
+// pure functions, extracted 2026-08-19 so the SAME confirmed-correct math
+// (cell-for-cell against her sheet, 2026-08-05) can feed either live data
+// (conferenceStrength useMemo below, from standingsCache) or historical
+// data (a buildStandings() call per tier for a past year — see
+// computeHistoricalConferenceStrength). Do not change the formula itself
+// without re-confirming against her sheet; this is a pure refactor, not a
+// formula change.
+//
+// Needs ALL tiers in a pool at once, not just one — every term is relative
+// to the pool's own median/average, so a single tier's rows alone aren't
+// enough to score it. That's the real scope difference from Wins/Points/
+// FAAB/Place, which only ever need one tier's own standings.
+function baseConferenceStats(tRows) {
+  if (!tRows || tRows.length < 2) return null;
+  const scores = tRows.map((r) => r.pts || 0);
+  const teamMax = Math.max(...scores);
+  const teamMin = Math.min(...scores);
+  const maxPts = tRows.map((r) => r.maxPts || 0);
+  const ptsPerMax = tRows.map((r, i) => (maxPts[i] ? scores[i] / maxPts[i] : 0));
+  return {
+    teamMax,
+    teamMin,
+    d: teamMax - teamMin,
+    leagueMedian: median(scores),
+    // "L Av Max*Pts/Max" / "L Med Max*Pts/Max" in her sheet — the average
+    // (or median) of each team's Max Points, times the average (or median)
+    // of each team's Pts/Max ratio, computed within this tier only.
+    // Multiplied together as a single per-tier stat, same as her
+    // Admin!Q120*Admin!R120 cell.
+    avgMaxPM: average(maxPts) * average(ptsPerMax),
+    medMaxPM: median(maxPts) * median(ptsPerMax),
+  };
+}
+
+function scoreConferencePool(rowsByTier, poolKeys) {
+  const stats = {};
+  poolKeys.forEach((k) => {
+    const s = baseConferenceStats(rowsByTier[k]);
+    if (s) stats[k] = s;
+  });
+  const keys = Object.keys(stats);
+  if (keys.length < 2) return {};
+
+  const poolMedianD = median(keys.map((k) => stats[k].d));
+  const poolAvgOfAvgMaxPM = average(keys.map((k) => stats[k].avgMaxPM));
+  const poolMedianOfMedMaxPM = median(keys.map((k) => stats[k].medMaxPM));
+  const poolMedianOfMax = median(keys.map((k) => stats[k].teamMax));
+  // Her sheet's $K$43 is "Av16 Med Tot Pts" — the AVERAGE of the pool's
+  // per-tier medians, not the median of them.
+  const poolAvgOfMedians = average(keys.map((k) => stats[k].leagueMedian));
+  const poolMedianOfMin = median(keys.map((k) => stats[k].teamMin));
+
+  const out = {};
+  keys.forEach((k) => {
+    const s = stats[k];
+    const score =
+      ((s.d - poolMedianD) / -10 / 10 +
+        (s.avgMaxPM - poolAvgOfAvgMaxPM) / 100 +
+        (s.medMaxPM - poolMedianOfMedMaxPM) / 20 +
+        (s.teamMax - poolMedianOfMax) / 100 +
+        (s.leagueMedian - poolAvgOfMedians) / 20 +
+        (s.teamMin - poolMedianOfMin) / 100) /
+      2; // her sheet sums all six bonus terms, then halves the total
+    out[k] = { score, poolSize: keys.length };
+  });
+  return out;
+}
 
 // ── Logo: the nav shield. Uses the same PFA_MARK file as the brackets
 // (public/art/pfa-mark.png) rather than a second copy of the same art, so
@@ -8032,6 +8103,11 @@ export default function App() {
   // Season CP" action has been run at least once; no UI reads this yet
   // (2026-08-19: storing the record now, display comes later).
   const [seasonCPFinal, setSeasonCPFinal] = useState([]);
+  // Historical League Strength scores, keyed tierKey_year — see storage.js's
+  // conferenceStrengthHistorical comment. Populated by the Admin "Compute
+  // Historical League Strength" action; runSeasonCPFinalLock reads from
+  // this to fill leagueStrengthCP instead of always leaving it null.
+  const [conferenceStrengthHistorical, setConferenceStrengthHistorical] = useState([]);
   const [weeklyAwardsSeason, setWeeklyAwardsSeason] = useState(CURRENT_SEASON);
   const [weeklyAwardsWeek, setWeeklyAwardsWeek] = useState(null);
   const [weeklyAwardsLoading, setWeeklyAwardsLoading] = useState(false);
@@ -8640,6 +8716,7 @@ export default function App() {
   // exact same sweepStreakBonuses core as the live 2026 path above.
   const [backfillRunning, setBackfillRunning] = useState(false);
   const [cpLockRunning, setCpLockRunning] = useState(false);
+  const [strengthBackfillRunning, setStrengthBackfillRunning] = useState(false);
   const runStreakBonusBackfill = useCallback(async () => {
     setBackfillRunning(true);
     try {
@@ -8657,6 +8734,61 @@ export default function App() {
     }
   }, [sweepStreakBonuses]);
 
+  // ── League Strength — historical computation ──
+  // Pulls standings for EVERY tier in a pool (all 10 Alliance tiers, or
+  // both Pro tiers) for one historical year, via the same buildStandings()
+  // used elsewhere for past seasons, then scores them with the exact same
+  // scoreConferencePool() the live badge uses — see that function's comment
+  // for why every tier in the pool is needed, not just one. Returns
+  // { tierKey: { score, poolSize } }, same shape as live conferenceStrength.
+  const computeHistoricalConferenceStrength = useCallback(async (year) => {
+    const rowsByTier = {};
+    for (const tKey of [...ALLIANCE_POOL, ...PRO_POOL]) {
+      const leagueId = LEAGUE_HISTORY[year] && LEAGUE_HISTORY[year][tKey];
+      if (!leagueId) continue;
+      try {
+        const [users, rosters] = await Promise.all([
+          j(`${SLEEPER}/league/${leagueId}/users`),
+          j(`${SLEEPER}/league/${leagueId}/rosters`),
+        ]);
+        rowsByTier[tKey] = buildStandings(users, rosters, leagueId, tKey, false);
+      } catch (e) {
+        console.error(`Historical League Strength fetch failed for ${tKey} ${year}`, e);
+      }
+    }
+    return {
+      ...scoreConferencePool(rowsByTier, ALLIANCE_POOL),
+      ...scoreConferencePool(rowsByTier, PRO_POOL),
+    };
+  }, []);
+
+  // Admin action — computes and stores League Strength for every tier for
+  // 2023, 2024, and 2025 (2022 waiting on her, not built yet; add it to this
+  // list once LEAGUE_HISTORY[2022] exists). Deliberately its own button,
+  // separate from the Season CP lock below: this doesn't need
+  // HISTORICAL_FINAL_ORDER (Place) at all, so it can run for a year like
+  // 2023 whose bracket backfill isn't done yet. Run this BEFORE (re-)running
+  // "Lock Final Season CP" so the lock picks up a real score instead of null.
+  const runConferenceStrengthBackfill = useCallback(async () => {
+    setStrengthBackfillRunning(true);
+    try {
+      for (const year of [2023, 2024, 2025]) {
+        try {
+          const scores = await computeHistoricalConferenceStrength(year);
+          for (const [tierKey, { score, poolSize }] of Object.entries(scores)) {
+            await writeConferenceStrengthHistoricalEntry(tierKey, year, { tierKey, year, score, poolSize }).then((local) => {
+              if (local) setConferenceStrengthHistorical(local);
+            });
+          }
+        } catch (e) {
+          console.error(`League Strength historical backfill failed for ${year}`, e);
+        }
+      }
+    } finally {
+      setStrengthBackfillRunning(false);
+    }
+  }, [computeHistoricalConferenceStrength]);
+
   // ── Season CP — final lock ──
   // Computes and permanently writes each roster's final Season CP breakdown
   // for a completed tier/year, reusing the exact same building blocks the
@@ -8667,12 +8799,11 @@ export default function App() {
   // Completed Bracket section already uses to resolve a HISTORICAL_FINAL_
   // ORDER team-name string to its real roster row), and cpForPlace.
   //
-  // League Strength is deliberately left null here — her call 2026-08-19,
-  // "hold off on historical League Strength scores... not a pressing issue."
-  // Conference Strength's live formula only works off `standingsCache`
-  // (this season's data), so a historical version needs its own data pull;
-  // until that's built, `pending` flags which components a record is still
-  // missing rather than silently baking an incomplete total in as final.
+  // League Strength reads from conferenceStrengthHistorical (see that
+  // collection's storage.js comment) — run "Compute Historical League
+  // Strength" first. If a tier/year isn't in there yet, this still falls
+  // back to null + "leagueStrength" in `pending`, same as before; re-running
+  // the lock after the strength backfill picks it up automatically.
   // Same rule for FAAB: contributes 0 and gets flagged if a year's starting
   // budget is ever missing from FAAB_STARTING_BUDGET, rather than NaN.
   //
@@ -8721,11 +8852,15 @@ export default function App() {
 
               const ptsMaxRatio = row.maxPts > 0 ? row.pts / row.maxPts : 1;
 
-              const pending = ["leagueStrength"]; // always, until the historical formula exists
+              const strengthEntry = conferenceStrengthHistorical.find((s) => s.tierKey === tierKey && s.year === year);
+              const leagueStrengthCP = strengthEntry ? strengthEntry.score : null;
+
+              const pending = [];
+              if (leagueStrengthCP == null) pending.push("leagueStrength");
               if (faabBudget == null) pending.push("faab");
 
               const total =
-                (winPoints + pointsComponent + faabComponent + xPointsTotal + penaltiesBonusesTotal + placeCP) *
+                (winPoints + pointsComponent + faabComponent + xPointsTotal + penaltiesBonusesTotal + placeCP + (leagueStrengthCP || 0)) *
                 ptsMaxRatio;
 
               const entry = {
@@ -8741,7 +8876,7 @@ export default function App() {
                 xPointsTotal,
                 penaltiesBonusesTotal,
                 placeCP,
-                leagueStrengthCP: null,
+                leagueStrengthCP,
                 ptsMaxRatio,
                 total,
                 pending,
@@ -8758,7 +8893,7 @@ export default function App() {
     } finally {
       setCpLockRunning(false);
     }
-  }, [streakBonusesLive, manualPenalties]);
+  }, [streakBonusesLive, manualPenalties, conferenceStrengthHistorical]);
 
   // Sleeper's own playoff bracket — this is the actual round-by-round
   // winner/loser data (roster IDs, not just seeding), separate from the
@@ -8829,6 +8964,7 @@ export default function App() {
     const unsubStreakBonuses = watchStreakBonusesLive((entries) => setStreakBonusesLive(entries));
     const unsubManualPenalties = watchManualPenalties((entries) => setManualPenalties(entries));
     const unsubSeasonCPFinal = watchSeasonCPFinal((entries) => setSeasonCPFinal(entries));
+    const unsubConferenceStrengthHistorical = watchConferenceStrengthHistorical((entries) => setConferenceStrengthHistorical(entries));
     const unsubHireTimers = watchHireTimers((timers) => setHireTimers(timers));
     return () => {
       unsubChat();
@@ -8840,6 +8976,7 @@ export default function App() {
       unsubStreakBonuses();
       unsubManualPenalties();
       unsubSeasonCPFinal();
+      unsubConferenceStrengthHistorical();
       unsubHireTimers();
     };
   }, []);
@@ -10196,68 +10333,21 @@ export default function App() {
   // roster, already parsed in buildStandings. Confirmed byte-for-byte
   // against her sheet's own MaxPts/pts-per-max columns on a real season's
   // roster dump — no lineup-optimizer or player-level data needed.
+  // Live version — now a thin wrapper around the shared scoreConferencePool
+  // above (extracted 2026-08-19 so historical years can reuse the exact
+  // same math). Just builds rowsByTier from standingsCache/leagueMap and
+  // hands it off; the scoring itself lives in one place now.
   const conferenceStrength = useMemo(() => {
     if (mode !== "live") return {};
-
-    const baseStats = (tKey) => {
+    const rowsByTier = {};
+    [...ALLIANCE_POOL, ...PRO_POOL].forEach((tKey) => {
       const id = leagueMap[tKey];
-      const tRows = id ? standingsCache[id] : null;
-      if (!tRows || tRows.length < 2) return null;
-      const scores = tRows.map((r) => r.pts || 0);
-      const teamMax = Math.max(...scores);
-      const teamMin = Math.min(...scores);
-      const maxPts = tRows.map((r) => r.maxPts || 0);
-      const ptsPerMax = tRows.map((r, i) => (maxPts[i] ? scores[i] / maxPts[i] : 0));
-      return {
-        teamMax,
-        teamMin,
-        d: teamMax - teamMin,
-        leagueMedian: median(scores),
-        // "L Av Max*Pts/Max" / "L Med Max*Pts/Max" in her sheet — the
-        // average (or median) of each team's Max Points, times the average
-        // (or median) of each team's Pts/Max ratio, computed within this
-        // tier only. Multiplied together as a single per-tier stat, same as
-        // her Admin!Q120*Admin!R120 cell.
-        avgMaxPM: average(maxPts) * average(ptsPerMax),
-        medMaxPM: median(maxPts) * median(ptsPerMax),
-      };
+      rowsByTier[tKey] = id ? standingsCache[id] : null;
+    });
+    return {
+      ...scoreConferencePool(rowsByTier, ALLIANCE_POOL),
+      ...scoreConferencePool(rowsByTier, PRO_POOL),
     };
-
-    const scorePool = (poolKeys) => {
-      const stats = {};
-      poolKeys.forEach((k) => {
-        const s = baseStats(k);
-        if (s) stats[k] = s;
-      });
-      const keys = Object.keys(stats);
-      if (keys.length < 2) return {};
-
-      const poolMedianD = median(keys.map((k) => stats[k].d));
-      const poolAvgOfAvgMaxPM = average(keys.map((k) => stats[k].avgMaxPM));
-      const poolMedianOfMedMaxPM = median(keys.map((k) => stats[k].medMaxPM));
-      const poolMedianOfMax = median(keys.map((k) => stats[k].teamMax));
-      // Her sheet's $K$43 is "Av16 Med Tot Pts" — the AVERAGE of the pool's
-      // per-tier medians, not the median of them.
-      const poolAvgOfMedians = average(keys.map((k) => stats[k].leagueMedian));
-      const poolMedianOfMin = median(keys.map((k) => stats[k].teamMin));
-
-      const out = {};
-      keys.forEach((k) => {
-        const s = stats[k];
-        const score =
-          ((s.d - poolMedianD) / -10 / 10 +
-            (s.avgMaxPM - poolAvgOfAvgMaxPM) / 100 +
-            (s.medMaxPM - poolMedianOfMedMaxPM) / 20 +
-            (s.teamMax - poolMedianOfMax) / 100 +
-            (s.leagueMedian - poolAvgOfMedians) / 20 +
-            (s.teamMin - poolMedianOfMin) / 100) /
-          2; // her sheet sums all six bonus terms, then halves the total
-        out[k] = { score, poolSize: keys.length };
-      });
-      return out;
-    };
-
-    return { ...scorePool(ALLIANCE_POOL), ...scorePool(PRO_POOL) };
   }, [mode, leagueMap, standingsCache]);
 
   // The 7 Weekly Awards categories, crowned across ALL 13 tiers combined
@@ -12632,9 +12722,9 @@ export default function App() {
                   Finalize Season
                 </h3>
                 <p className="text-sm mb-4" style={{ color: C.slate }}>
-                  Run these in order for a completed season: backfill streak bonuses first, then lock the final
-                  Season CP breakdown (it sums the streak total in as one of its components). Both are safe to
-                  re-click any time — deterministic doc IDs just overwrite with a fresher record.
+                  Run these in order for a completed season: backfill streak bonuses, compute League Strength,
+                  then lock the final Season CP breakdown (it sums both of those in as components). All three are
+                  safe to re-click any time — deterministic doc IDs just overwrite with a fresher record.
                 </p>
                 <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
                   <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
@@ -12659,10 +12749,32 @@ export default function App() {
                 </div>
                 <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
                   <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
-                    Lock the final Season CP breakdown (Wins, Points, FAAB, X Points, Penalties/Bonuses, Place) for
-                    every tier with a confirmed final order — currently 2024 and 2025, all 13 tiers. League Strength
-                    is left blank for now (its historical formula isn't built yet); safe to re-run later to fill it
-                    in without disturbing anything else already locked.
+                    Compute League Strength for every tier, 2023 through 2025. Doesn't depend on a confirmed
+                    bracket for that year (unlike Place below), so this can run for a year like 2023 even before
+                    its backfill is done. Run this before the lock button below so it has a real number to use.
+                  </div>
+                  <button
+                    onClick={runConferenceStrengthBackfill}
+                    disabled={strengthBackfillRunning}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 4,
+                      border: `1px solid ${C.gold}`,
+                      background: strengthBackfillRunning ? "transparent" : C.gold,
+                      color: strengthBackfillRunning ? C.slate : C.ink,
+                      fontWeight: 600,
+                      cursor: strengthBackfillRunning ? "default" : "pointer",
+                    }}
+                  >
+                    {strengthBackfillRunning ? "Running…" : "Compute Historical League Strength (2023–2025)"}
+                  </button>
+                </div>
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                    Lock the final Season CP breakdown (Wins, Points, FAAB, X Points, Penalties/Bonuses, Place,
+                    League Strength) for every tier with a confirmed final order — currently 2024 and 2025, all 13
+                    tiers. League Strength only fills in if the button above has already been run for that year;
+                    otherwise it's left blank, same as before. Safe to re-run any time to pick up a fresher value.
                   </div>
                   <button
                     onClick={runSeasonCPFinalLock}
