@@ -279,6 +279,10 @@ const HISTORICAL_FINAL_ORDER = {
       "DC", "San Francisco", "Houston", "Seattle", "Dallas", "Memphis", "Orlando", "Boston", "Chicago", "Las Vegas",
       "St Louis", "New Jersey", "Brooklyn", "Omaha", "LAX", "Birmingham", "Tampa Bay", "LAW", "New York", "Atlanta",
     ],
+    USFL: [
+      "Los Angeles", "Pittsburgh", "Birmingham", "Philadelphia", "San Antonio", "Houston", "Orlando", "Detroit", "Arizona", "Denver",
+      "Chicago", "Oklahoma", "Memphis", "Boston", "Tampa Bay", "Oakland", "Michigan", "Washington", "Jacksonville", "New Jersey",
+    ],
   },
   2024: {
     FLHS: [
@@ -7077,8 +7081,104 @@ const USFL_2024_CONSOLATION = {
   ],
 };
 
-// --- 2024 XFL, ranks 1-10 (championship half) --------------------------------
-// Transcribed from her PFA_Playoffs_2024 - XFL.csv export, confirmed
+// --- 2023 USFL, ranks 1-10 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2023 - USFL.csv export -- same 20-team,
+// play-in/bye/qualifying-round structure as XFL 2023 above, decoded and
+// cross-checked the same careful column-by-column way. Her first upload was
+// missing the leading blank column XFL's export had, throwing off every
+// column index; she caught it and re-uploaded a corrected file, which
+// decoded to the exact same teams/scores already read back and confirmed.
+// Full read-back confirmed with her 2026-08-19.
+const USFL_2023_PLAYOFFS = {
+  colors: USFL_CLR, logoSrc: USFL_MARK,
+  sections: [
+    {
+      banners: USFL_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "USFL",
+      slots: [[448, 4, 100, 84, "Trophy", USFL_TROPHY], [448, 200, 100, 96, "PFA", PFA_MARK]],
+      champion: { y: 114, label: "Champion", team: r3Winner(["Pittsburgh", "226.80", "Los Angeles", "235.85"]), sub: "1st place" },
+      boxes: usflXflMainBoxes({
+        playInLeft: ["Denver", "135.60", "Orlando", "180.75"],
+        byeTop: ["Pittsburgh", "229.65", "Orlando", "196.35"],
+        byeBot: ["Philadelphia", "237.95", "San Antonio", "207.25"],
+        semiLeft: ["Pittsburgh", "224.20", "Philadelphia", "196.85"],
+        final: ["Pittsburgh", "226.80", "Los Angeles", "235.85"],
+        semiRight: ["Birmingham", "207.30", "Los Angeles", "260.50"],
+        byeTopR: ["Birmingham", "278.05", "Detroit", "215.85"],
+        byeBotR: ["Los Angeles", "237.10", "Houston", "114.10"],
+        playInRight: ["Detroit", "219.30", "Arizona", "185.85"],
+      }),
+    },
+    {
+      h: 420,
+      paths: USFLXFL_PLACE_PATHS_LIVE,
+      boxes: [
+        ...r3Split(336, 33, 560, 33, ["Philadelphia", "179.10", "Birmingham", "201.80"]),
+        ...r3Stack(224, 95, ["Orlando", "180.90", "San Antonio", "204.60"]),
+        ...r3Stack(672, 95, ["Detroit", "199.60", "Houston", "210.10"]),
+        ...r3Split(336, 114, 560, 114, ["San Antonio", "274.25", "Houston", "270.85"]),
+        ...r3Split(336, 209, 560, 209, ["Orlando", "219.30", "Detroit", "190.00"]),
+        [112, 360, "Denver", "184.10"], [784, 360, "Arizona", "168.40"],
+      ],
+      series: [
+        [224, 341, "313.20", "Denver", "129.10"], [336, 341, "427.40", "Denver", "114.20", 0, true],
+        [560, 341, "556.55", "Arizona", "206.80", 1, true], [672, 341, "349.75", "Arizona", "181.35"],
+      ],
+      winners: [
+        [448, 14, "Birmingham"], [448, 95, "San Antonio"],
+        [448, 190, "Orlando"], [448, 341, "Arizona"],
+      ],
+      places: USFLXFL_CHAMP_PLACES,
+    },
+  ],
+};
+
+// --- 2023 USFL, ranks 11-20 (consolation half) ---------------------------------
+const USFL_2023_CONSOLATION = {
+  colors: USFL_CLR, logoSrc: USFL_MARK,
+  sections: [
+    {
+      banners: USFL_CONSO_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "USFL",
+      slots: [[448, 226, 100, 70, "PFA", PFA_MARK]],
+      winners: [[448, 95, r3Winner(["Chicago", "162.45", "Oklahoma", "139.50"])]],
+      places: [[448, 114, "3rd pick", "11th place"]],
+      boxes: usflXflMainBoxes({
+        playInLeft: ["Michigan", "206.25", "Jacksonville", "178.75"],
+        byeTop: ["Chicago", "155.35", "Michigan", "142.15"],
+        byeBot: ["Memphis", "236.40", "Oakland", "155.70"],
+        semiLeft: ["Chicago", "181.20", "Memphis", "177.25"],
+        final: ["Chicago", "162.45", "Oklahoma", "139.50"],
+        semiRight: ["Boston", "185.00", "Oklahoma", "264.95"],
+        byeTopR: ["Boston", "163.45", "Tampa Bay", "137.10"],
+        byeBotR: ["Washington", "77.75", "Oklahoma", "207.85"],
+        playInRight: ["Tampa Bay", "199.70", "New Jersey", "195.25"],
+      }),
+    },
+    {
+      h: 470,
+      paths: USFLXFL_PLACE_PATHS_LIVE,
+      boxes: [
+        ...r3Split(336, 33, 560, 33, ["Memphis", "230.30", "Boston", "144.20"]),
+        ...r3Stack(224, 95, ["Michigan", "178.55", "Oakland", "229.65"]),
+        ...r3Stack(672, 95, ["Tampa Bay", "186.15", "Washington", "153.50"]),
+        ...r3Split(336, 114, 560, 114, ["Oakland", "164.10", "Tampa Bay", "199.80"]),
+        ...r3Split(336, 209, 560, 209, ["Michigan", "230.05", "Washington", "94.05"]),
+        [112, 360, "Jacksonville", "198.10"], [784, 360, "New Jersey", "199.50"],
+      ],
+      series: [
+        [224, 341, "380.95", "Jacksonville", "182.85"], [336, 341, "570.45", "Jacksonville", "189.50", 1, true],
+        [560, 341, "533.30", "New Jersey", "186.15", 0, true], [672, 341, "347.15", "New Jersey", "147.65"],
+      ],
+      winners: [
+        [448, 14, "Memphis"], [448, 95, "Tampa Bay"],
+        [448, 190, "Michigan"], [448, 341, "Jacksonville"],
+      ],
+      places: USFLXFL_CONSO_PLACES,
+      footer: [112, 420, 772, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+    },
+  ],
+};
+
+
 // 2026-08-17. Note: the qualifying game deciding who'd play for 5th was a
 // 0.45-point margin (Orlando 218.10 over Memphis 217.65) — flagged to her,
 // confirmed correct as transcribed.
@@ -7999,6 +8099,7 @@ const GRID_BRACKETS = {
     "BIG XII": { playoffs: XII_2023_PLAYOFFS, consolation: XII_2023_CONSOLATION },
     SEC: { playoffs: SEC_2023_PLAYOFFS, consolation: SEC_2023_CONSOLATION },
     XFL: { playoffs: XFL_2023_PLAYOFFS, consolation: XFL_2023_CONSOLATION },
+    USFL: { playoffs: USFL_2023_PLAYOFFS, consolation: USFL_2023_CONSOLATION },
   },
 };
 
