@@ -271,6 +271,10 @@ const HISTORICAL_FINAL_ORDER = {
       "Baylor", "S Dakota", "W Virginia", "Iowa State", "BYU", "UCF", "Kansas", "Texas Tech",
       "Kansas State", "Houston", "TCU", "Denver", "N Colorado", "OSU", "Cincinnati", "N Iowa",
     ],
+    SEC: [
+      "Oklahoma", "Georgia", "Kentucky", "Auburn", "South Carolina", "Arkansas", "Alabama", "Ole Miss",
+      "Missouri", "Texas A&M", "Texas", "Tennessee", "Vanderbilt", "Miss State", "Florida", "LSU",
+    ],
   },
   2024: {
     FLHS: [
@@ -6598,6 +6602,58 @@ const SEC_2024_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2023 SEC, ranks 1-8 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2023 - SEC.csv export, full read-back
+// confirmed with her 2026-08-19. One name normalization: sheet's "Miss St"
+// -> "Miss State", matching SEC_CLR's exact key.
+const SEC_2023_PLAYOFFS = r3ChampHalf({
+  colors: SEC_CLR, logo: "SEC", logoSrc: SEC_MARK, trophy: SEC_TROPHY,
+  banners: SEC_BANNERS,
+  wk15: [
+    ["Ole Miss", "168.45", "Georgia", "179.40"],
+    ["South Carolina", "229.25", "Kentucky", "243.60"],
+    ["Oklahoma", "227.15", "Arkansas", "224.15"],
+    ["Alabama", "165.90", "Auburn", "175.70"],
+  ],
+  semis: [
+    ["Georgia", "250.35", "Kentucky", "232.95"],
+    ["Oklahoma", "223.90", "Auburn", "212.50"],
+  ],
+  final: ["Georgia", "221.60", "Oklahoma", "257.50"],
+  third: ["Kentucky", "243.60", "Auburn", "174.90"],
+  fifth: {
+    leftQual: ["Ole Miss", "205.90", "South Carolina", "227.60"],
+    rightQual: ["Arkansas", "214.50", "Alabama", "181.00"],
+    final: ["South Carolina", "248.45", "Arkansas", "211.85"],
+  },
+  seventh: ["Ole Miss", "180.65", "Alabama", "216.85"],
+});
+
+// --- 2023 SEC, ranks 9-16 (consolation half) --------------------------------
+const SEC_2023_CONSOLATION = r3ConsoHalf({
+  colors: SEC_CLR, logo: "SEC", logoSrc: SEC_MARK,
+  banners: SEC_CONSO_BANNERS,
+  wk15: [
+    ["Florida", "157.35", "Tennessee", "181.35"],
+    ["Missouri", "268.00", "Vanderbilt", "129.40"],
+    ["Texas A&M", "151.80", "Miss State", "138.40"],
+    ["LSU", "168.75", "Texas", "213.50"],
+  ],
+  semis: [
+    ["Tennessee", "113.05", "Missouri", "208.65"],
+    ["Texas A&M", "220.50", "Texas", "156.50"],
+  ],
+  final: ["Missouri", "265.40", "Texas A&M", "175.35"],
+  eleventh: ["Tennessee", "165.40", "Texas", "184.95"],
+  thirteenth: {
+    leftQual: ["Florida", "206.15", "Vanderbilt", "252.50"],
+    rightQual: ["Miss State", "159.60", "LSU", "158.30"],
+    final: ["Vanderbilt", "149.00", "Miss State", "105.90"],
+  },
+  fifteenth: ["Florida", "258.40", "LSU", "152.75"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // Which tiers render a live R3 bracket. SEC first as the test run; the others
 // need their own short-name check before being added.
 const R3_LIVE = {
@@ -7839,6 +7895,7 @@ const GRID_BRACKETS = {
     TEN: { playoffs: PAC12_2023_PLAYOFFS, consolation: PAC12_2023_CONSOLATION },
     ACC: { playoffs: ACC_2023_PLAYOFFS, consolation: ACC_2023_CONSOLATION },
     "BIG XII": { playoffs: XII_2023_PLAYOFFS, consolation: XII_2023_CONSOLATION },
+    SEC: { playoffs: SEC_2023_PLAYOFFS, consolation: SEC_2023_CONSOLATION },
   },
 };
 
