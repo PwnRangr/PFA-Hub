@@ -11901,16 +11901,6 @@ export default function App() {
                 const r1 = HISTORICAL_ROUND1[standingsSeason] && HISTORICAL_ROUND1[standingsSeason][tierKey];
                 return (
                   <div className="mt-6 space-y-8">
-                    <div>
-                      <div className="text-xs uppercase tracking-widest mb-2" style={{ color: C.slate, letterSpacing: "0.2em" }}>
-                        Completed Bracket — {standingsSeason}
-                      </div>
-                      <p className="text-xs" style={{ color: C.slate }}>
-                        The real {standingsSeason} results, transcribed from the playoff sheets — Round 1 on the
-                        left, confirmed final order on the right. Byes don't get a Round 1 box but still land in
-                        their real final spot.
-                      </p>
-                    </div>
                     {groups.map((g) => (
                       <div key={g.key}>
                         <div className="text-sm font-semibold mb-2" style={{ color: C.chalk }}>
