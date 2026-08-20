@@ -227,6 +227,16 @@ const HISTORICAL_FINAL_ORDER = {
   // First historical year added beyond 2025 — transcribed from her
   // PFA_Playoffs_2024 - FLHS.csv export (a direct CSV export of the actual
   // bracket-sheet tab, not a screenshot), confirmed with her 2026-08-17.
+  // First pre-2024 tier — FLHS 2023, transcribed from her PFA_Playoffs_2023 -
+  // FLHS.csv export, full read-back confirmed with her 2026-08-19. Unblocks
+  // this tier/year's seasonCPFinal Place component (League Strength for
+  // 2023 was already stored via conferenceStrengthHistorical).
+  2023: {
+    FLHS: [
+      "Miami Beach", "Coral Springs", "Palmetto", "Coral Glades", "Deerfield", "Cypress Bay", "Western", "Boca Raton",
+      "Taravella", "Southwest", "West Broward", "Dr Krop", "Miami Senior", "Stoneman", "West Boca", "Miami Dade",
+    ],
+  },
   2024: {
     FLHS: [
       "Coral Springs", "Cypress Bay", "Miami Beach", "Western", "Taravella", "Deerfield", "West Boca", "Palmetto",
@@ -5494,6 +5504,61 @@ const FLHS_2024_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2023 FLHS, ranks 1-8 (championship half) -------------------------------
+// Transcribed from her PFA_Playoffs_2023 - FLHS.csv export (a direct export
+// of the actual bracket-sheet tab), full read-back confirmed with her
+// 2026-08-19. Same 16 schools as 2024/2025, so FLHS_CLR/FLHS_MARK/
+// FLHS_TROPHY/FLHS_BANNERS are reused unchanged. Sheet spelled the 5th-place
+// team "Deerfield Bch" — normalized to "Deerfield" to match every other
+// season's naming (confirmed with her, not a different team).
+const FLHS_2023_PLAYOFFS = r3ChampHalf({
+  colors: FLHS_CLR, logo: "FHSAA", logoSrc: FLHS_MARK, trophy: FLHS_TROPHY,
+  banners: FLHS_BANNERS,
+  wk15: [
+    ["Cypress Bay", "177.85", "Miami Beach", "251.40"],
+    ["Palmetto", "224.60", "Western", "203.35"],
+    ["Coral Springs", "222.75", "Deerfield", "195.90"],
+    ["Coral Glades", "237.95", "Boca Raton", "201.30"],
+  ],
+  semis: [
+    ["Miami Beach", "255.85", "Palmetto", "189.15"],
+    ["Coral Springs", "248.70", "Coral Glades", "215.40"],
+  ],
+  final: ["Miami Beach", "312.20", "Coral Springs", "225.35"],
+  third: ["Palmetto", "194.35", "Coral Glades", "170.45"],
+  fifth: {
+    leftQual: ["Cypress Bay", "209.80", "Western", "206.65"],
+    rightQual: ["Deerfield", "167.40", "Boca Raton", "156.90"],
+    final: ["Cypress Bay", "148.25", "Deerfield", "167.00"],
+  },
+  seventh: ["Western", "215.70", "Boca Raton", "207.55"],
+});
+
+// --- 2023 FLHS, ranks 9-16 (consolation half) -------------------------------
+const FLHS_2023_CONSOLATION = r3ConsoHalf({
+  colors: FLHS_CLR, logo: "FHSAA", logoSrc: FLHS_MARK,
+  banners: FLHS_CONSO_BANNERS,
+  wk15: [
+    ["Taravella", "226.40", "Miami Dade", "151.00"],
+    ["Miami Senior", "103.40", "West Broward", "146.30"],
+    ["Stoneman", "173.65", "Dr Krop", "198.70"],
+    ["Southwest", "195.20", "West Boca", "181.35"],
+  ],
+  semis: [
+    ["Taravella", "263.40", "West Broward", "122.00"],
+    ["Dr Krop", "167.65", "Southwest", "171.95"],
+  ],
+  final: ["Taravella", "258.15", "Southwest", "175.90"],
+  eleventh: ["West Broward", "139.20", "Dr Krop", "123.45"],
+  thirteenth: {
+    leftQual: ["Miami Dade", "155.85", "Miami Senior", "231.05"],
+    rightQual: ["Stoneman", "204.30", "West Boca", "148.05"],
+    final: ["Miami Senior", "238.50", "Stoneman", "157.20"],
+  },
+  fifteenth: ["Miami Dade", "100.70", "West Boca", "203.90"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // --- 2024 GLIAC, ranks 1-8 (championship half) ------------------------------
 // Transcribed from her PFA_Playoffs_2024 - GLIAC.numbers export, same
 // mirrored bracket-sheet layout as FLHS 2024 above, confirmed 2026-08-17.
@@ -7196,6 +7261,11 @@ const GRID_BRACKETS = {
     USFL: { playoffs: USFL_2024_PLAYOFFS, consolation: USFL_2024_CONSOLATION },
     XFL: { playoffs: XFL_2024_PLAYOFFS, consolation: XFL_2024_CONSOLATION },
     NFL: { playoffs: NFL_2024_PLAYOFFS, consolation: NFL_2024_CONSOLATION },
+  },
+  2023: {
+    // First pre-2024 tier — FLHS 2023 shipped 2026-08-19. Confirmed against
+    // her PFA_Playoffs_2023 - FLHS.csv, full read-back approved 2026-08-19.
+    FLHS: { playoffs: FLHS_2023_PLAYOFFS, consolation: FLHS_2023_CONSOLATION },
   },
 };
 
