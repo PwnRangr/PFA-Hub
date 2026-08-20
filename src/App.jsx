@@ -248,6 +248,10 @@ const HISTORICAL_FINAL_ORDER = {
       "Bucknell", "Princeton", "Cornell", "Colgate", "Georgetown", "Dartmouth", "Brown", "MIT",
       "Penn", "Fordham", "Yale", "Columbia", "Lafayette", "Harvard", "Lehigh", "Holy Cross",
     ],
+    SOCO: [
+      "Jax State", "Citadel", "Tenn Tech", "Elon", "Belmont", "Martin", "Austin Peay", "E Tenn",
+      "Carolina", "VMI", "Murray State", "Mercer", "Tenn State", "Nicholls", "Chattanooga", "Samford",
+    ],
   },
   2024: {
     FLHS: [
@@ -5990,6 +5994,62 @@ const SOCO_2024_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2023 SOCO, ranks 1-8 (championship half) -------------------------------
+// Transcribed from her PFA_Playoffs_2023 - SoCo.csv export, full read-back
+// confirmed with her 2026-08-19 (double-checked against a raw csv.reader
+// parse before presenting, after the IVY mix-up earlier this session).
+// Name normalizations (matching SOCO_CLR and the 2024/2025 short forms):
+// sheet's "UT Martin" -> "Martin"; sheet's bare "Tenn" -> "E Tenn" (East
+// Tennessee State -- the only bare "Tenn" team in this conference; "Tenn
+// State" and "Tenn Tech" in the sheet already matched their canonical forms).
+const SOCO_2023_PLAYOFFS = r3ChampHalf({
+  colors: SOCO_CLR, logo: "SoCon", logoSrc: SOCO_MARK, trophy: SOCO_TROPHY,
+  banners: SOCO_BANNERS,
+  wk15: [
+    ["Jax State", "237.45", "Martin", "191.70"],
+    ["Elon", "205.15", "E Tenn", "140.35"],
+    ["Austin Peay", "202.25", "Citadel", "225.80"],
+    ["Belmont", "168.20", "Tenn Tech", "220.60"],
+  ],
+  semis: [
+    ["Jax State", "298.40", "Elon", "228.00"],
+    ["Citadel", "204.55", "Tenn Tech", "138.00"],
+  ],
+  final: ["Jax State", "242.80", "Citadel", "235.20"],
+  third: ["Elon", "181.90", "Tenn Tech", "247.55"],
+  fifth: {
+    leftQual: ["Martin", "235.40", "E Tenn", "193.85"],
+    rightQual: ["Austin Peay", "248.00", "Belmont", "253.35"],
+    final: ["Martin", "135.30", "Belmont", "247.60"],
+  },
+  seventh: ["E Tenn", "158.60", "Austin Peay", "212.40"],
+});
+
+// --- 2023 SOCO, ranks 9-16 (consolation half) -------------------------------
+const SOCO_2023_CONSOLATION = r3ConsoHalf({
+  colors: SOCO_CLR, logo: "SoCon", logoSrc: SOCO_MARK,
+  banners: SOCO_CONSO_BANNERS,
+  wk15: [
+    ["VMI", "236.75", "Samford", "141.90"],
+    ["Tenn State", "166.80", "Mercer", "170.15"],
+    ["Carolina", "176.70", "Chattanooga", "137.55"],
+    ["Murray State", "188.80", "Nicholls", "156.60"],
+  ],
+  semis: [
+    ["VMI", "228.25", "Mercer", "128.70"],
+    ["Carolina", "184.10", "Murray State", "177.75"],
+  ],
+  final: ["VMI", "173.05", "Carolina", "179.45"],
+  eleventh: ["Mercer", "137.90", "Murray State", "183.25"],
+  thirteenth: {
+    leftQual: ["Samford", "106.50", "Tenn State", "216.45"],
+    rightQual: ["Chattanooga", "123.90", "Nicholls", "142.40"],
+    final: ["Tenn State", "207.65", "Nicholls", "200.45"],
+  },
+  fifteenth: ["Samford", "136.95", "Chattanooga", "186.05"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // --- 2024 SUN, ranks 1-8 (championship half) --------------------------------
 // Transcribed from her PFA_Playoffs_2024 - SUN.csv export, confirmed 2026-08-17.
 const SUN_2024_PLAYOFFS = r3ChampHalf({
@@ -7488,6 +7548,7 @@ const GRID_BRACKETS = {
     GLIAC: { playoffs: GLIAC_2023_PLAYOFFS, consolation: GLIAC_2023_CONSOLATION },
     SWAC: { playoffs: SWAC_2023_PLAYOFFS, consolation: SWAC_2023_CONSOLATION },
     IVY: { playoffs: IVY_2023_PLAYOFFS, consolation: IVY_2023_CONSOLATION },
+    SOCO: { playoffs: SOCO_2023_PLAYOFFS, consolation: SOCO_2023_CONSOLATION },
   },
 };
 
@@ -11600,11 +11661,10 @@ export default function App() {
                       );
                     })}
                   </div>
-                  {standingsSeason !== CURRENT_SEASON && (
-                    <span className="text-xs" style={{ color: C.slate }}>
-                      Viewing final {standingsSeason} standings — read-only, no live scoring.
-                    </span>
-                  )}
+                  {/* "Viewing final {year} standings — read-only, no live
+                      scoring." banner removed 2026-08-19 at her request --
+                      it's already understood every non-current year here is
+                      historical, the disclaimer was redundant. */}
                 </div>
               )}
 
