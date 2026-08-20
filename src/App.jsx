@@ -260,6 +260,17 @@ const HISTORICAL_FINAL_ORDER = {
       "UCLA", "Washington State", "Washington", "Arizona State", "Eastern Washington", "Arizona", "Portland State", "Colorado",
       "Oregon State", "Boise State", "Cal", "Utah", "Stanford", "Cal Poly", "Oregon", "San Diego State",
     ],
+    // 12th place (Syracuse) reflects a genuine bracket-advancement mistake
+    // on her original sheet, intentionally preserved -- see the comment on
+    // ACC_2023_CONSOLATION above for the full explanation.
+    ACC: [
+      "GA Tech", "Boston College", "Duke", "Clemson", "NC State", "Maryland", "N Carolina", "Florida St",
+      "Notre Dame", "Virginia", "Miami", "Syracuse", "Wake Forest", "Virginia Tech", "Pittsburgh", "Louisville",
+    ],
+    "BIG XII": [
+      "Baylor", "S Dakota", "W Virginia", "Iowa State", "BYU", "UCF", "Kansas", "Texas Tech",
+      "Kansas State", "Houston", "TCU", "Denver", "N Colorado", "OSU", "Cincinnati", "N Iowa",
+    ],
   },
   2024: {
     FLHS: [
@@ -4732,6 +4743,10 @@ const ACC_CLR = {
   "Pittsburgh": ["#003594", "#FFB81C"], "Boston College": ["#98002E", "#BC9B6A"],
   "Wake Forest": ["#9E7E38", "#000000"], "NC State": ["#CC0000", "#FFFFFF"],
   "SMU": ["#C8102E", "#FFFFFF"], "Miami": ["#005030", "#F47321"],
+  // Maryland was in the 2023 roster, dropped for 2024 when SMU joined
+  // (mirrors the real ACC's 2024 realignment) -- confirmed with her
+  // 2026-08-19, same colors already used for Maryland in TEN_CLR.
+  "Maryland": ["#E03A3E", "#FFD520"],
 };
 
 // The ACC championship game has no proper name (like SEC / TEN / BIG XII).
@@ -6354,6 +6369,72 @@ const ACC_2024_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2023 ACC, ranks 1-8 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2023 - ACC.csv export, full read-back
+// confirmed with her 2026-08-19. Name normalizations (matching ACC_CLR and
+// the 2024/2025 short forms): sheet's "VA Tech" -> "Virginia Tech"; sheet's
+// "NC" -> "N Carolina"; sheet's "Florida State" -> "Florida St". Roster
+// includes Maryland, which isn't in 2024/2025's ACC_CLR (see the note
+// there) -- 2023 had Maryland, 2024 swapped it for SMU.
+const ACC_2023_PLAYOFFS = r3ChampHalf({
+  colors: ACC_CLR, logo: "ACC", logoSrc: ACC_MARK, trophy: ACC_TROPHY,
+  banners: ACC_BANNERS,
+  wk15: [
+    ["Clemson", "183.35", "Florida St", "159.35"],
+    ["Boston College", "261.05", "NC State", "177.35"],
+    ["GA Tech", "254.40", "N Carolina", "247.55"],
+    ["Maryland", "189.10", "Duke", "206.05"],
+  ],
+  semis: [
+    ["Clemson", "220.10", "Boston College", "241.75"],
+    ["GA Tech", "243.60", "Duke", "184.30"],
+  ],
+  final: ["Boston College", "174.30", "GA Tech", "185.55"],
+  third: ["Clemson", "183.20", "Duke", "189.75"],
+  fifth: {
+    leftQual: ["Florida St", "184.60", "NC State", "237.25"],
+    rightQual: ["N Carolina", "168.40", "Maryland", "243.35"],
+    final: ["NC State", "257.15", "Maryland", "159.70"],
+  },
+  seventh: ["Florida St", "207.00", "N Carolina", "260.00"],
+});
+
+// --- 2023 ACC, ranks 9-16 (consolation half) --------------------------------
+// wk15[0] (Syracuse vs Louisville) and semis[0] (Syracuse vs Notre Dame) look
+// discontinuous on purpose: Louisville scored higher in wk15[0] (255.95 vs
+// 167.60) but Syracuse is who actually advanced to the semis on her sheet --
+// a real bracket-entry mistake from the original season. Confirmed with her
+// 2026-08-19: leave it exactly as it actually played out rather than
+// "correcting" it, since fixing it now would ripple into other
+// already-settled downstream effects (draft order, CP, etc.) for that
+// season. Each round here is its own independent [team,score,team,score]
+// record -- a round's winner is derived only from that round's own two
+// scores, never from whether a team "should" have gotten there, so this
+// renders faithfully without any special-case code.
+const ACC_2023_CONSOLATION = r3ConsoHalf({
+  colors: ACC_CLR, logo: "ACC", logoSrc: ACC_MARK,
+  banners: ACC_CONSO_BANNERS,
+  wk15: [
+    ["Syracuse", "167.60", "Louisville", "255.95"],
+    ["Wake Forest", "208.80", "Notre Dame", "240.70"],
+    ["Virginia", "255.95", "Virginia Tech", "130.20"],
+    ["Pittsburgh", "135.45", "Miami", "258.05"],
+  ],
+  semis: [
+    ["Syracuse", "200.50", "Notre Dame", "220.90"],
+    ["Virginia", "194.00", "Miami", "166.50"],
+  ],
+  final: ["Notre Dame", "178.45", "Virginia", "175.00"],
+  eleventh: ["Syracuse", "231.70", "Miami", "239.10"],
+  thirteenth: {
+    leftQual: ["Louisville", "201.70", "Wake Forest", "247.70"],
+    rightQual: ["Virginia Tech", "184.85", "Pittsburgh", "177.90"],
+    final: ["Wake Forest", "202.45", "Virginia Tech", "163.00"],
+  },
+  fifteenth: ["Louisville", "148.60", "Pittsburgh", "173.50"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // --- 2024 BIG XII, ranks 1-8 (championship half) -----------------------------
 // Transcribed from her PFA_Playoffs_2024 - XII.csv export, confirmed
 // 2026-08-17. Arizona had no XII_CLR entry at all (a real gap, not a naming
@@ -6404,6 +6485,58 @@ const XII_2024_CONSOLATION = r3ConsoHalf({
     final: ["Texas Tech", "166.90", "Cincinnati", "206.25"],
   },
   fifteenth: ["Houston", "300.25", "Denver", "166.60"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
+// --- 2023 BIG XII, ranks 1-8 (championship half) ----------------------------
+// Transcribed from her PFA_Playoffs_2023 - BIGXII.csv export, full read-back
+// confirmed with her 2026-08-19. No naming normalizations needed -- every
+// team already matched XII_CLR.
+const XII_2023_PLAYOFFS = r3ChampHalf({
+  colors: XII_CLR, logo: "XII", logoSrc: XII_MARK, trophy: XII_TROPHY,
+  banners: XII_BANNERS,
+  wk15: [
+    ["S Dakota", "218.20", "BYU", "202.85"],
+    ["W Virginia", "216.90", "Kansas", "157.50"],
+    ["Iowa State", "267.85", "Texas Tech", "162.10"],
+    ["UCF", "174.35", "Baylor", "204.35"],
+  ],
+  semis: [
+    ["S Dakota", "280.90", "W Virginia", "214.70"],
+    ["Iowa State", "194.20", "Baylor", "195.75"],
+  ],
+  final: ["S Dakota", "180.50", "Baylor", "229.40"],
+  third: ["W Virginia", "221.35", "Iowa State", "186.80"],
+  fifth: {
+    leftQual: ["BYU", "233.25", "Kansas", "157.95"],
+    rightQual: ["Texas Tech", "149.20", "UCF", "202.00"],
+    final: ["BYU", "222.90", "UCF", "188.95"],
+  },
+  seventh: ["Kansas", "240.10", "Texas Tech", "174.20"],
+});
+
+// --- 2023 BIG XII, ranks 9-16 (consolation half) -----------------------------
+const XII_2023_CONSOLATION = r3ConsoHalf({
+  colors: XII_CLR, logo: "XII", logoSrc: XII_MARK,
+  banners: XII_CONSO_BANNERS,
+  wk15: [
+    ["Denver", "179.10", "OSU", "149.15"],
+    ["Kansas State", "247.50", "Cincinnati", "225.50"],
+    ["Houston", "202.60", "N Iowa", "108.80"],
+    ["N Colorado", "170.05", "TCU", "191.30"],
+  ],
+  semis: [
+    ["Denver", "190.60", "Kansas State", "207.25"],
+    ["Houston", "225.55", "TCU", "178.85"],
+  ],
+  final: ["Kansas State", "266.05", "Houston", "185.20"],
+  eleventh: ["Denver", "158.60", "TCU", "212.85"],
+  thirteenth: {
+    leftQual: ["OSU", "208.80", "Cincinnati", "178.30"],
+    rightQual: ["N Iowa", "156.80", "N Colorado", "211.20"],
+    final: ["OSU", "118.60", "N Colorado", "195.55"],
+  },
+  fifteenth: ["Cincinnati", "261.30", "N Iowa", "131.20"],
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
@@ -7704,6 +7837,8 @@ const GRID_BRACKETS = {
     // Branded "PAC-12" for 2023, before her 2024 Big Ten rebrand -- see the
     // note on PAC12_CLR. Still tierKey TEN, same underlying league.
     TEN: { playoffs: PAC12_2023_PLAYOFFS, consolation: PAC12_2023_CONSOLATION },
+    ACC: { playoffs: ACC_2023_PLAYOFFS, consolation: ACC_2023_CONSOLATION },
+    "BIG XII": { playoffs: XII_2023_PLAYOFFS, consolation: XII_2023_CONSOLATION },
   },
 };
 
