@@ -244,6 +244,10 @@ const HISTORICAL_FINAL_ORDER = {
       "Grambling", "Jackson St", "SC St", "Pine Bluff", "NC Central", "Alabama St", "PVAM", "Bethune",
       "Florida A&M", "TX Southern", "Norfolk St", "Southern U", "Miss Valley", "Alcorn", "Alabama A&M", "Morgan St",
     ],
+    IVY: [
+      "Bucknell", "Princeton", "Cornell", "Colgate", "Georgetown", "Dartmouth", "Brown", "MIT",
+      "Penn", "Fordham", "Yale", "Columbia", "Lafayette", "Harvard", "Lehigh", "Holy Cross",
+    ],
   },
   2024: {
     FLHS: [
@@ -5876,6 +5880,64 @@ const IVY_2024_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2023 IVY, ranks 1-8 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2023 - IVY.csv export. First read-back
+// had an initial mix-up on her end (she was looking at a different sheet
+// and offered a set of Week 15 pairings that swapped Penn/Princeton and
+// Columbia/MIT between the two halves); a raw csv.reader parse of the
+// actual uploaded file confirmed the original read was correct, and she
+// then confirmed the same read-back a second time against the right sheet.
+// No naming normalizations needed -- every team already matches IVY_CLR.
+// No novelty bowl name on Ivy, same as every other year (see the note on
+// IVY_2025_PLAYOFFS above).
+const IVY_2023_PLAYOFFS = r3ChampHalf({
+  colors: IVY_CLR, logo: "IVY", logoSrc: IVY_MARK, trophy: IVY_TROPHY,
+  banners: IVY_BANNERS,
+  wk15: [
+    ["Brown", "211.85", "Cornell", "221.00"],
+    ["Dartmouth", "203.20", "Princeton", "226.55"],
+    ["Bucknell", "213.45", "Georgetown", "161.65"],
+    ["Colgate", "237.20", "MIT", "232.50"],
+  ],
+  semis: [
+    ["Cornell", "195.75", "Princeton", "207.15"],
+    ["Bucknell", "267.15", "Colgate", "195.35"],
+  ],
+  final: ["Princeton", "212.40", "Bucknell", "265.80"],
+  third: ["Cornell", "186.90", "Colgate", "141.30"],
+  fifth: {
+    leftQual: ["Brown", "188.30", "Dartmouth", "222.75"],
+    rightQual: ["Georgetown", "242.70", "MIT", "201.80"],
+    final: ["Dartmouth", "165.95", "Georgetown", "174.70"],
+  },
+  seventh: ["Brown", "269.00", "MIT", "231.70"],
+});
+
+// --- 2023 IVY, ranks 9-16 (consolation half) --------------------------------
+const IVY_2023_CONSOLATION = r3ConsoHalf({
+  colors: IVY_CLR, logo: "IVY", logoSrc: IVY_MARK,
+  banners: IVY_CONSO_BANNERS,
+  wk15: [
+    ["Yale", "189.85", "Holy Cross", "112.35"],
+    ["Penn", "173.90", "Harvard", "134.50"],
+    ["Lafayette", "140.50", "Fordham", "160.95"],
+    ["Lehigh", "165.70", "Columbia", "199.20"],
+  ],
+  semis: [
+    ["Yale", "164.30", "Penn", "212.40"],
+    ["Fordham", "215.60", "Columbia", "153.35"],
+  ],
+  final: ["Penn", "238.95", "Fordham", "210.65"],
+  eleventh: ["Yale", "221.95", "Columbia", "192.80"],
+  thirteenth: {
+    leftQual: ["Holy Cross", "96.55", "Harvard", "227.35"],
+    rightQual: ["Lafayette", "231.35", "Lehigh", "224.90"],
+    final: ["Harvard", "189.70", "Lafayette", "219.20"],
+  },
+  fifteenth: ["Holy Cross", "104.80", "Lehigh", "192.80"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // --- 2024 SOCO, ranks 1-8 (championship half) -------------------------------
 // Transcribed from her PFA_Playoffs_2024 - SOCO.csv export, confirmed 2026-08-17.
 const SOCO_2024_PLAYOFFS = r3ChampHalf({
@@ -7425,6 +7487,7 @@ const GRID_BRACKETS = {
     FLHS: { playoffs: FLHS_2023_PLAYOFFS, consolation: FLHS_2023_CONSOLATION },
     GLIAC: { playoffs: GLIAC_2023_PLAYOFFS, consolation: GLIAC_2023_CONSOLATION },
     SWAC: { playoffs: SWAC_2023_PLAYOFFS, consolation: SWAC_2023_CONSOLATION },
+    IVY: { playoffs: IVY_2023_PLAYOFFS, consolation: IVY_2023_CONSOLATION },
   },
 };
 
