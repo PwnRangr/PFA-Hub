@@ -240,6 +240,10 @@ const HISTORICAL_FINAL_ORDER = {
       "Davenport", "Mount Union", "Muskingum", "Purdue NW", "Ferris State", "Ohio N", "Baldwin", "Wayne State",
       "Heidelberg", "Lake Superior", "Northwood", "Capital", "N Michigan", "JCU", "Parkside", "Wilmington",
     ],
+    SWAC: [
+      "Grambling", "Jackson St", "SC St", "Pine Bluff", "NC Central", "Alabama St", "PVAM", "Bethune",
+      "Florida A&M", "TX Southern", "Norfolk St", "Southern U", "Miss Valley", "Alcorn", "Alabama A&M", "Morgan St",
+    ],
   },
   2024: {
     FLHS: [
@@ -4213,6 +4217,34 @@ function r3ChampHalf(o) {
   };
 }
 
+// ranks 1-8, with the 7th-place game renamed to a novelty bowl (SWAC's
+// recurring "7-11" gimmick game -- the exact wording drifts season to
+// season, confirmed with her 2026-08-19: 2023 uses "The 7Eleven Seventh
+// Place Bowl", 2024 uses "The 7Eleven Seven Days A Week 7th Place Super
+// Savings Bowl", 2025 uses "7-11 Seven Days A Week 7th Place Super Savings
+// Bowl" -- three different strings across three seasons, expect this to
+// keep varying). Reuses r3MainBoxes/r3PlaceSection so win flags are still
+// DERIVED from scores like every other tier -- only the 3rd-section label
+// and a small 7-11 logo slot differ from the plain r3ChampHalf above.
+function r3ChampHalfBowl(o) {
+  const place = r3PlaceSection({
+    upper: o.third, mid: o.fifth, lower: o.seventh,
+    picks: [R3_CHAMP_PICKS[0], R3_CHAMP_PICKS[1], ["", o.bowlName]],
+  });
+  return {
+    colors: o.colors, logoSrc: o.logoSrc,
+    sections: [
+      {
+        banners: o.banners, cols: WK_COLS_3, h: 200, paths: R3_MAIN_PATHS, logo: o.logo,
+        slots: [[448, 0, 100, 52, "Trophy", o.trophy], [448, 159, 100, 57, "PFA", PFA_MARK]],
+        champion: { y: 76, label: o.championLabel || "Champion", team: r3Winner(o.final) },
+        boxes: r3MainBoxes(o),
+      },
+      { ...place, h: 282, slots: [[468, 154, 60, 34, "7-11", SEVEN_MARK]] },
+    ],
+  };
+}
+
 // ranks 9-16
 function r3ConsoHalf(o) {
   return {
@@ -5679,9 +5711,14 @@ const GLIAC_2023_CONSOLATION = r3ConsoHalf({
 // --- 2024 SWAC, ranks 1-8 (championship half) -------------------------------
 // Transcribed from her PFA_Playoffs_2024 - SWAC.csv export, same mirrored
 // bracket-sheet layout as FLHS/GLIAC 2024 above, confirmed 2026-08-17.
-const SWAC_2024_PLAYOFFS = r3ChampHalf({
+// Retrofitted 2026-08-19 from the plain r3ChampHalf template to
+// r3ChampHalfBowl so the 7th-place game shows its real novelty bowl name
+// instead of plain "7th place" -- confirmed with her alongside the 2023
+// backfill, same session.
+const SWAC_2024_PLAYOFFS = r3ChampHalfBowl({
   colors: SWAC_CLR, logo: "SWAC", logoSrc: SWAC_MARK, trophy: SWAC_TROPHY,
   banners: SWAC_BANNERS,
+  bowlName: "The 7Eleven Seven Days A Week 7th Place Super Savings Bowl",
   wk15: [
     ["Bethune", "244.70", "Alabama St", "150.20"],
     ["Jackson St", "298.85", "SC St", "192.00"],
@@ -5724,6 +5761,66 @@ const SWAC_2024_CONSOLATION = r3ConsoHalf({
     final: ["Florida A&M", "218.80", "Pine Bluff", "220.45"],
   },
   fifteenth: ["Miss Valley", "258.10", "Southern U", "142.45"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
+// --- 2023 SWAC, ranks 1-8 (championship half) -------------------------------
+// Transcribed from her PFA_Playoffs_2023 - SWAC.csv export, full read-back
+// confirmed with her 2026-08-19. Name normalizations (matching SWAC_CLR and
+// the 2024/2025 short forms): sheet's "Jackson State"/"SC State"/"Alabama
+// State"/"Norfolk State"/"Morgan State" -> "Jackson St"/"SC St"/"Alabama
+// St"/"Norfolk St"/"Morgan St"; sheet's "Arkansas PB" -> "Pine Bluff" (same
+// school, matches the short form used everywhere else). 7th-place bowl name
+// confirmed as 2023's own shorter wording -- see r3ChampHalfBowl above for
+// why the wording differs from 2024/2025.
+const SWAC_2023_PLAYOFFS = r3ChampHalfBowl({
+  colors: SWAC_CLR, logo: "SWAC", logoSrc: SWAC_MARK, trophy: SWAC_TROPHY,
+  banners: SWAC_BANNERS,
+  bowlName: "The 7Eleven Seventh Place Bowl",
+  wk15: [
+    ["Bethune", "228.70", "Jackson St", "274.25"],
+    ["SC St", "247.25", "Alabama St", "184.15"],
+    ["PVAM", "209.60", "Grambling", "223.40"],
+    ["NC Central", "148.80", "Pine Bluff", "306.65"],
+  ],
+  semis: [
+    ["Jackson St", "228.80", "SC St", "194.30"],
+    ["Grambling", "301.60", "Pine Bluff", "266.05"],
+  ],
+  final: ["Jackson St", "243.45", "Grambling", "256.45"],
+  third: ["SC St", "260.05", "Pine Bluff", "242.05"],
+  fifth: {
+    leftQual: ["Bethune", "215.40", "Alabama St", "225.80"],
+    rightQual: ["PVAM", "184.85", "NC Central", "233.80"],
+    final: ["Alabama St", "168.20", "NC Central", "176.50"],
+  },
+  seventh: ["Bethune", "270.25", "PVAM", "325.10"],
+});
+
+// --- 2023 SWAC, ranks 9-16 (consolation half) -------------------------------
+// No novelty bowl name on the consolation half -- plain r3ConsoHalf, same as
+// every other tier.
+const SWAC_2023_CONSOLATION = r3ConsoHalf({
+  colors: SWAC_CLR, logo: "SWAC", logoSrc: SWAC_MARK,
+  banners: SWAC_CONSO_BANNERS,
+  wk15: [
+    ["Norfolk St", "182.50", "Miss Valley", "148.80"],
+    ["Florida A&M", "161.65", "Alabama A&M", "144.75"],
+    ["Morgan St", "155.40", "Southern U", "163.95"],
+    ["Alcorn", "179.60", "TX Southern", "182.20"],
+  ],
+  semis: [
+    ["Norfolk St", "172.20", "Florida A&M", "192.40"],
+    ["Southern U", "216.35", "TX Southern", "228.40"],
+  ],
+  final: ["Florida A&M", "214.15", "TX Southern", "173.10"],
+  eleventh: ["Norfolk St", "189.60", "Southern U", "111.75"],
+  thirteenth: {
+    leftQual: ["Miss Valley", "222.55", "Alabama A&M", "183.65"],
+    rightQual: ["Morgan St", "174.00", "Alcorn", "217.95"],
+    final: ["Miss Valley", "221.30", "Alcorn", "153.95"],
+  },
+  fifteenth: ["Alabama A&M", "196.60", "Morgan St", "145.00"],
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
@@ -7327,6 +7424,7 @@ const GRID_BRACKETS = {
     // full read-backs confirmed 2026-08-19.
     FLHS: { playoffs: FLHS_2023_PLAYOFFS, consolation: FLHS_2023_CONSOLATION },
     GLIAC: { playoffs: GLIAC_2023_PLAYOFFS, consolation: GLIAC_2023_CONSOLATION },
+    SWAC: { playoffs: SWAC_2023_PLAYOFFS, consolation: SWAC_2023_CONSOLATION },
   },
 };
 
