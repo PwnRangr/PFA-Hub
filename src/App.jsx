@@ -283,6 +283,14 @@ const HISTORICAL_FINAL_ORDER = {
       "Los Angeles", "Pittsburgh", "Birmingham", "Philadelphia", "San Antonio", "Houston", "Orlando", "Detroit", "Arizona", "Denver",
       "Chicago", "Oklahoma", "Memphis", "Boston", "Tampa Bay", "Oakland", "Michigan", "Washington", "Jacksonville", "New Jersey",
     ],
+    // LA/NY disambiguated by division (matches TEAM_CLR's LA Rams/LA
+    // Chargers/NY Jets/NY Giants split) -- see the note on NFL_2023_PLAYOFFS.
+    NFL: [
+      "New England", "Minnesota", "Las Vegas", "Dallas", "Buffalo", "San Francisco", "Denver", "Green Bay",
+      "Arizona", "Houston", "Detroit", "Baltimore", "NY Jets", "LA Rams", "Tampa Bay", "Kansas City",
+      "LA Chargers", "Chicago", "Cincinnati", "Carolina", "Seattle", "Jacksonville", "Miami", "Philadelphia",
+      "Cleveland", "New Orleans", "Pittsburgh", "NY Giants", "Indianapolis", "Atlanta", "Tennessee", "Washington",
+    ],
   },
   2024: {
     FLHS: [
@@ -3714,6 +3722,103 @@ const NFL_2024_CONSOLATION = brChampHalf({
   eleventh: ["NY Giants", "106.75", "Indianapolis", "133.30"],
   thirteenth: ["Washington", "110.90", "Cleveland", "148.90"],
   fifteenth: ["Atlanta", "126.30", "Houston", "176.35"],
+  banners: BR_BANNERS, brMainPaths: BR_MAIN_PATHS, logo: "NFL", logoSrc: NFL_MARK,
+  topWinnerY: 171, topPick: "9th pick", topLabel: "17th place",
+  champSlots: [[448, 324, 100, 110, "PFA", PFA_MARK]],
+  ladderH: 730,
+  ladderPaths: [],
+  places: [
+    [448, 33, "11th pick", "19th place"], [448, 133, "13th pick", "21st place"],
+    [448, 233, "15th pick", "23rd place"], [448, 333, "3rd pick", "25th place"],
+    [448, 433, "5th pick", "27th place"], [448, 533, "7th pick", "29th place"],
+    [448, 633, "2nd pick", "31st place"],
+  ],
+  footer: [336, 680, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
+// --- 2023 NFL, ranks 1-16 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2023 - NFL.csv export -- same 32-team,
+// 2-division brChampHalf shape as 2024/2025, decoded column-by-column and
+// cross-checked against every anchor label before the read-back. One real
+// disambiguation needed: the sheet just says "LOS ANGELES"/"NEW YORK" with
+// no franchise name, unlike TEAM_CLR which splits LA Rams/LA Chargers and
+// NY Jets/NY Giants. Resolved by which division (NFC/AFC) each appearance
+// sits under, confirmed with her 2026-08-19: championship half's LA=Rams
+// (NFC), NY=Jets (AFC); consolation half's LA=Chargers (AFC), NY=Giants
+// (NFC) -- matches the real teams' actual conferences. That year's
+// championship-game novelty name was "PainBowl II".
+const NFL_2023_PLAYOFFS = brChampHalf({
+  east: {
+    r1: [["San Francisco", "168.85", "LA Rams", "111.80"], ["Dallas", "200.25", "Detroit", "112.30"],
+         ["Tampa Bay", "154.35", "Green Bay", "175.40"], ["Minnesota", "124.85", "Arizona", "104.35"]],
+    r2: [["San Francisco", "147.30", "Dallas", "214.30"], ["Green Bay", "140.55", "Minnesota", "156.55"]],
+    r3: ["Dallas", "162.55", "Minnesota", "240.70"],
+    lr1: [["LA Rams", "103.95", "Detroit", "186.25"], ["Tampa Bay", "132.35", "Arizona", "165.35"]],
+    lr2w: ["Detroit", "118.80", "Arizona", "210.00"],
+    lr2l: ["LA Rams", "223.80", "Tampa Bay", "191.40"],
+    r2lose: ["San Francisco", "230.95", "Green Bay", "181.45"],
+  },
+  west: {
+    r1: [["Las Vegas", "244.60", "Kansas City", "133.10"], ["Houston", "116.85", "Buffalo", "167.25"],
+         ["NY Jets", "188.95", "Denver", "203.05"], ["Baltimore", "129.60", "New England", "237.60"]],
+    r2: [["Las Vegas", "255.75", "Buffalo", "144.60"], ["Denver", "166.60", "New England", "211.70"]],
+    r3: ["Las Vegas", "150.95", "New England", "214.50"],
+    lr1: [["Kansas City", "101.90", "Houston", "130.15"], ["NY Jets", "146.10", "Baltimore", "151.30"]],
+    lr2w: ["Houston", "141.90", "Baltimore", "139.30"],
+    lr2l: ["Kansas City", "159.90", "NY Jets", "170.10"],
+    r2lose: ["Buffalo", "191.10", "Denver", "150.60"],
+  },
+  champ: ["Minnesota", "183.70", "New England", "185.65"],
+  third: ["Dallas", "129.20", "Las Vegas", "202.65"],
+  fifth: ["San Francisco", "195.20", "Buffalo", "292.65"],
+  seventh: ["Green Bay", "189.00", "Denver", "229.35"],
+  ninth: ["Arizona", "118.75", "Houston", "96.20"],
+  eleventh: ["Detroit", "186.70", "Baltimore", "145.20"],
+  thirteenth: ["LA Rams", "134.05", "NY Jets", "203.40"],
+  fifteenth: ["Tampa Bay", "167.30", "Kansas City", "127.00"],
+  banners: BR_BANNERS, brMainPaths: BR_MAIN_PATHS, logo: "NFL", logoSrc: NFL_MARK,
+  championSub: "PainBowl II",
+  champSlots: [[448, 16, 100, 150, "Trophy", NFL_TROPHY], [448, 334, 100, 100, "PFA", PFA_MARK]],
+  ladderH: 690,
+  ladderPaths: [],
+  places: [
+    [448, 33, "29th pick", "3rd place"], [448, 133, "25th pick", "5th place"],
+    [448, 233, "27th pick", "7th place"], [448, 333, "17th pick", "9th place"],
+    [448, 433, "19th pick", "11th place"], [448, 533, "21st pick", "13th place"],
+    [448, 633, "23rd pick", "15th place"],
+  ],
+});
+
+// --- 2023 NFL, ranks 17-32 (consolation half) --------------------------------
+const NFL_2023_CONSOLATION = brChampHalf({
+  east: {
+    r1: [["Chicago", "148.60", "Washington", "55.00"], ["Seattle", "168.65", "New Orleans", "132.80"],
+         ["Philadelphia", "148.85", "Atlanta", "95.60"], ["NY Giants", "129.80", "Carolina", "143.10"]],
+    r2: [["Chicago", "163.60", "Seattle", "119.90"], ["Philadelphia", "76.70", "Carolina", "117.60"]],
+    r3: ["Chicago", "145.80", "Carolina", "94.40"],
+    lr1: [["Washington", "54.60", "New Orleans", "127.30"], ["Atlanta", "66.60", "NY Giants", "146.10"]],
+    lr2w: ["New Orleans", "130.10", "NY Giants", "89.15"],
+    lr2l: ["Washington", "58.50", "Atlanta", "81.50"],
+    r2lose: ["Seattle", "186.40", "Philadelphia", "71.20"],
+  },
+  west: {
+    r1: [["Pittsburgh", "174.25", "Jacksonville", "189.10"], ["Indianapolis", "170.95", "LA Chargers", "233.45"],
+         ["Cincinnati", "171.90", "Tennessee", "30.80"], ["Miami", "149.60", "Cleveland", "128.10"]],
+    r2: [["Jacksonville", "160.20", "LA Chargers", "254.90"], ["Cincinnati", "170.75", "Miami", "141.55"]],
+    r3: ["LA Chargers", "238.45", "Cincinnati", "217.70"],
+    lr1: [["Pittsburgh", "183.35", "Indianapolis", "151.30"], ["Tennessee", "30.10", "Cleveland", "135.70"]],
+    lr2w: ["Pittsburgh", "127.75", "Cleveland", "145.70"],
+    lr2l: ["Indianapolis", "139.40", "Tennessee", "55.00"],
+    r2lose: ["Jacksonville", "138.55", "Miami", "136.70"],
+  },
+  champ: ["Chicago", "131.30", "LA Chargers", "155.55"],
+  third: ["Carolina", "108.20", "Cincinnati", "156.60"],
+  fifth: ["Seattle", "182.50", "Jacksonville", "141.20"],
+  seventh: ["Philadelphia", "62.40", "Miami", "171.85"],
+  ninth: ["New Orleans", "84.90", "Cleveland", "128.90"],
+  eleventh: ["NY Giants", "134.70", "Pittsburgh", "152.20"],
+  thirteenth: ["Atlanta", "78.20", "Indianapolis", "116.80"],
+  fifteenth: ["Washington", "98.90", "Tennessee", "142.30"],
   banners: BR_BANNERS, brMainPaths: BR_MAIN_PATHS, logo: "NFL", logoSrc: NFL_MARK,
   topWinnerY: 171, topPick: "9th pick", topLabel: "17th place",
   champSlots: [[448, 324, 100, 110, "PFA", PFA_MARK]],
@@ -8100,6 +8205,7 @@ const GRID_BRACKETS = {
     SEC: { playoffs: SEC_2023_PLAYOFFS, consolation: SEC_2023_CONSOLATION },
     XFL: { playoffs: XFL_2023_PLAYOFFS, consolation: XFL_2023_CONSOLATION },
     USFL: { playoffs: USFL_2023_PLAYOFFS, consolation: USFL_2023_CONSOLATION },
+    NFL: { playoffs: NFL_2023_PLAYOFFS, consolation: NFL_2023_CONSOLATION },
   },
 };
 
