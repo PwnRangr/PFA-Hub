@@ -403,6 +403,51 @@ export function watchClub300Live(cb) {
   return () => unsub();
 }
 
+// ── 300 Club (historical, one-time migration off the curated CLUB_300
+// array) ──
+// Separate collection from club300Live on purpose. club300All (App.jsx)
+// deliberately drops any club300Live entry whose year isn't the current
+// season — that filter exists because of a real bug with stale metadata
+// on leftover past-season live-detected entries, and it needs to keep
+// applying ONLY to club300Live. This collection instead holds the
+// trusted, curated historical migration (the old CLUB_300 array, written
+// once via the Admin "Migrate 300 Club Historical Data" button), so no
+// such filter applies here — it merges in for every year unconditionally.
+// Deterministic key mirrors the same tier+week+year+points fingerprint
+// club300All already uses for dedup, so re-clicking the migration button
+// just overwrites the same 154 docs rather than duplicating them.
+// Entry shape is identical to CLUB_300's own array entries — { coach,
+// team, conf, pts, week, year } — nothing downstream (tally-by-conf, the
+// dedup/sort in club300All) needs to change to read it.
+function club300HistoricalKey(tierKey, week, year, pts) {
+  return `${tierKey}_${week}_${year}_${pts.toFixed(2)}`;
+}
+
+export async function writeClub300HistoricalEntry(tierKey, entry) {
+  const key = club300HistoricalKey(tierKey, entry.week, entry.year, entry.pts);
+  if (!firebaseReady) {
+    const all = localGet("pfa-club300-historical") || {};
+    all[key] = entry;
+    localSet("pfa-club300-historical", all);
+    return Object.values(all); // local fallback only; Firebase updates via watchClub300Historical's snapshot
+  }
+  await ensureDb();
+  await fs.setDoc(fs.doc(db, "club300Historical", key), entry);
+  return null;
+}
+
+export function watchClub300Historical(cb) {
+  if (!firebaseReady) {
+    cb(Object.values(localGet("pfa-club300-historical") || {}));
+    return () => {};
+  }
+  let unsub = () => {};
+  ensureDb().then(() => {
+    unsub = fs.onSnapshot(fs.collection(db, "club300Historical"), (snap) => cb(snap.docs.map((d) => d.data())));
+  });
+  return () => unsub();
+}
+
 // ── Streak Bonuses (X Points, live/auto-computed) ──
 // Same shape as club300Live above: one doc per qualifying WEEK, not one doc
 // per roster-season. A roster on an 8-game win streak earns a bonus on

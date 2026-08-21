@@ -25,6 +25,8 @@ import {
   setWeeklyResult,
   addClub300Entry,
   watchClub300Live,
+  writeClub300HistoricalEntry,
+  watchClub300Historical,
   addClub4000Entry,
   watchClub4000Live,
   getClub4000ProcessedYear,
@@ -9232,6 +9234,7 @@ export default function App() {
   // resolves (see the effect near the initial load below).
   const [weeklyResultsCache, setWeeklyResultsCache] = useState({});
   const [club300Live, setClub300Live] = useState([]);
+  const [club300Historical, setClub300Historical] = useState([]);
   const [club4000Live, setClub4000Live] = useState([]);
   const [streakBonusesLive, setStreakBonusesLive] = useState([]);
   const [manualPenalties, setManualPenalties] = useState([]);
@@ -9854,6 +9857,7 @@ export default function App() {
   const [backfillRunning, setBackfillRunning] = useState(false);
   const [cpLockRunning, setCpLockRunning] = useState(false);
   const [strengthBackfillRunning, setStrengthBackfillRunning] = useState(false);
+  const [club300MigrationRunning, setClub300MigrationRunning] = useState(false);
   const runStreakBonusBackfill = useCallback(async () => {
     setBackfillRunning(true);
     try {
@@ -9897,6 +9901,34 @@ export default function App() {
       ...scoreConferencePool(rowsByTier, ALLIANCE_POOL),
       ...scoreConferencePool(rowsByTier, PRO_POOL),
     };
+  }, []);
+
+  // Admin action — ONE-TIME migration of the curated CLUB_300 historical
+  // array (154 games) into its own Firestore collection, club300Historical,
+  // so future corrections/additions to 300 Club history don't require a
+  // code deploy. Safe to re-click any time — deterministic doc IDs
+  // overwrite rather than duplicate. This does NOT yet change what
+  // club300All reads from: CLUB_300 stays the active source until the
+  // migration is confirmed (watch the live count next to the button —
+  // should read 154 / 154), at which point a follow-up change switches
+  // club300All over to read club300Historical instead, and CLUB_300
+  // becomes a commented-out backup rather than deleted.
+  const runClub300HistoricalMigration = useCallback(async () => {
+    setClub300MigrationRunning(true);
+    try {
+      for (const entry of CLUB_300) {
+        const tierKey = CONF_TO_TIER_KEY[entry.conf] || entry.conf;
+        try {
+          await writeClub300HistoricalEntry(tierKey, entry).then((local) => {
+            if (local) setClub300Historical(local);
+          });
+        } catch (e) {
+          console.error(`club300Historical migration failed for ${entry.coach} (${entry.year} wk${entry.week})`, e);
+        }
+      }
+    } finally {
+      setClub300MigrationRunning(false);
+    }
   }, []);
 
   // Admin action — computes and stores League Strength for every tier for
@@ -10097,6 +10129,7 @@ export default function App() {
     const unsubApps = watchApplications((apps) => setApplications(apps));
     const unsubPromo = watchPromotionWindow((open) => setPromotionWindowOpen(open));
     const unsubClub300 = watchClub300Live((entries) => setClub300Live(entries));
+    const unsubClub300Historical = watchClub300Historical((entries) => setClub300Historical(entries));
     const unsubClub4000 = watchClub4000Live((entries) => setClub4000Live(entries));
     const unsubStreakBonuses = watchStreakBonusesLive((entries) => setStreakBonusesLive(entries));
     const unsubManualPenalties = watchManualPenalties((entries) => setManualPenalties(entries));
@@ -10109,6 +10142,7 @@ export default function App() {
       unsubApps();
       unsubPromo();
       unsubClub300();
+      unsubClub300Historical();
       unsubClub4000();
       unsubStreakBonuses();
       unsubManualPenalties();
@@ -13940,6 +13974,33 @@ export default function App() {
                   >
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2024/2025)"}
                   </button>
+                </div>
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                    One-time: migrates the curated 300 Club historical list (154 games) into its own Firestore
+                    collection (<code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>club300Historical</code>)
+                    so future corrections don't need a code deploy. Safe to re-click (deterministic doc IDs
+                    overwrite). Doesn't change the live 300 Club page yet — that switch happens once the count
+                    below reads 154 / 154.
+                  </div>
+                  <button
+                    onClick={runClub300HistoricalMigration}
+                    disabled={club300MigrationRunning}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 4,
+                      border: `1px solid ${C.gold}`,
+                      background: club300MigrationRunning ? "transparent" : C.gold,
+                      color: club300MigrationRunning ? C.slate : C.ink,
+                      fontWeight: 600,
+                      cursor: club300MigrationRunning ? "default" : "pointer",
+                    }}
+                  >
+                    {club300MigrationRunning ? "Running…" : "Migrate 300 Club Historical Data"}
+                  </button>
+                  <span style={{ marginLeft: 12, fontSize: 12, color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>
+                    {club300Historical.length} / {CLUB_300.length} migrated
+                  </span>
                 </div>
               </section>
             )}
