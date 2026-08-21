@@ -683,6 +683,58 @@ export function watchClub4000Live(cb) {
   return () => unsub();
 }
 
+// ── 4000 Club (historical, migrated off the curated CLUB_4000 array,
+// following the exact same pattern as club300Historical above) ──
+// Deterministic key mirrors the fingerprint club4000All already uses for
+// dedup: tier+year+coach, not tier+year+points — there's no "week" here
+// (one season total per roster per year), and a coach only ever holds one
+// roster per league per year, so coach alone is a unique identity within a
+// tier+year without needing points as a tiebreaker (see club4000All's own
+// comment in App.jsx). Built self-healing FROM THE START this time — the
+// 300 Club version started as a naive per-entry overwrite and had to be
+// rebuilt after a CONF_TO_TIER_KEY alias change orphaned one doc (see
+// mistakes.md). A key derived from a lookup table is only as stable as
+// that table, and this project's alias table has already changed twice in
+// one week — so straight to fetch-diff-delete-then-write.
+function club4000HistoricalKey(tierKey, year, coach) {
+  return `${tierKey}_${year}_${coach}`;
+}
+
+export { club4000HistoricalKey };
+
+export async function replaceClub4000Historical(freshEntries) {
+  if (!firebaseReady) {
+    const all = {};
+    for (const [key, entry] of freshEntries) all[key] = entry;
+    localSet("pfa-club4000-historical", all);
+    return Object.values(all); // local fallback only; Firebase updates via watchClub4000Historical's snapshot
+  }
+  await ensureDb();
+  const freshKeys = new Set(freshEntries.map(([key]) => key));
+  const snap = await fs.getDocs(fs.collection(db, "club4000Historical"));
+  const deletions = [];
+  snap.forEach((d) => {
+    if (!freshKeys.has(d.id)) deletions.push(fs.deleteDoc(d.ref));
+  });
+  await Promise.all(deletions);
+  for (const [key, entry] of freshEntries) {
+    await fs.setDoc(fs.doc(db, "club4000Historical", key), entry);
+  }
+  return null;
+}
+
+export function watchClub4000Historical(cb) {
+  if (!firebaseReady) {
+    cb(Object.values(localGet("pfa-club4000-historical") || {}));
+    return () => {};
+  }
+  let unsub = () => {};
+  ensureDb().then(() => {
+    unsub = fs.onSnapshot(fs.collection(db, "club4000Historical"), (snap) => cb(snap.docs.map((d) => d.data())));
+  });
+  return () => unsub();
+}
+
 // Guards the 13-league sweep (see detect4000/its calling effect in App.jsx)
 // so it only actually hits Sleeper once per season, the first time anyone
 // loads the site after week 17 -- without this, EVERY page load for the

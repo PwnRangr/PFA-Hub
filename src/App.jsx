@@ -28,6 +28,9 @@ import {
   watchClub300Historical,
   addClub4000Entry,
   watchClub4000Live,
+  club4000HistoricalKey,
+  replaceClub4000Historical,
+  watchClub4000Historical,
   getClub4000ProcessedYear,
   markClub4000ProcessedYear,
   addStreakBonusEntry,
@@ -915,7 +918,17 @@ const TIERS = [
 // situation as "PION" (a genuinely separate, now-discontinued 2022-only
 // league) — that one stays unmapped on purpose, its own bucket everywhere
 // this alias table is consulted.
-const CONF_TO_TIER_KEY = { XII: "BIG XII", FHS: "FLHS", BIG10: "TEN", "PAC 12": "TEN" };
+// "PAC" (no "12") added 2026-08-21 — UNCONFIRMED, a working assumption,
+// not yet a fact like the others in this table. Both CLUB_4000 entries
+// tagged "PAC" are the same team, "Arizona Wildcats" (2022, 2023) — the
+// exact team that showed up under "PAC 12" in CLUB_300, which Lainey
+// DID confirm is TEN pre-rebrand. Treating "PAC" as the same alias on
+// that strength of evidence, but flag this to her before fully trusting
+// it: unlike "PAC 12"/"BIG10"/"XII", this one hasn't been directly
+// confirmed. If she says it's wrong, remove this line and re-click the
+// 4000 Club migration button — it's self-healing, so it'll clean up
+// automatically.
+const CONF_TO_TIER_KEY = { XII: "BIG XII", FHS: "FLHS", BIG10: "TEN", "PAC 12": "TEN", PAC: "TEN" };
 
 // NFL division numbers as configured in Sleeper -> real conference/division
 // names. Confirmed directly by Lainey.
@@ -9258,6 +9271,7 @@ export default function App() {
   const [club300Live, setClub300Live] = useState([]);
   const [club300Historical, setClub300Historical] = useState([]);
   const [club4000Live, setClub4000Live] = useState([]);
+  const [club4000Historical, setClub4000Historical] = useState([]);
   const [streakBonusesLive, setStreakBonusesLive] = useState([]);
   const [manualPenalties, setManualPenalties] = useState([]);
   // The permanent, locked Season CP record for completed tier/years — see
@@ -9879,6 +9893,7 @@ export default function App() {
   const [backfillRunning, setBackfillRunning] = useState(false);
   const [cpLockRunning, setCpLockRunning] = useState(false);
   const [strengthBackfillRunning, setStrengthBackfillRunning] = useState(false);
+  const [club4000MigrationRunning, setClub4000MigrationRunning] = useState(false);
   const runStreakBonusBackfill = useCallback(async () => {
     setBackfillRunning(true);
     try {
@@ -9922,6 +9937,36 @@ export default function App() {
       ...scoreConferencePool(rowsByTier, ALLIANCE_POOL),
       ...scoreConferencePool(rowsByTier, PRO_POOL),
     };
+  }, []);
+
+  // Admin action — migration/re-sync of the curated CLUB_4000 array (53
+  // seasons) into its own Firestore collection, club4000Historical.
+  // Staged the same way 300 Club's first turn was: this does NOT yet
+  // change what club4000All reads from — CLUB_4000 stays the active
+  // source until the count next to the button is confirmed (should read
+  // 53 / 53), at which point a follow-up switches club4000All over and
+  // retires CLUB_4000 the same way CLUB_300 was retired. Built
+  // self-healing FROM THE START (fetch what's there, delete anything that
+  // doesn't match a freshly computed key, then write the fresh set) —
+  // see replaceClub4000Historical's comment in storage.js for why a naive
+  // per-entry overwrite isn't actually safe to re-click once a resolved
+  // key can change (which already happened once this week, with 300
+  // Club's "PAC 12" alias).
+  const runClub4000HistoricalMigration = useCallback(async () => {
+    setClub4000MigrationRunning(true);
+    try {
+      const freshEntries = CLUB_4000.map((entry) => {
+        const tierKey = CONF_TO_TIER_KEY[entry.conf] || entry.conf;
+        const key = club4000HistoricalKey(tierKey, entry.year, entry.coach);
+        return [key, entry];
+      });
+      const local = await replaceClub4000Historical(freshEntries);
+      if (local) setClub4000Historical(local);
+    } catch (e) {
+      console.error("club4000Historical migration failed", e);
+    } finally {
+      setClub4000MigrationRunning(false);
+    }
   }, []);
 
   // Admin action — computes and stores League Strength for every tier for
@@ -10124,6 +10169,7 @@ export default function App() {
     const unsubClub300 = watchClub300Live((entries) => setClub300Live(entries));
     const unsubClub300Historical = watchClub300Historical((entries) => setClub300Historical(entries));
     const unsubClub4000 = watchClub4000Live((entries) => setClub4000Live(entries));
+    const unsubClub4000Historical = watchClub4000Historical((entries) => setClub4000Historical(entries));
     const unsubStreakBonuses = watchStreakBonusesLive((entries) => setStreakBonusesLive(entries));
     const unsubManualPenalties = watchManualPenalties((entries) => setManualPenalties(entries));
     const unsubSeasonCPFinal = watchSeasonCPFinal((entries) => setSeasonCPFinal(entries));
@@ -10137,6 +10183,7 @@ export default function App() {
       unsubClub300();
       unsubClub300Historical();
       unsubClub4000();
+      unsubClub4000Historical();
       unsubStreakBonuses();
       unsubManualPenalties();
       unsubSeasonCPFinal();
@@ -11741,7 +11788,12 @@ export default function App() {
   // Only conferences that actually have a qualifying entry -- matches
   // club300ByConf's own convention (tally() drops zero-count keys) rather
   // than the reference mockup, which listed all 15 including zeros.
-  const club4000ByConf = useMemo(() => tally(club4000All, (r) => r.conf), [club4000All]);
+  // Resolved through CONF_TO_TIER_KEY (not raw r.conf) — same fix as
+  // club300ByConf above, and for the same reason: a rebranded tier's
+  // pre-rebrand games should count toward its current name's bar, not
+  // sit in their own separate one. "PION" (a genuinely separate,
+  // discontinued league) correctly still falls through to its own bucket.
+  const club4000ByConf = useMemo(() => tally(club4000All, (r) => CONF_TO_TIER_KEY[r.conf] || r.conf), [club4000All]);
   const club4000BySeason = useMemo(() => {
     const map = new Map();
     club4000All.forEach((r) => map.set(r.year, (map.get(r.year) || 0) + 1));
@@ -13982,6 +14034,32 @@ export default function App() {
                   >
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2024/2025)"}
                   </button>
+                </div>
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                    Migrates the curated 4000 Club historical list (53 seasons) into its own Firestore collection
+                    (<code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>club4000Historical</code>). Same
+                    pattern as the 300 Club migration — doesn't change the live 4000 Club page yet, that switch
+                    happens once the count below reads 53 / 53. Safe to re-click any time (self-healing).
+                  </div>
+                  <button
+                    onClick={runClub4000HistoricalMigration}
+                    disabled={club4000MigrationRunning}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 4,
+                      border: `1px solid ${C.gold}`,
+                      background: club4000MigrationRunning ? "transparent" : C.gold,
+                      color: club4000MigrationRunning ? C.slate : C.ink,
+                      fontWeight: 600,
+                      cursor: club4000MigrationRunning ? "default" : "pointer",
+                    }}
+                  >
+                    {club4000MigrationRunning ? "Running…" : "Migrate 4000 Club Historical Data"}
+                  </button>
+                  <span style={{ marginLeft: 12, fontSize: 12, color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>
+                    {club4000Historical.length} / {CLUB_4000.length} migrated
+                  </span>
                 </div>
               </section>
             )}
