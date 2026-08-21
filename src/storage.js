@@ -476,6 +476,31 @@ export function watchClub300Historical(cb) {
   return () => unsub();
 }
 
+// One-off correction to a single club300Historical doc — a genuine
+// data-entry mistake (a wrong year on one entry, confirmed by Lainey
+// 2026-08-21), not an alias/config change like the "PAC 12" case above.
+// The general bulk migration (replaceClub300Historical) isn't the right
+// tool here: it reconciles against the FULL 154-entry source array, which
+// is overkill (and requires resurrecting the retired CLUB_300 array as
+// live code) just to fix one field on one record. This instead targets
+// exactly the two keys involved: delete the doc filed under its old
+// (wrong) key, write the corrected entry under its new (right) key.
+// Firestore's deleteDoc is a no-op if the old key doesn't exist, so this
+// is safe to re-run if it's ever needed for a similar one-off fix again.
+export async function correctClub300HistoricalEntry(oldKey, newKey, newEntry) {
+  if (!firebaseReady) {
+    const all = localGet("pfa-club300-historical") || {};
+    delete all[oldKey];
+    all[newKey] = newEntry;
+    localSet("pfa-club300-historical", all);
+    return Object.values(all); // local fallback only; Firebase updates via watchClub300Historical's snapshot
+  }
+  await ensureDb();
+  await fs.deleteDoc(fs.doc(db, "club300Historical", oldKey));
+  await fs.setDoc(fs.doc(db, "club300Historical", newKey), newEntry);
+  return null;
+}
+
 // ── Streak Bonuses (X Points, live/auto-computed) ──
 // Same shape as club300Live above: one doc per qualifying WEEK, not one doc
 // per roster-season. A roster on an 8-game win streak earns a bonus on

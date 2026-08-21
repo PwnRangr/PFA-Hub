@@ -26,6 +26,7 @@ import {
   addClub300Entry,
   watchClub300Live,
   watchClub300Historical,
+  correctClub300HistoricalEntry,
   addClub4000Entry,
   watchClub4000Live,
   watchClub4000Historical,
@@ -136,15 +137,13 @@ const LEAGUE_HISTORY = {
     // app has no config for. Kept as a comment, same treatment the 2023
     // block already gave it — just confirmed now instead of guessed.
     //
-    // DISCREPANCY WORTH HER ATTENTION: the 2023 block below has its own
-    // commented "Pioneer" entry, ID "919371831558131712", marked "year
-    // unconfirmed" — a DIFFERENT ID than this one. She's confirmed
-    // Pioneer only played in 2022, which points to THIS id (806...) being
-    // the real one and the 2023 block's 919... being either wrong or a
-    // leftover reference to something else entirely. Flagging rather than
-    // silently deleting either — an old commented guess isn't proof of
-    // anything on its own, but two different IDs for a supposedly
-    // single-season league is a real conflict, not a formatting choice.
+    // CONFIRMED 2026-08-21: this ID (806...) is the season that actually
+    // played — Pioneer's only real season. The 2023 block below has a
+    // DIFFERENT Pioneer ID (919...), which isn't a conflict after all: she
+    // confirmed the league was carried over/"transitioned" into a 2023
+    // Sleeper shell (a real ID exists) but never actually played any games
+    // that season before folding for good. Both IDs are legitimate; only
+    // one of them has real season data behind it.
   },
   2023: {
     NFL: "919396554954412032",
@@ -160,12 +159,14 @@ const LEAGUE_HISTORY = {
     SWAC: "919392917653901312",
     GLIAC: "919392125446373376",
     FLHS: "919369950941241344",
-    // Pioneer: "919371831558131712" — folded league, year unconfirmed.
-    // See the 2022 block above for a real conflict this raises: she's
-    // confirmed Pioneer only played in 2022, and 2022's actual Pioneer ID
-    // (806355824665542656) is different from this one. This ID may be
-    // wrong, or may not actually be Pioneer's — worth asking her before
-    // trusting either further.
+    // Pioneer: "919371831558131712" — CONFIRMED 2026-08-21: a real
+    // Sleeper league ID, created when Pioneer was carried over into the
+    // 2023 season, but no games were ever played in it before the league
+    // folded for good. Not the same as the 2022 block's Pioneer ID
+    // (806355824665542656) above, which IS a real played season — these
+    // are sequential, not conflicting. Kept as a comment, not a live key,
+    // same reasoning as 2022's entry (and doubly so here — there's no
+    // game data to fetch even if it were a live key).
   },
 };
 
@@ -1803,7 +1804,7 @@ const CLUB_300 = [
   { coach: "ColBow", team: "Cypress Bay Lightning", conf: "FLHS", pts: 306.95, week: 9, year: 2022 },
   { coach: "Wynnguy", team: "Brown Bears", conf: "IVY", pts: 306.8, week: 4, year: 2025 },
   { coach: "treetwig", team: "Pine Bluff Golden Lions", conf: "SWAC", pts: 306.65, week: 15, year: 2023 },
-  { coach: "catinthehat2", team: "St Francis Red Flash", conf: "PION", pts: 306.4, week: 6, year: 2023 },
+  { coach: "catinthehat2", team: "St Francis Red Flash", conf: "PION", pts: 306.4, week: 6, year: 2022 }, // CORRECTED 2026-08-21 — was year: 2023, a confirmed data-entry mistake (Pioneer played no games in 2023); fixed live via correctClub300HistoricalEntry, and corrected here too so this archive matches reality
   { coach: "WillStephensSr", team: "Alabama State Hornets", conf: "SWAC", pts: 306.35, week: 2, year: 2022 },
   { coach: "heavyd1017", team: "Miss State Bulldogs", conf: "SEC", pts: 306.35, week: 5, year: 2022 },
   { coach: "beardmantv", team: "Auburn Tigers", conf: "SEC", pts: 306.25, week: 6, year: 2023 },
@@ -9954,6 +9955,33 @@ export default function App() {
   const [backfillRunning, setBackfillRunning] = useState(false);
   const [cpLockRunning, setCpLockRunning] = useState(false);
   const [strengthBackfillRunning, setStrengthBackfillRunning] = useState(false);
+  const [pionFixRunning, setPionFixRunning] = useState(false);
+  const [pionFixDone, setPionFixDone] = useState(false);
+  // One-off data correction — confirmed 2026-08-21: catinthehat2's
+  // St Francis Red Flash Pioneer game (306.4 pts, week 6) was entered
+  // under year 2023, but Pioneer never played any games that season
+  // (confirmed) — the same coach's CLUB_4000 entry for the same team
+  // already correctly says 2022, and Lainey confirmed this was a data-
+  // entry mistake on her end. Delete-old-key + write-new-key rather than
+  // the bulk migration button, since this is a single-record fix, not a
+  // full-array reconcile — see correctClub300HistoricalEntry's comment in
+  // storage.js. THIS IS A ONE-OFF: remove this button, handler, and the
+  // two state lines above once she's clicked it and confirmed the fix.
+  const runPionDataFix = useCallback(async () => {
+    setPionFixRunning(true);
+    try {
+      await correctClub300HistoricalEntry(
+        "PION_6_2023_306.40",
+        "PION_6_2022_306.40",
+        { coach: "catinthehat2", team: "St Francis Red Flash", conf: "PION", pts: 306.4, week: 6, year: 2022 }
+      );
+      setPionFixDone(true);
+    } catch (e) {
+      console.error("Pioneer 2023->2022 data fix failed", e);
+    } finally {
+      setPionFixRunning(false);
+    }
+  }, []);
   const runStreakBonusBackfill = useCallback(async () => {
     setBackfillRunning(true);
     try {
@@ -14067,6 +14095,29 @@ export default function App() {
                     }}
                   >
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2024/2025)"}
+                  </button>
+                </div>
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.ember}`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                    <strong style={{ color: C.ember }}>ONE-OFF, remove after running:</strong> fixes a confirmed
+                    data-entry mistake in club300Historical — catinthehat2's St Francis Red Flash Pioneer game
+                    (306.4 pts, week 6) is filed under year 2023, but should be 2022. Click once, confirm it below,
+                    then let me know so this button gets removed.
+                  </div>
+                  <button
+                    onClick={runPionDataFix}
+                    disabled={pionFixRunning || pionFixDone}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 4,
+                      border: `1px solid ${C.ember}`,
+                      background: pionFixRunning || pionFixDone ? "transparent" : C.ember,
+                      color: pionFixRunning || pionFixDone ? C.slate : C.ink,
+                      fontWeight: 600,
+                      cursor: pionFixRunning || pionFixDone ? "default" : "pointer",
+                    }}
+                  >
+                    {pionFixRunning ? "Running…" : pionFixDone ? "Done" : "Fix Pioneer 2023→2022 Data Error"}
                   </button>
                 </div>
               </section>
