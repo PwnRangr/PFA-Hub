@@ -65,7 +65,14 @@ export default function Footer() {
       <div className="max-w-6xl mx-auto flex flex-col gap-2">
         <div className="flex justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <span>Painless Football Alliance</span>
+            <a
+              href="mailto:PainlessFootball@Gmail.com"
+              style={{ color: "inherit", textDecoration: "none" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = C.gold)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "inherit")}
+            >
+              Painless Football Alliance
+            </a>
             <KofiButton />
           </div>
           <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>sleeper api · firebase · alliance sheet</span>
