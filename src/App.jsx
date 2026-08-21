@@ -26,7 +26,6 @@ import {
   addClub300Entry,
   watchClub300Live,
   watchClub300Historical,
-  correctClub300HistoricalEntry,
   addClub4000Entry,
   watchClub4000Live,
   watchClub4000Historical,
@@ -9955,33 +9954,6 @@ export default function App() {
   const [backfillRunning, setBackfillRunning] = useState(false);
   const [cpLockRunning, setCpLockRunning] = useState(false);
   const [strengthBackfillRunning, setStrengthBackfillRunning] = useState(false);
-  const [pionFixRunning, setPionFixRunning] = useState(false);
-  const [pionFixDone, setPionFixDone] = useState(false);
-  // One-off data correction — confirmed 2026-08-21: catinthehat2's
-  // St Francis Red Flash Pioneer game (306.4 pts, week 6) was entered
-  // under year 2023, but Pioneer never played any games that season
-  // (confirmed) — the same coach's CLUB_4000 entry for the same team
-  // already correctly says 2022, and Lainey confirmed this was a data-
-  // entry mistake on her end. Delete-old-key + write-new-key rather than
-  // the bulk migration button, since this is a single-record fix, not a
-  // full-array reconcile — see correctClub300HistoricalEntry's comment in
-  // storage.js. THIS IS A ONE-OFF: remove this button, handler, and the
-  // two state lines above once she's clicked it and confirmed the fix.
-  const runPionDataFix = useCallback(async () => {
-    setPionFixRunning(true);
-    try {
-      await correctClub300HistoricalEntry(
-        "PION_6_2023_306.40",
-        "PION_6_2022_306.40",
-        { coach: "catinthehat2", team: "St Francis Red Flash", conf: "PION", pts: 306.4, week: 6, year: 2022 }
-      );
-      setPionFixDone(true);
-    } catch (e) {
-      console.error("Pioneer 2023->2022 data fix failed", e);
-    } finally {
-      setPionFixRunning(false);
-    }
-  }, []);
   const runStreakBonusBackfill = useCallback(async () => {
     setBackfillRunning(true);
     try {
@@ -14095,29 +14067,6 @@ export default function App() {
                     }}
                   >
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2024/2025)"}
-                  </button>
-                </div>
-                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.ember}`, borderRadius: 6 }}>
-                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
-                    <strong style={{ color: C.ember }}>ONE-OFF, remove after running:</strong> fixes a confirmed
-                    data-entry mistake in club300Historical — catinthehat2's St Francis Red Flash Pioneer game
-                    (306.4 pts, week 6) is filed under year 2023, but should be 2022. Click once, confirm it below,
-                    then let me know so this button gets removed.
-                  </div>
-                  <button
-                    onClick={runPionDataFix}
-                    disabled={pionFixRunning || pionFixDone}
-                    style={{
-                      padding: "8px 14px",
-                      borderRadius: 4,
-                      border: `1px solid ${C.ember}`,
-                      background: pionFixRunning || pionFixDone ? "transparent" : C.ember,
-                      color: pionFixRunning || pionFixDone ? C.slate : C.ink,
-                      fontWeight: 600,
-                      cursor: pionFixRunning || pionFixDone ? "default" : "pointer",
-                    }}
-                  >
-                    {pionFixRunning ? "Running…" : pionFixDone ? "Done" : "Fix Pioneer 2023→2022 Data Error"}
                   </button>
                 </div>
               </section>
