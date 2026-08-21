@@ -1630,6 +1630,19 @@ const SETTINGS_LEAGUE_SECTIONS = [
   },
 ];
 
+// CLUB_300 — the curated 300 Club historical data, 154 games. As of
+// 2026-08-21 this is NO LONGER read directly by the live 300 Club page —
+// club300All now reads from the Firestore collection club300Historical
+// instead (migrated off this exact array, confirmed 154/154). This array
+// stays fully active in code on purpose, not commented out: the Admin
+// "Migrate 300 Club Historical Data" button (Finalize Season sub-tab)
+// still reads it as the source of truth any time a re-sync is needed
+// (e.g. a future CONF_TO_TIER_KEY alias change, same as the "PAC 12" fix
+// this session) — so it's the backup AND the live source for that one
+// button, not a dead reference. If it's ever edited (a new game added, a
+// score corrected), re-click that Admin button to push the change into
+// club300Historical — editing this array alone does nothing for the live
+// site anymore.
 const CLUB_300 = [
   { coach: "Harvey28", team: "Carolina Chanticleers", conf: "SUN", pts: 388.1, week: 15, year: 2022 },
   { coach: "mchostetler1", team: "Florida Gators", conf: "SEC", pts: 384.85, week: 2, year: 2024 },
@@ -9910,19 +9923,18 @@ export default function App() {
     };
   }, []);
 
-  // Admin action — ONE-TIME (but safely re-runnable) migration of the
-  // curated CLUB_300 historical array (154 games) into its own Firestore
-  // collection, club300Historical, so future corrections/additions to 300
-  // Club history don't require a code deploy. Self-healing: fetches what's
-  // actually there and deletes anything that doesn't match a freshly
-  // computed key before writing (see replaceClub300Historical's comment in
-  // storage.js for why a naive per-entry overwrite isn't actually safe to
-  // re-click). This does NOT yet change what club300All reads from:
-  // CLUB_300 stays the active source until the migration is confirmed
-  // (watch the live count next to the button — should read 154 / 154),
-  // at which point a follow-up change switches club300All over to read
-  // club300Historical instead, and CLUB_300 becomes a commented-out
-  // backup rather than deleted.
+  // Admin action — safely re-runnable migration/re-sync of the curated
+  // CLUB_300 array (154 games) into its own Firestore collection,
+  // club300Historical, which is what club300All actually reads from now
+  // (confirmed 154/154, cut over 2026-08-21). CLUB_300 stays fully active
+  // in code — not commented out — specifically so this button keeps
+  // working: it's the one remaining consumer of the array, the source of
+  // truth any time a re-sync is needed (a corrected score, a new game
+  // added, or a CONF_TO_TIER_KEY alias changing again). Self-healing:
+  // fetches what's actually in the collection and deletes anything that
+  // doesn't match a freshly computed key before writing (see
+  // replaceClub300Historical's comment in storage.js for why a naive
+  // per-entry overwrite isn't actually safe to re-click).
   const runClub300HistoricalMigration = useCallback(async () => {
     setClub300MigrationRunning(true);
     try {
@@ -11630,10 +11642,19 @@ export default function App() {
     [leagueWeeklyAwards]
   );
 
-  // 300 Club: static CLUB_300 merged with live-detected entries, sorted
-  // highest score first. Two defensive filters, both needed because of
-  // the detect300 bug fixed just above (it used to fire on every past
-  // week Weekly Awards browsed, not just the current season):
+  // 300 Club: club300Historical (Firestore — migrated 2026-08-21 off the
+  // old static CLUB_300 array, confirmed 154/154) merged with live-detected
+  // entries, sorted highest score first. CLUB_300 itself is no longer read
+  // here — it stays in the file, still fully active code (not commented
+  // out), because the "Migrate 300 Club Historical Data" admin button
+  // still reads from it as the source of truth for any future re-sync
+  // (e.g. if a CONF_TO_TIER_KEY alias changes again, same as the PAC-12
+  // fix this session). Its role changed from "the display's data source"
+  // to "the migration's data source" — nothing was deleted.
+  //
+  // Two defensive filters, both needed because of the detect300 bug fixed
+  // just above (it used to fire on every past week Weekly Awards browsed,
+  // not just the current season):
   // 1. Drop any club300Live entry whose year isn't CURRENT_SEASON. A
   //    past-season live entry is always a leftover from before the fix —
   //    it can never be created again going forward, and even where it
@@ -11643,22 +11664,22 @@ export default function App() {
   //    doesn't match TEAM_ART at all — found from her screenshot
   //    2026-08-07: a stray past-season entry with a mismatched team name
   //    showed no logo, and wasn't even a duplicate of anything in
-  //    CLUB_300, so the tier+week+year+points dedup below couldn't have
-  //    caught it). Historical years belong to the curated static array
-  //    only now.
+  //    club300Historical, so the tier+week+year+points dedup below
+  //    couldn't have caught it). Historical years belong to
+  //    club300Historical only now.
   // 2. Dedupe what's left by (tier, week, year, points) — still needed
   //    for the current season, where a live entry could theoretically
-  //    collide with something hand-typed into CLUB_300 later. The
-  //    fingerprint doesn't include coach/team name on purpose, since
-  //    those could differ; tier+week+year+points is the reliable game
-  //    identity, and CLUB_300 (spread first) always wins a collision.
-  // CLUB_300 happens to already be hand-authored in descending order,
-  // but that's not something to rely on, so this still ends with an
-  // explicit sort. Kept as a useMemo (not a module constant) since
-  // club300Live changes at runtime.
+  //    collide with something in club300Historical. The fingerprint
+  //    doesn't include coach/team name on purpose, since those could
+  //    differ; tier+week+year+points is the reliable game identity, and
+  //    club300Historical (spread first) always wins a collision.
+  // club300Historical isn't guaranteed to arrive pre-sorted the way the
+  // old hand-authored CLUB_300 happened to be, so this still ends with an
+  // explicit sort regardless. Kept as a useMemo (not a module constant)
+  // since both club300Historical and club300Live change at runtime.
   const club300All = useMemo(() => {
     const currentLive = club300Live.filter((r) => r.year === CURRENT_SEASON);
-    const merged = currentLive.length ? [...CLUB_300, ...currentLive] : CLUB_300;
+    const merged = currentLive.length ? [...club300Historical, ...currentLive] : club300Historical;
     const seen = new Set();
     const deduped = [];
     merged.forEach((r) => {
@@ -11669,7 +11690,7 @@ export default function App() {
       deduped.push(r);
     });
     return deduped.sort((a, b) => b.pts - a.pts);
-  }, [club300Live]);
+  }, [club300Historical, club300Live]);
   const club300TopCoaches = useMemo(() => tally(club300All, (r) => r.coach).slice(0, 10), [club300All]);
   const club300TopTeams = useMemo(() => tally(club300All, (r) => r.team).slice(0, 8), [club300All]);
   // Resolved through CONF_TO_TIER_KEY (not raw r.conf) so a rebranded
@@ -13992,11 +14013,10 @@ export default function App() {
                 </div>
                 <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
                   <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
-                    One-time: migrates the curated 300 Club historical list (154 games) into its own Firestore
-                    collection (<code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>club300Historical</code>)
-                    so future corrections don't need a code deploy. Safe to re-click (deterministic doc IDs
-                    overwrite). Doesn't change the live 300 Club page yet — that switch happens once the count
-                    below reads 154 / 154.
+                    Syncs the curated 300 Club historical list (CLUB_300 in code) into its own Firestore collection
+                    (<code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>club300Historical</code>), which the
+                    live 300 Club page reads from directly. Safe to re-click any time — self-healing, so it cleans
+                    up stale docs if a game's data or a conference alias ever changes.
                   </div>
                   <button
                     onClick={runClub300HistoricalMigration}
