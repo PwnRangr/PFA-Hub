@@ -334,6 +334,17 @@ const HISTORICAL_FINAL_ORDER = {
       "Cleveland", "New Orleans", "Pittsburgh", "NY Giants", "Indianapolis", "Atlanta", "Tennessee", "Washington",
     ],
   },
+  2022: {
+    // Pre-2023 backfill, just getting started 2026-08-21 -- SEC is the
+    // first tier done, transcribed from her PFA_Playoffs_2022_-_SEC.csv
+    // export, full read-back confirmed. Matches SEC_2022_PLAYOFFS/
+    // SEC_2022_CONSOLATION in GRID_BRACKETS above exactly. The other 12
+    // tiers are still fully open.
+    SEC: [
+      "Ole Miss", "Vanderbilt", "Texas A&M", "Miss State", "Tennessee", "Auburn", "Kentucky", "Missouri",
+      "Arkansas", "Georgia", "Florida", "Oklahoma", "South Carolina", "LSU", "Texas", "Alabama",
+    ],
+  },
   2024: {
     FLHS: [
       "Coral Springs", "Cypress Bay", "Miami Beach", "Western", "Taravella", "Deerfield", "West Boca", "Palmetto",
@@ -6885,6 +6896,70 @@ const SEC_2023_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2022 SEC, ranks 1-8 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2022_-_SEC.csv export -- the first of
+// the (currently unstarted) pre-2023 tiers. Every winner cross-validated
+// two independent ways: head-to-head score comparison AND the sheet's own
+// explicit W/L + placement labels agree on every single game, with zero
+// discrepancies. Full read-back confirmed with her 2026-08-21. Left/right
+// assignment per her explicit instruction: the sheet's "bottom half" (Ole
+// Miss/Missouri/Tennessee/Miss St) goes on the right; within each side, the
+// sheet's "bottom" sub-matchup goes on the right of that side. One name
+// normalization, same as 2023: sheet's "Miss St" -> "Miss State", matching
+// SEC_CLR's exact key.
+const SEC_2022_PLAYOFFS = r3ChampHalf({
+  colors: SEC_CLR, logo: "SEC", logoSrc: SEC_MARK, trophy: SEC_TROPHY,
+  banners: SEC_BANNERS,
+  wk15: [
+    ["Auburn", "204.15", "Texas A&M", "215.40"],
+    ["Kentucky", "189.95", "Vanderbilt", "290.60"],
+    ["Ole Miss", "283.40", "Missouri", "97.40"],
+    ["Tennessee", "213.50", "Miss State", "217.70"],
+  ],
+  semis: [
+    ["Texas A&M", "157.85", "Vanderbilt", "217.45"],
+    ["Ole Miss", "205.90", "Miss State", "162.40"],
+  ],
+  final: ["Vanderbilt", "183.60", "Ole Miss", "233.65"],
+  third: ["Texas A&M", "171.15", "Miss State", "156.55"],
+  fifth: {
+    leftQual: ["Auburn", "230.40", "Kentucky", "199.15"],
+    rightQual: ["Missouri", "143.25", "Tennessee", "191.45"],
+    final: ["Auburn", "219.10", "Tennessee", "241.30"],
+  },
+  seventh: ["Kentucky", "211.55", "Missouri", "94.80"],
+});
+
+// --- 2022 SEC, ranks 9-16 (consolation half) --------------------------------
+// Same source/confirmation as the playoffs half above. One assumption
+// flagged and CONFIRMED correct 2026-08-21: unlike the championship half,
+// she didn't explicitly state the consolation left/right split -- it's
+// applied here by structural analogy to the confirmed championship split
+// (the sheet's own top/bottom halves mirror the same pattern).
+const SEC_2022_CONSOLATION = r3ConsoHalf({
+  colors: SEC_CLR, logo: "SEC", logoSrc: SEC_MARK,
+  banners: SEC_CONSO_BANNERS,
+  wk15: [
+    ["Arkansas", "258.45", "LSU", "190.90"],
+    ["Oklahoma", "192.15", "Alabama", "163.10"],
+    ["Florida", "254.60", "Texas", "201.10"],
+    ["South Carolina", "179.35", "Georgia", "253.25"],
+  ],
+  semis: [
+    ["Arkansas", "235.30", "Oklahoma", "234.85"],
+    ["Florida", "171.25", "Georgia", "213.75"],
+  ],
+  final: ["Arkansas", "183.25", "Georgia", "68.65"],
+  eleventh: ["Oklahoma", "172.90", "Florida", "182.90"],
+  thirteenth: {
+    leftQual: ["LSU", "280.35", "Alabama", "162.80"],
+    rightQual: ["Texas", "201.80", "South Carolina", "280.35"],
+    final: ["LSU", "192.65", "South Carolina", "231.90"],
+  },
+  fifteenth: ["Alabama", "182.60", "Texas", "208.70"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // Which tiers render a live R3 bracket. SEC first as the test run; the others
 // need their own short-name check before being added.
 const R3_LIVE = {
@@ -8449,6 +8524,14 @@ const GRID_BRACKETS = {
     USFL: { playoffs: USFL_2023_PLAYOFFS, consolation: USFL_2023_CONSOLATION },
     NFL: { playoffs: NFL_2023_PLAYOFFS, consolation: NFL_2023_CONSOLATION },
   },
+  2022: {
+    // Pre-2023 backfill, just getting started 2026-08-21 -- SEC is the
+    // first tier done, transcribed from her PFA_Playoffs_2022_-_SEC.csv
+    // export, full read-back confirmed. The other 12 tiers are still
+    // fully open -- this is the real remaining backlog, add each one here
+    // as its CSV comes in and gets confirmed, same process as this one.
+    SEC: { playoffs: SEC_2022_PLAYOFFS, consolation: SEC_2022_CONSOLATION },
+  },
 };
 
 // A from-scratch "completed bracket" visual for confirmed historical results —
@@ -9142,7 +9225,7 @@ function RulesAndSettingsContent({ openRuleSections, setOpenRuleSections }) {
             </div>
 
             <div className="mt-8 pt-4 text-xs" style={{ borderTop: `1px solid ${C.line}`, color: C.slate }}>
-              <div>Alliance creator: <span style={{ color: C.chalk, fontWeight: 600 }}>PwnRangr</span></div>
+              <div>Alliance creator: <a href="mailto:PainlessFootball@Gmail.com" style={{ color: C.chalk, fontWeight: 600, textDecoration: "underline" }}>PwnRangr</a></div>
               <div className="mt-1">Contributors: Claude, Lainey Schooltree, Davidsstone, Deevel, Gavdjedi, Vastettler</div>
             </div>
           </section>
