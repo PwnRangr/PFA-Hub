@@ -29,7 +29,6 @@ import {
   addClub4000Entry,
   watchClub4000Live,
   watchClub4000Historical,
-  replaceCoachTrophiesHistorical,
   watchCoachTrophiesHistorical,
   getClub4000ProcessedYear,
   markClub4000ProcessedYear,
@@ -2290,12 +2289,24 @@ function TeamMark({ team, tierKey, size = 38 }) {
   );
 }
 
-// ── Trophies: coach, award, league, year — empty until the real list is
-// provided, keyed by coach name (lowercased). One entry per win, so a coach
-// who won a league three times gets three entries and three icons, same
-// idea as wearing multiple rings. Only two categories for now (novelty
-// awards excluded per Lainey); anything else falls back to a plain star.
+// COACH_TROPHIES_ARCHIVE — coach, award, league, year, keyed by coach name
+// (lowercased). One entry per win, so a coach who won a league three times
+// gets three entries and three icons, same idea as wearing multiple
+// rings. Only two categories (novelty awards excluded per Lainey);
+// anything else falls back to a plain star.
 //   "harvey28": [{ award: "League Champion", league: "NFL", year: 2023 }, ...]
+//
+// PERMANENTLY RETIRED 2026-08-21, same treatment as CLUB_300/CLUB_4000
+// (see their own archive comments elsewhere in this file): TrophyBadges
+// reads from the Firestore collection coachTrophiesHistorical now
+// (migrated off this exact object, confirmed 36/36 coaches — 50
+// individual trophies — via the Admin "Migrate Trophy Historical Data"
+// button, now removed). She's confident in the data. Left here as an
+// inert historical record only, block-commented rather than deleted. A
+// future correction would need a fresh one-off fix directly against
+// coachTrophiesHistorical, same as CAREER_STATS/club300Historical/
+// club4000Historical corrections already work.
+/*
 const COACH_TROPHIES = {
   josssock: [{ award: "League Champion", league: "NFL", year: 2023 }],
   aziv49: [{ award: "League Champion", league: "SEC", year: 2022 }],
@@ -2364,6 +2375,7 @@ const COACH_TROPHIES = {
   mrcoolbuns: [{ award: "Coach of the Year", league: "XFL", year: 2023 }],
   austin3x: [{ award: "Coach of the Year", league: "Sun Belt", year: 2025 }],
 };
+*/
 
 // Original, generic badge shapes — not a recreation of any real trophy —
 // just enough to visually distinguish the two award categories.
@@ -2388,8 +2400,13 @@ function TrophyIcon({ award, size = 14 }) {
   );
 }
 
-function TrophyBadges({ name, size = 14 }) {
-  const trophies = COACH_TROPHIES[(name || "").toLowerCase()];
+// `trophies` is coachTrophiesHistorical (App's Firestore-backed state),
+// keyed the same way COACH_TROPHIES always was -- passed down as a prop
+// since this is a standalone component, not something with direct access
+// to App's state. Migrated 2026-08-21; see COACH_TROPHIES_ARCHIVE's
+// comment near the top of this file.
+function TrophyBadges({ name, size = 14, trophies: allTrophies }) {
+  const trophies = (allTrophies || {})[(name || "").toLowerCase()];
   if (!trophies || !trophies.length) return null;
   return (
     <span className="inline-flex items-center gap-0.5 align-middle ml-1.5" title={trophies.map((t) => `${t.award} — ${t.league} ${t.year}`).join(", ")}>
@@ -2403,7 +2420,7 @@ function TrophyBadges({ name, size = 14 }) {
 // ── Coach Profile popup: current team + conference are always shown (from
 // the same Sleeper data as the directory); career stats show once CAREER_
 // STATS has an entry for this coach, otherwise a plain "not in yet" note.
-function CoachProfileModal({ coach, onClose }) {
+function CoachProfileModal({ coach, onClose, coachTrophies }) {
   if (!coach) return null;
   const isCurrentSeason = Boolean(coach.currentStats);
   const entries = CAREER_STATS[coach.name.toLowerCase()] || [];
@@ -2430,7 +2447,7 @@ function CoachProfileModal({ coach, onClose }) {
             <div>
               <div className="text-lg font-semibold leading-tight">
                 {coach.name}
-                <TrophyBadges name={coach.name} size={15} />
+                <TrophyBadges name={coach.name} size={15} trophies={coachTrophies} />
               </div>
               <div className="text-xs" style={{ color: C.slate }}>{coach.team || "—"}</div>
               {coach.tierKey && (
@@ -9957,31 +9974,6 @@ export default function App() {
   const [backfillRunning, setBackfillRunning] = useState(false);
   const [cpLockRunning, setCpLockRunning] = useState(false);
   const [strengthBackfillRunning, setStrengthBackfillRunning] = useState(false);
-  const [trophiesMigrationRunning, setTrophiesMigrationRunning] = useState(false);
-  // Admin action — migration/re-sync of the curated COACH_TROPHIES object
-  // (36 coaches, 50 individual trophy entries) into its own Firestore
-  // collection, coachTrophiesHistorical. Staged the same way 300/4000
-  // Club's first turn was: this does NOT yet change what TrophyBadges
-  // reads from — COACH_TROPHIES stays the active source until the count
-  // next to the button is confirmed (should read 36 / 36), at which point
-  // a follow-up switches TrophyBadges over and retires COACH_TROPHIES the
-  // same way CLUB_300/CLUB_4000 were retired. Self-healing from the start
-  // (see replaceCoachTrophiesHistorical's comment in storage.js) — though
-  // notably this key (the coach name itself) doesn't have the alias-table
-  // fragility club300/4000's keys did, since there's no CONF_TO_TIER_KEY-
-  // style resolution involved in building it.
-  const runCoachTrophiesHistoricalMigration = useCallback(async () => {
-    setTrophiesMigrationRunning(true);
-    try {
-      const freshEntries = Object.entries(COACH_TROPHIES);
-      const local = await replaceCoachTrophiesHistorical(freshEntries);
-      if (local) setCoachTrophiesHistorical(local);
-    } catch (e) {
-      console.error("coachTrophiesHistorical migration failed", e);
-    } finally {
-      setTrophiesMigrationRunning(false);
-    }
-  }, []);
   const runStreakBonusBackfill = useCallback(async () => {
     setBackfillRunning(true);
     try {
@@ -11166,7 +11158,7 @@ export default function App() {
           <td className="px-3 py-2 whitespace-nowrap" style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>
             <button type="button" onClick={() => openCoachProfile(r.coach)} style={{ color: "inherit" }}>
               {r.coach}
-              <TrophyBadges name={r.coach} size={12} />
+              <TrophyBadges name={r.coach} size={12} trophies={coachTrophiesHistorical} />
             </button>
             {isLast && (
               <span className="ml-2 px-1.5 py-0.5 text-xs uppercase tracking-wider rounded-sm" style={{ background: "rgba(212,96,76,0.2)", color: C.ember }}>
@@ -12408,7 +12400,7 @@ export default function App() {
                               style={{ color: m.name === currentUser?.displayName ? C.gold : C.chalk }}
                             >
                               {m.name}
-                              <TrophyBadges name={m.name} size={11} />
+                              <TrophyBadges name={m.name} size={11} trophies={coachTrophiesHistorical} />
                             </button>
                             <span style={{ color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>{ago(m.ts)}</span>
                             {isMod && (
@@ -13026,7 +13018,7 @@ export default function App() {
                       <td className="px-3 py-2 whitespace-nowrap text-center" style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>
                         <button type="button" onClick={() => openCoachProfile(r.name)} style={{ color: "inherit" }}>
                           {r.name}
-                          <TrophyBadges name={r.name} size={12} />
+                          <TrophyBadges name={r.name} size={12} trophies={coachTrophiesHistorical} />
                         </button>
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-center" style={{ fontFamily: "'Barlow', sans-serif", color: C.slate }}>
@@ -13191,7 +13183,7 @@ export default function App() {
                               padding: "0 3px", marginLeft: 5, verticalAlign: 1,
                             }}>{c.tag}</span>
                           )}
-                          <TrophyBadges name={c.name} size={12} />
+                          <TrophyBadges name={c.name} size={12} trophies={coachTrophiesHistorical} />
                         </div>
                         <div className="text-xs truncate" style={{ color: C.slate }}>{c.team}</div>
                       </div>
@@ -13268,7 +13260,7 @@ export default function App() {
                     <div className="min-w-0 flex-1">
                       <button type="button" onClick={() => openCoachProfile(r.coach)} className="text-sm font-semibold truncate block" style={{ color: "inherit" }}>
                         {r.coach}
-                        <TrophyBadges name={r.coach} size={11} />
+                        <TrophyBadges name={r.coach} size={11} trophies={coachTrophiesHistorical} />
                       </button>
                       <div className="text-xs truncate" style={{ color: C.slate }}>
                         <button
@@ -13302,7 +13294,7 @@ export default function App() {
                     >
                       <span className="truncate">
                         {name}
-                        <TrophyBadges name={name} size={11} />
+                        <TrophyBadges name={name} size={11} trophies={coachTrophiesHistorical} />
                       </span>
                       <span className="shrink-0 ml-2" style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold }}>{count}</span>
                     </button>
@@ -13391,7 +13383,7 @@ export default function App() {
                     <div className="min-w-0 flex-1">
                       <button type="button" onClick={() => openCoachProfile(r.coach)} className="text-sm font-semibold truncate block" style={{ color: "inherit" }}>
                         {r.coach}
-                        <TrophyBadges name={r.coach} size={11} />
+                        <TrophyBadges name={r.coach} size={11} trophies={coachTrophiesHistorical} />
                       </button>
                       <div className="text-xs truncate" style={{ color: C.slate }}>
                         <button
@@ -13429,7 +13421,7 @@ export default function App() {
                       <div className="flex items-center justify-between gap-2">
                         <span className="truncate">
                           {r.coach}
-                          <TrophyBadges name={r.coach} size={11} />
+                          <TrophyBadges name={r.coach} size={11} trophies={coachTrophiesHistorical} />
                         </span>
                         <span className="shrink-0" style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold }}>{r.count}</span>
                       </div>
@@ -14099,32 +14091,6 @@ export default function App() {
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2024/2025)"}
                   </button>
                 </div>
-                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
-                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
-                    Migrates the curated Trophy list (36 coaches, 50 trophies) into its own Firestore collection
-                    (<code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>coachTrophiesHistorical</code>).
-                    Same pattern as 300/4000 Club — doesn't change the live Trophy badges yet, that switch happens
-                    once the count below reads 36 / 36. Safe to re-click any time (self-healing).
-                  </div>
-                  <button
-                    onClick={runCoachTrophiesHistoricalMigration}
-                    disabled={trophiesMigrationRunning}
-                    style={{
-                      padding: "8px 14px",
-                      borderRadius: 4,
-                      border: `1px solid ${C.gold}`,
-                      background: trophiesMigrationRunning ? "transparent" : C.gold,
-                      color: trophiesMigrationRunning ? C.slate : C.ink,
-                      fontWeight: 600,
-                      cursor: trophiesMigrationRunning ? "default" : "pointer",
-                    }}
-                  >
-                    {trophiesMigrationRunning ? "Running…" : "Migrate Trophy Historical Data"}
-                  </button>
-                  <span style={{ marginLeft: 12, fontSize: 12, color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>
-                    {Object.keys(coachTrophiesHistorical).length} / {Object.keys(COACH_TROPHIES).length} migrated
-                  </span>
-                </div>
               </section>
             )}
             {adminSubTab === "penalties" && (
@@ -14272,7 +14238,7 @@ export default function App() {
 
       <Footer />
 
-      <CoachProfileModal coach={selectedCoach} onClose={() => setSelectedCoach(null)} />
+      <CoachProfileModal coach={selectedCoach} onClose={() => setSelectedCoach(null)} coachTrophies={coachTrophiesHistorical} />
       <TeamProfileModal
         team={selectedTeam}
         onClose={() => setSelectedTeam(null)}

@@ -787,6 +787,13 @@ export function watchClub4000Historical(cb) {
 // freshEntries: array of [coachKey, trophiesArray] pairs — literally
 // Object.entries(COACH_TROPHIES), no key-computation function needed
 // (unlike club300HistoricalKey/club4000HistoricalKey).
+//
+// PERMANENT as of 2026-08-21, same as club300Historical/club4000Historical:
+// confirmed 36/36, she's confident in the data, so the Admin "Migrate
+// Trophy Historical Data" button and its App.jsx handler have been
+// retired. Nothing in App.jsx calls this function anymore. Left here
+// rather than deleted — the machinery a future one-off correction would
+// reuse.
 export async function replaceCoachTrophiesHistorical(freshEntries) {
   if (!firebaseReady) {
     const all = {};
