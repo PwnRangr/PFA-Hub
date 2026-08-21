@@ -335,14 +335,19 @@ const HISTORICAL_FINAL_ORDER = {
     ],
   },
   2022: {
-    // Pre-2023 backfill, just getting started 2026-08-21 -- SEC is the
-    // first tier done, transcribed from her PFA_Playoffs_2022_-_SEC.csv
-    // export, full read-back confirmed. Matches SEC_2022_PLAYOFFS/
-    // SEC_2022_CONSOLATION in GRID_BRACKETS above exactly. The other 12
-    // tiers are still fully open.
+    // Pre-2023 backfill, ongoing 2026-08-21 -- matches GRID_BRACKETS[2022]
+    // above exactly, same tiers done/open. 10 tiers still open.
     SEC: [
       "Ole Miss", "Vanderbilt", "Texas A&M", "Miss State", "Tennessee", "Auburn", "Kentucky", "Missouri",
       "Arkansas", "Georgia", "Florida", "Oklahoma", "South Carolina", "LSU", "Texas", "Alabama",
+    ],
+    "BIG XII": [
+      "TCU", "OSU", "Iowa State", "Baylor", "Kansas State", "Texas Tech", "BYU", "Cincinnati",
+      "Denver", "N Colorado", "N Iowa", "W Virginia", "UCF", "Kansas", "S Dakota", "Houston",
+    ],
+    ACC: [
+      "Virginia", "Boston College", "Louisville", "Clemson", "N Carolina", "Pittsburgh", "Maryland", "Syracuse",
+      "Miami", "GA Tech", "Wake Forest", "Notre Dame", "NC State", "Duke", "Virginia Tech", "Florida St",
     ],
   },
   2024: {
@@ -6681,6 +6686,69 @@ const ACC_2023_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2022 ACC, ranks 1-8 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2022_-_ACC.csv export. Every winner
+// cross-validated two independent ways (head-to-head score comparison AND
+// the sheet's own explicit W/L + placement labels), zero discrepancies.
+// Full read-back confirmed 2026-08-21. Same name normalizations as 2023
+// (matching ACC_CLR): sheet's "NC" -> "N Carolina"; sheet's "VA Tech" ->
+// "Virginia Tech"; sheet's "Florida State" -> "Florida St". Left/right
+// split by the same convention established for SEC/BIG XII 2022: the
+// sheet's "bottom half" (Boston College/Syracuse/N Carolina/Clemson) goes
+// right; within each side, the sheet's "bottom" sub-matchup goes right of
+// that side.
+const ACC_2022_PLAYOFFS = r3ChampHalf({
+  colors: ACC_CLR, logo: "ACC", logoSrc: ACC_MARK, trophy: ACC_TROPHY,
+  banners: ACC_BANNERS,
+  wk15: [
+    ["Maryland", "211.85", "Louisville", "230.50"],
+    ["Virginia", "249.80", "Pittsburgh", "242.15"],
+    ["Boston College", "207.90", "Syracuse", "207.15"],
+    ["N Carolina", "212.95", "Clemson", "263.05"],
+  ],
+  semis: [
+    ["Louisville", "224.40", "Virginia", "242.45"],
+    ["Boston College", "213.35", "Clemson", "194.75"],
+  ],
+  final: ["Virginia", "206.85", "Boston College", "182.30"],
+  third: ["Louisville", "206.55", "Clemson", "136.70"],
+  fifth: {
+    leftQual: ["Maryland", "161.95", "Pittsburgh", "202.70"],
+    rightQual: ["Syracuse", "226.10", "N Carolina", "257.20"],
+    final: ["Pittsburgh", "175.60", "N Carolina", "231.15"],
+  },
+  seventh: ["Maryland", "234.25", "Syracuse", "204.60"],
+});
+
+// --- 2022 ACC, ranks 9-16 (consolation half) --------------------------------
+// Same source/confirmation as the playoffs half above. Consolation
+// left/right split by structural analogy to the confirmed championship
+// split, same assumption pattern as SEC/BIG XII 2022 (confirmed correct
+// both times).
+const ACC_2022_CONSOLATION = r3ConsoHalf({
+  colors: ACC_CLR, logo: "ACC", logoSrc: ACC_MARK,
+  banners: ACC_CONSO_BANNERS,
+  wk15: [
+    ["GA Tech", "228.90", "Duke", "194.50"],
+    ["Virginia Tech", "143.30", "Wake Forest", "231.40"],
+    ["Miami", "195.95", "NC State", "191.15"],
+    ["Florida St", "225.15", "Notre Dame", "238.70"],
+  ],
+  semis: [
+    ["GA Tech", "261.15", "Wake Forest", "147.55"],
+    ["Miami", "243.25", "Notre Dame", "208.85"],
+  ],
+  final: ["GA Tech", "134.60", "Miami", "200.55"],
+  eleventh: ["Wake Forest", "221.40", "Notre Dame", "181.30"],
+  thirteenth: {
+    leftQual: ["Duke", "218.00", "Virginia Tech", "147.95"],
+    rightQual: ["NC State", "234.15", "Florida St", "212.35"],
+    final: ["Duke", "143.65", "NC State", "174.40"],
+  },
+  fifteenth: ["Virginia Tech", "158.40", "Florida St", "139.30"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // --- 2024 BIG XII, ranks 1-8 (championship half) -----------------------------
 // Transcribed from her PFA_Playoffs_2024 - XII.csv export, confirmed
 // 2026-08-17. Arizona had no XII_CLR entry at all (a real gap, not a naming
@@ -6783,6 +6851,65 @@ const XII_2023_CONSOLATION = r3ConsoHalf({
     final: ["OSU", "118.60", "N Colorado", "195.55"],
   },
   fifteenth: ["Cincinnati", "261.30", "N Iowa", "131.20"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
+// --- 2022 BIG XII, ranks 1-8 (championship half) ----------------------------
+// Transcribed from her PFA_Playoffs_2022_-_BIG_12.csv export. Every winner
+// cross-validated two independent ways (head-to-head score comparison AND
+// the sheet's own explicit W/L + placement labels), zero discrepancies.
+// Full read-back confirmed 2026-08-21. Left/right split by the same
+// convention established for SEC 2022: the sheet's "bottom half" (OSU/
+// Cincinnati/Iowa State/Kansas State) goes right; within each side, the
+// sheet's "bottom" sub-matchup goes right of that side.
+const XII_2022_PLAYOFFS = r3ChampHalf({
+  colors: XII_CLR, logo: "XII", logoSrc: XII_MARK, trophy: XII_TROPHY,
+  banners: XII_BANNERS,
+  wk15: [
+    ["TCU", "253.50", "BYU", "179.40"],
+    ["Texas Tech", "224.35", "Baylor", "307.60"],
+    ["OSU", "195.45", "Cincinnati", "194.25"],
+    ["Iowa State", "247.35", "Kansas State", "150.50"],
+  ],
+  semis: [
+    ["TCU", "315.15", "Baylor", "231.25"],
+    ["OSU", "217.25", "Iowa State", "209.00"],
+  ],
+  final: ["TCU", "218.40", "OSU", "133.45"],
+  third: ["Baylor", "146.60", "Iowa State", "191.20"],
+  fifth: {
+    leftQual: ["BYU", "182.20", "Texas Tech", "188.95"],
+    rightQual: ["Cincinnati", "196.00", "Kansas State", "235.35"],
+    final: ["Texas Tech", "135.00", "Kansas State", "203.45"],
+  },
+  seventh: ["BYU", "263.00", "Cincinnati", "178.90"],
+});
+
+// --- 2022 BIG XII, ranks 9-16 (consolation half) ----------------------------
+// Same source/confirmation as the playoffs half above. Consolation
+// left/right split by structural analogy to the confirmed championship
+// split, same assumption pattern as SEC 2022 (confirmed correct there).
+const XII_2022_CONSOLATION = r3ConsoHalf({
+  colors: XII_CLR, logo: "XII", logoSrc: XII_MARK,
+  banners: XII_CONSO_BANNERS,
+  wk15: [
+    ["N Iowa", "298.40", "Kansas", "229.80"],
+    ["Houston", "135.55", "Denver", "218.20"],
+    ["N Colorado", "195.75", "S Dakota", "155.20"],
+    ["UCF", "205.80", "W Virginia", "237.80"],
+  ],
+  semis: [
+    ["N Iowa", "218.90", "Denver", "231.95"],
+    ["N Colorado", "185.45", "W Virginia", "177.65"],
+  ],
+  final: ["Denver", "192.50", "N Colorado", "152.90"],
+  eleventh: ["N Iowa", "203.35", "W Virginia", "174.75"],
+  thirteenth: {
+    leftQual: ["Kansas", "240.25", "Houston", "190.95"],
+    rightQual: ["S Dakota", "194.70", "UCF", "201.70"],
+    final: ["Kansas", "178.75", "UCF", "197.15"],
+  },
+  fifteenth: ["Houston", "173.45", "S Dakota", "194.55"],
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
@@ -8525,12 +8652,12 @@ const GRID_BRACKETS = {
     NFL: { playoffs: NFL_2023_PLAYOFFS, consolation: NFL_2023_CONSOLATION },
   },
   2022: {
-    // Pre-2023 backfill, just getting started 2026-08-21 -- SEC is the
-    // first tier done, transcribed from her PFA_Playoffs_2022_-_SEC.csv
-    // export, full read-back confirmed. The other 12 tiers are still
-    // fully open -- this is the real remaining backlog, add each one here
-    // as its CSV comes in and gets confirmed, same process as this one.
+    // Pre-2023 backfill, ongoing 2026-08-21 -- transcribed from her
+    // PFA_Playoffs_2022 CSV exports as they come in, full read-back
+    // confirmed for each. 10 tiers still open.
     SEC: { playoffs: SEC_2022_PLAYOFFS, consolation: SEC_2022_CONSOLATION },
+    "BIG XII": { playoffs: XII_2022_PLAYOFFS, consolation: XII_2022_CONSOLATION },
+    ACC: { playoffs: ACC_2022_PLAYOFFS, consolation: ACC_2022_CONSOLATION },
   },
 };
 
