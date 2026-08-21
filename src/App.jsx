@@ -28,8 +28,6 @@ import {
   watchClub300Historical,
   addClub4000Entry,
   watchClub4000Live,
-  club4000HistoricalKey,
-  replaceClub4000Historical,
   watchClub4000Historical,
   getClub4000ProcessedYear,
   markClub4000ProcessedYear,
@@ -1815,22 +1813,34 @@ const CLUB_300 = [
 ];
 */
 
-// The 4000 Club: 4,000+ combined points across a full regular season
-// (weeks 1-17), the season-long sibling of CLUB_300 above. Sourced from
-// Lainey's "Painless Football Alliance - 4000 Club" export, 2026-08-16 --
-// 53 qualifying seasons, 2022-2025. Static like CLUB_300 (no live-detection
-// counterpart yet -- that would need a full-season point total per roster,
-// not just a single week's matchup score, so it isn't a simple extension of
-// the existing club300Live watcher). Conference labels are exactly as she
-// recorded them historically, including three that predate or fall outside
-// the current 13-tier structure -- "XII" (aliased to BIG XII via
-// CONF_TO_TIER_KEY already), "BIG10" (an inconsistent alt-label for TEN in
-// some 2025 rows, aliased below), and "PAC"/"PION" (leagues that no longer
-// exist in the Alliance -- PION is likely the folded league mentioned
-// elsewhere as having sat between GLIAC and FLHS, though that's my
-// inference, not confirmed). Left as-is rather than "corrected" -- this is
-// a historical record, not current standings.
-
+// CLUB_4000_ARCHIVE — 4,000+ combined points across a full regular season
+// (weeks 1-17), the season-long sibling of CLUB_300 above (now also
+// retired — see its own archive comment near the top of this file).
+// Sourced from Lainey's "Painless Football Alliance - 4000 Club" export,
+// 2026-08-16 -- 53 qualifying seasons, 2022-2025. Conference labels are
+// exactly as she recorded them historically, including labels that
+// predate or fall outside the current 13-tier structure -- "XII" (aliased
+// to BIG XII), "BIG10" (an inconsistent alt-label for TEN in some 2025
+// rows), and "PAC" (confirmed 2026-08-21: same as CLUB_300's "PAC 12",
+// TEN pre-rebrand — an earlier draft of this comment guessed PAC was a
+// defunct league like PION; that guess was wrong, corrected now that
+// she's confirmed it). "PION" IS genuinely a separate, discontinued
+// league (her "Pioneer Conference," 2022 only) -- NOT the same folded
+// league that explains the CP arithmetic gap between GLIAC and FLHS,
+// despite an earlier inference in this comment guessing they might be
+// related; that guess was never confirmed and is now known to be a
+// different thing. All three aliases live in CONF_TO_TIER_KEY.
+//
+// PERMANENTLY RETIRED 2026-08-21: club4000All reads from the Firestore
+// collection club4000Historical now (migrated off this exact array,
+// confirmed 53/53). She's confident in the data, same as CLUB_300, so the
+// one-time Admin "Migrate 4000 Club Historical Data" button and its
+// App.jsx handler have been removed — no live code path reads this array.
+// Left here as an inert historical record only, block-commented rather
+// than deleted. A future correction would need a fresh one-off fix
+// directly against club4000Historical, same as CAREER_STATS/
+// COACH_TROPHIES/club300Historical corrections already work.
+/*
 const CLUB_4000 = [
   { coach: "MambasDisciples", team: "PVAM Panthers", conf: "SWAC", pts: 4470.3, avg: 262.96, year: 2023 },
   { coach: "beardmantv", team: "Auburn Tigers", conf: "SEC", pts: 4360.6, avg: 256.51, year: 2022 },
@@ -1886,12 +1896,14 @@ const CLUB_4000 = [
   { coach: "cspeece22", team: "WI Parkside Rangers", conf: "GLIAC", pts: 4003.35, avg: 235.49, year: 2025 },
   { coach: "StokesCity", team: "Western Wildcats", conf: "FLHS", pts: 4240.15, avg: 249.42, year: 2025 },
 ];
+*/
 
-// Leaderboards derived directly from CLUB_300 itself, so they can never
-// drift out of sync with the list players actually see. Kept as a plain
-// function (not a module-level constant) since the 300 Club tab now merges
-// this static list with live-detected entries — the merge has to happen
-// inside the component (useMemo, keyed on club300Live) where that state lives.
+// Generic tally helper — used by both the 300 Club and 4000 Club tabs to
+// count entries by an arbitrary key (coach, team, conference). Kept as a
+// plain function (not a module-level constant) since both clubs merge
+// their Firestore historical collection with live-detected entries at
+// render time — the merge has to happen inside the component (useMemo,
+// keyed on the relevant Historical/Live state) where that state lives.
 function tally(arr, keyFn) {
   const counts = {};
   arr.forEach((item) => {
@@ -9893,7 +9905,6 @@ export default function App() {
   const [backfillRunning, setBackfillRunning] = useState(false);
   const [cpLockRunning, setCpLockRunning] = useState(false);
   const [strengthBackfillRunning, setStrengthBackfillRunning] = useState(false);
-  const [club4000MigrationRunning, setClub4000MigrationRunning] = useState(false);
   const runStreakBonusBackfill = useCallback(async () => {
     setBackfillRunning(true);
     try {
@@ -9937,36 +9948,6 @@ export default function App() {
       ...scoreConferencePool(rowsByTier, ALLIANCE_POOL),
       ...scoreConferencePool(rowsByTier, PRO_POOL),
     };
-  }, []);
-
-  // Admin action — migration/re-sync of the curated CLUB_4000 array (53
-  // seasons) into its own Firestore collection, club4000Historical.
-  // Staged the same way 300 Club's first turn was: this does NOT yet
-  // change what club4000All reads from — CLUB_4000 stays the active
-  // source until the count next to the button is confirmed (should read
-  // 53 / 53), at which point a follow-up switches club4000All over and
-  // retires CLUB_4000 the same way CLUB_300 was retired. Built
-  // self-healing FROM THE START (fetch what's there, delete anything that
-  // doesn't match a freshly computed key, then write the fresh set) —
-  // see replaceClub4000Historical's comment in storage.js for why a naive
-  // per-entry overwrite isn't actually safe to re-click once a resolved
-  // key can change (which already happened once this week, with 300
-  // Club's "PAC 12" alias).
-  const runClub4000HistoricalMigration = useCallback(async () => {
-    setClub4000MigrationRunning(true);
-    try {
-      const freshEntries = CLUB_4000.map((entry) => {
-        const tierKey = CONF_TO_TIER_KEY[entry.conf] || entry.conf;
-        const key = club4000HistoricalKey(tierKey, entry.year, entry.coach);
-        return [key, entry];
-      });
-      const local = await replaceClub4000Historical(freshEntries);
-      if (local) setClub4000Historical(local);
-    } catch (e) {
-      console.error("club4000Historical migration failed", e);
-    } finally {
-      setClub4000MigrationRunning(false);
-    }
   }, []);
 
   // Admin action — computes and stores League Strength for every tier for
@@ -11721,20 +11702,24 @@ export default function App() {
   const club300ByConf = useMemo(() => tally(club300All, (r) => CONF_TO_TIER_KEY[r.conf] || r.conf), [club300All]);
 
   // ── The 4000 Club ──
-  // CLUB_4000 is the static curated list (2022-2025, hand-exported from
-  // her sheet); club4000Live is what the season-end sweep above writes
-  // once week 17 ends for the CURRENT season. Same "static list for
-  // history + live detection only for the current season" split
-  // club300All established just above, for the same reason (see its
-  // comment): a stray live entry for a leftover prior season would be
-  // unreliable the same way. Fingerprint is tier+year+coach rather than
-  // club300All's tier+week+year+pts — there's no "week" here (one season
-  // total per roster per year), and a coach only ever holds one roster per
-  // league per year, so coach alone is already a unique identity within a
-  // tier+year without needing points as a tiebreaker.
+  // club4000Historical (Firestore — migrated 2026-08-21 off the old
+  // static CLUB_4000 array, confirmed 53/53, same permanent-migration
+  // treatment as club300Historical above) merged with club4000Live, which
+  // the season-end sweep writes to once week 17 ends for the CURRENT
+  // season. Same "historical collection for history + live detection only
+  // for the current season" split club300All established above, for the
+  // same reason (see its comment): a stray live entry for a leftover
+  // prior season would be unreliable the same way. Fingerprint is
+  // tier+year+coach rather than club300All's tier+week+year+pts — there's
+  // no "week" here (one season total per roster per year), and a coach
+  // only ever holds one roster per league per year, so coach alone is
+  // already a unique identity within a tier+year without needing points
+  // as a tiebreaker. The migration is permanent, same as 300 Club's — the
+  // old CLUB_4000 array is retired (block-commented near the top of this
+  // file, no live code path reads it anymore).
   const club4000All = useMemo(() => {
     const currentLive = club4000Live.filter((r) => r.year === CURRENT_SEASON);
-    const merged = currentLive.length ? [...CLUB_4000, ...currentLive] : CLUB_4000;
+    const merged = currentLive.length ? [...club4000Historical, ...currentLive] : club4000Historical;
     const seen = new Set();
     const deduped = [];
     merged.forEach((r) => {
@@ -11745,7 +11730,7 @@ export default function App() {
       deduped.push(r);
     });
     return deduped.sort((a, b) => b.pts - a.pts);
-  }, [club4000Live]);
+  }, [club4000Historical, club4000Live]);
   const club4000Ranked = useMemo(
     () => club4000All.map((r, i) => ({ ...r, rank: i + 1 })), // already sorted by pts desc above
     [club4000All]
@@ -14034,32 +14019,6 @@ export default function App() {
                   >
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2024/2025)"}
                   </button>
-                </div>
-                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
-                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
-                    Migrates the curated 4000 Club historical list (53 seasons) into its own Firestore collection
-                    (<code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>club4000Historical</code>). Same
-                    pattern as the 300 Club migration — doesn't change the live 4000 Club page yet, that switch
-                    happens once the count below reads 53 / 53. Safe to re-click any time (self-healing).
-                  </div>
-                  <button
-                    onClick={runClub4000HistoricalMigration}
-                    disabled={club4000MigrationRunning}
-                    style={{
-                      padding: "8px 14px",
-                      borderRadius: 4,
-                      border: `1px solid ${C.gold}`,
-                      background: club4000MigrationRunning ? "transparent" : C.gold,
-                      color: club4000MigrationRunning ? C.slate : C.ink,
-                      fontWeight: 600,
-                      cursor: club4000MigrationRunning ? "default" : "pointer",
-                    }}
-                  >
-                    {club4000MigrationRunning ? "Running…" : "Migrate 4000 Club Historical Data"}
-                  </button>
-                  <span style={{ marginLeft: 12, fontSize: 12, color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>
-                    {club4000Historical.length} / {CLUB_4000.length} migrated
-                  </span>
                 </div>
               </section>
             )}

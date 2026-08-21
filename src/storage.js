@@ -696,6 +696,12 @@ export function watchClub4000Live(cb) {
 // mistakes.md). A key derived from a lookup table is only as stable as
 // that table, and this project's alias table has already changed twice in
 // one week — so straight to fetch-diff-delete-then-write.
+//
+// PERMANENT as of 2026-08-21, same as club300Historical: confirmed
+// 53/53, she's confident in the data, so the Admin "Migrate 4000 Club
+// Historical Data" button and its App.jsx handler have been retired.
+// Nothing in App.jsx calls these two functions anymore. Left here rather
+// than deleted — the machinery a future one-off correction would reuse.
 function club4000HistoricalKey(tierKey, year, coach) {
   return `${tierKey}_${year}_${coach}`;
 }
