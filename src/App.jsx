@@ -1091,7 +1091,11 @@ function placementInfoRows(size, tKeyForCP) {
 // identical, fixed values in every 16-team league regardless of which one
 // it is. Champion CP steps down 5 per league, SEC (140) through FLHS (95)
 // — a league that used to sit between GLIAC and FLHS has since folded,
-// which is why FLHS isn't one more step down at 90.
+// which is why FLHS isn't one more step down at 90. CONFIRMED 2026-08-21:
+// that folded league is the Pioneer Conference/League (tagged "PION" in
+// the retired CLUB_300/CLUB_4000 archives near the top of this file) —
+// also independently on record in LEAGUE_HISTORY's 2023 block as a
+// commented-out Sleeper league ID sitting between GLIAC and FLHS.
 const CP_OFFSETS_1_10 = [0, 5, 10, 15, 20, 25, 30, 35, 45, 50]; // subtracted from each league's champion CP
 const CP_TAIL_16 = [20, 10, 0, -5, -10, -15]; // ranks 11-16
 const CHAMPION_CP_16 = {
@@ -1822,14 +1826,21 @@ const CLUB_300 = [
 // predate or fall outside the current 13-tier structure -- "XII" (aliased
 // to BIG XII), "BIG10" (an inconsistent alt-label for TEN in some 2025
 // rows), and "PAC" (confirmed 2026-08-21: same as CLUB_300's "PAC 12",
-// TEN pre-rebrand — an earlier draft of this comment guessed PAC was a
-// defunct league like PION; that guess was wrong, corrected now that
-// she's confirmed it). "PION" IS genuinely a separate, discontinued
-// league (her "Pioneer Conference," 2022 only) -- NOT the same folded
-// league that explains the CP arithmetic gap between GLIAC and FLHS,
-// despite an earlier inference in this comment guessing they might be
-// related; that guess was never confirmed and is now known to be a
-// different thing. All three aliases live in CONF_TO_TIER_KEY.
+// TEN pre-rebrand). "PION" is her Pioneer Conference/League — CONFIRMED
+// 2026-08-21 to be the exact folded league that explains the CP
+// arithmetic gap between GLIAC and FLHS (see CHAMPION_CP_16's comment
+// near CP_OFFSETS_1_10 — FLHS's champion CP isn't simply one more -5 step
+// down from GLIAC because a league used to sit between them). It's also
+// already on record structurally, independent of anything in this
+// comment: LEAGUE_HISTORY[2023] literally has a commented-out "Pioneer"
+// Sleeper league ID sitting between the GLIAC and FLHS entries. A
+// PREVIOUS version of this comment got this backwards — claimed PION was
+// NOT the GLIAC/FLHS gap league, based on an unwarranted inference from a
+// narrower confirmation (that PION isn't a CURRENT-tier alias, which is
+// true but is a different claim from whether it's the gap league). That
+// was wrong; she corrected it directly. PION correctly stays unmapped in
+// CONF_TO_TIER_KEY regardless — it isn't an alias for any of today's 13
+// tiers, gap-league or not.
 //
 // PERMANENTLY RETIRED 2026-08-21: club4000All reads from the Firestore
 // collection club4000Historical now (migrated off this exact array,
