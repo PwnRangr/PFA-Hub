@@ -6847,6 +6847,123 @@ const R3_LIVE = {
 };
 
 // ===========================================================================
+// LIVE-SCORED PLAYOFF BRACKETS (top8-cascade tiers) -- automates what used
+// to need a full CSV backfill after the season. Pilot on SEC only for now
+// (her request 2026-08-20); bump this list to extend to BIG XII/ACC/TEN,
+// which share the identical top8-cascade shape.
+//
+// Two things she confirmed 2026-08-20 that this whole approach rests on:
+// (1) Sleeper's own playoff mode is OFF in every league and its native
+//     winners_bracket/losers_bracket can't represent our full-cascade
+//     format anyway -- see loadBracketResults' own comment. Not used here.
+// (2) She manually sets each week's real Sleeper matchups to mirror the
+//     bracket. That means a roster's own weekly score (from the SAME
+//     getWeeklyResultCached fetch Weekly Awards/streak bonuses/Tournament
+//     already use) IS its bracket-game score directly -- no need to find
+//     "which Sleeper matchup pairs these two rosters", just compare each
+//     side's own number for the week, exactly like tourneyPlay already does.
+// (3) Playoff weeks are fixed 15/16/17 every season (her confirmation:
+//     "weeks 14-17 until the NFL changes" -- top8-cascade tiers use the
+//     last three of those, no play-in round).
+//
+// Reuses tourneyPlay/resolveTourneyBracket's exact "resolve only what
+// scores currently allow, leave the rest blank" pattern rather than writing
+// a parallel version of the same idea -- tourneyPlay is already documented
+// as a generic helper (see the Pro Bowl section), not Tournament-specific.
+// tourneyPlay itself is declared later in the file as a hoisted `function`
+// declaration, so calling it here is safe (no TDZ risk, unlike a `const`
+// arrow function would be) -- same reasoning already used elsewhere in this
+// file for exactly this kind of forward reference.
+const LIVE_BRACKET_SCORED_TIERS = ["SEC"];
+
+// One resolved game -> the [name,score,name,score] tuple r3ChampHalf/
+// r3ConsoHalf expect. Shows the team name with a blank score once a game's
+// two participants are known but not yet played (same "seeded, not yet
+// scored" state r3LiveHalf already shows for round 1) -- now extends that
+// same progressive reveal to every later round too, once its participants
+// are known, even before that round's own week starts.
+function r3LiveTuple(g) {
+  if (!g) return r3Blank;
+  if (g.played) return [g.a.team, fmt(g.scoreA), g.b.team, fmt(g.scoreB)];
+  if (g.a && g.b) return [g.a.team, "", g.b.team, ""];
+  if (g.a) return [g.a.team, "", "", ""];
+  if (g.b) return ["", "", g.b.team, ""];
+  return r3Blank;
+}
+
+// Resolves an 8-team top8-cascade half (playoffs or consolation seed list)
+// as far as `scores` currently allows. `seeds` = bracket.playoffSeeds or
+// .consolationSeeds (index 0 = seed 1 within that half). `scores` =
+// {week: {rosterId: points}}, built only from weeks actually fetched -- a
+// missing week/roster means "not known yet", never a false zero (same
+// r3Played-style safety as every other bracket in this file).
+function resolveR3LiveBracket(cfg, seeds, scores) {
+  if (!seeds || seeds.length < 8) return {};
+  const bySeed = (n) => {
+    const row = seeds[n - 1];
+    return row ? { rosterId: row.rosterId, team: r3ShortName(row.team, cfg.colors, cfg.aliases) } : null;
+  };
+  const games = {};
+  R3_SEED_SLOTS.forEach(([hi, lo], i) => {
+    games[`wk15_${i}`] = tourneyPlay(bySeed(hi), bySeed(lo), 15, scores, false);
+  });
+  const w = (i) => (games[`wk15_${i}`] || {}).winner || null;
+  const l = (i) => (games[`wk15_${i}`] || {}).loser || null;
+  games.semis0 = tourneyPlay(w(0), w(1), 16, scores, false);
+  games.semis1 = tourneyPlay(w(2), w(3), 16, scores, false);
+  games.lqual = tourneyPlay(l(0), l(1), 16, scores, false);
+  games.rqual = tourneyPlay(l(2), l(3), 16, scores, false);
+  const sw = (k) => (games[k] || {}).winner || null;
+  const sl = (k) => (games[k] || {}).loser || null;
+  games.final = tourneyPlay(sw("semis0"), sw("semis1"), 17, scores, false);
+  games.third = tourneyPlay(sl("semis0"), sl("semis1"), 17, scores, false);
+  games.fifth = tourneyPlay(sw("lqual"), sw("rqual"), 17, scores, false);
+  games.seventh = tourneyPlay(sl("lqual"), sl("rqual"), 17, scores, false);
+  return games;
+}
+
+function r3LiveScoredHalf(cfg, seeds, scores, half) {
+  const games = resolveR3LiveBracket(cfg, seeds, scores);
+  const o = {
+    colors: cfg.colors, logoSrc: cfg.logoSrc, logo: cfg.logo,
+    banners: half === "playoffs" ? cfg.banners : cfg.consoBanners,
+    trophy: cfg.trophy,
+    wk15: R3_SEED_SLOTS.map((_, i) => r3LiveTuple(games[`wk15_${i}`])),
+    semis: [r3LiveTuple(games.semis0), r3LiveTuple(games.semis1)],
+    final: r3LiveTuple(games.final),
+    fifth: {
+      leftQual: r3LiveTuple(games.lqual),
+      rightQual: r3LiveTuple(games.rqual),
+      final: r3LiveTuple(games.fifth),
+    },
+  };
+  if (half === "playoffs") {
+    o.third = r3LiveTuple(games.third);
+    o.seventh = r3LiveTuple(games.seventh);
+    return r3ChampHalf(o);
+  }
+  o.eleventh = r3LiveTuple(games.third);
+  o.thirteenth = o.fifth;
+  delete o.fifth;
+  o.fifteenth = r3LiveTuple(games.seventh);
+  o.footer = [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"];
+  return r3ConsoHalf(o);
+}
+
+// scores: {week: {rosterId: points}} for this ONE tier, from the component's
+// liveBracketScores[tierKey] state (see the fetch effect near tierKey).
+function buildR3LiveScored(tierKey, bracket, scores) {
+  if (!LIVE_BRACKET_SCORED_TIERS.includes(tierKey)) return null;
+  const cfg = R3_LIVE[tierKey];
+  if (!cfg || !bracket || !scores) return null;
+  if (!bracket.playoffSeeds || bracket.playoffSeeds.length === 0) return null;
+  return {
+    playoffs: r3LiveScoredHalf(cfg, bracket.playoffSeeds, scores, "playoffs"),
+    consolation: r3LiveScoredHalf(cfg, bracket.consolationSeeds || [], scores, "consolation"),
+  };
+}
+
+// ===========================================================================
 // LIVE-SEEDED BR BRACKETS (current season) — same idea as R3_LIVE, but for
 // the bigger NFL-shape template. Only round 1 (the 8 real seeds/conference)
 // is known before games are played; everything downstream is blank, exactly
@@ -9079,6 +9196,9 @@ export default function App() {
   const [view, setView] = useState("home");
   const [adminSubTab, setAdminSubTab] = useState("applications");
   const [tierKey, setTierKey] = useState("NFL");
+  // {tierKey: {week: {rosterId: points}}} -- see the fetch effect below and
+  // buildR3LiveScored above. Only populated for LIVE_BRACKET_SCORED_TIERS.
+  const [liveBracketScores, setLiveBracketScores] = useState({});
   const [dirQuery, setDirQuery] = useState("");
   const [club300Query, setClub300Query] = useState("");
   const [club4000Query, setClub4000Query] = useState("");
@@ -10111,6 +10231,44 @@ export default function App() {
     return () => { cancelled = true; };
   }, [view, tourneySeeds, nflState, leagueMap, getWeeklyResultCached]);
 
+  // Playoff bracket live scores — pilot on SEC only (LIVE_BRACKET_SCORED_TIERS,
+  // her request 2026-08-20). Same "fetch each playoff week once it's worth
+  // fetching, cache-first via getWeeklyResultCached" pattern as the
+  // Tournament effect just above — no new Sleeper calls, just a new caller.
+  // Fetches weeks 15/16/17 progressively as they pass, PLUS whichever of
+  // those weeks is currently in progress (so live/partial scores show up
+  // mid-week, matching what the old Week Matchups list used to do before
+  // it was removed) — never fetches before week 15 (playoffs haven't
+  // started) or once week 17 is done and cached (nothing left to refresh).
+  useEffect(() => {
+    if (view !== "standings" || standingsSeason !== CURRENT_SEASON || !nflState) return;
+    if (!LIVE_BRACKET_SCORED_TIERS.includes(tierKey)) return;
+    const leagueId = leagueMap[tierKey];
+    if (!leagueId) return;
+    let cancelled = false;
+    (async () => {
+      const weekMap = {};
+      const fetchWeek = async (week) => {
+        const result = await getWeeklyResultCached(tierKey, leagueId, CURRENT_SEASON, week).catch(() => null);
+        if (!result) return;
+        const m = {};
+        result.pairs.forEach(({ a, b }) => { m[a.rosterId] = a.points; m[b.rosterId] = b.points; });
+        weekMap[week] = m;
+      };
+      if (nflState.week > 15) await fetchWeek(15);
+      if (cancelled) return;
+      if (nflState.week > 16) await fetchWeek(16);
+      if (cancelled) return;
+      if (nflState.week > 17) await fetchWeek(17);
+      if (cancelled) return;
+      if (nflState.week >= 15 && nflState.week <= 17 && !weekMap[nflState.week]) {
+        await fetchWeek(nflState.week);
+      }
+      if (!cancelled) setLiveBracketScores((c) => ({ ...c, [tierKey]: weekMap }));
+    })();
+    return () => { cancelled = true; };
+  }, [view, tierKey, standingsSeason, nflState, leagueMap, getWeeklyResultCached]);
+
   // UFL PRO BOWL — seeds lock in ONCE at the Week9->Week10 rollover (one
   // week before its own Week10 QF round starts), mirroring the main
   // Tournament's own Week7->Week8 freeze pattern one week later since the
@@ -10688,11 +10846,10 @@ export default function App() {
   const liveRows = leagueId ? standingsCache[leagueId] : null;
   const demoRows = tierKey === "NFL" ? DEMO_NFL.map((r) => ({ ...r, maxPts: null })) : null;
   const rows = mode === "live" ? liveRows : demoRows;
-  const pairs = mode === "live" && leagueId ? matchupsCache[leagueId] : null;
   const bracket = mode === "live" ? computeBracket(tierKey) : null;
   // Declared AFTER `bracket` on purpose — it reads it. (See the TDZ note: a
   // const that reads another const must sit below it.)
-  const liveGrid = buildR3Live(tierKey, bracket) || buildBRLive(tierKey, bracket) || buildUSFLXFLLive(tierKey, bracket);
+  const liveGrid = buildR3LiveScored(tierKey, bracket, liveBracketScores[tierKey]) || buildR3Live(tierKey, bracket) || buildBRLive(tierKey, bracket) || buildUSFLXFLLive(tierKey, bracket);
 
   // One reference panel for the whole tier, computed here and rendered in the
   // left column under the tier ladder. Only the ten 16-team leagues have a CP
@@ -12374,24 +12531,10 @@ export default function App() {
                 </div>
               )}
 
-              {pairs && pairs.length > 0 && (
-                <div className="mt-6">
-                  <div className="text-xs uppercase tracking-widest mb-2" style={{ color: C.slate, letterSpacing: "0.2em" }}>
-                    Week {nflState && nflState.week} matchups
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-2">
-                    {pairs.map((p, i) => (
-                      <div key={i} className="flex items-center justify-between px-3 py-2 rounded-sm text-sm" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
-                        <span className="truncate pr-2" style={{ fontWeight: 600 }}>{p.a.coach}</span>
-                        <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: p.a.live >= p.b.live ? C.turf : C.slate }}>{fmt(p.a.live)}</span>
-                        <span className="px-2 text-xs" style={{ color: C.slate }}>vs</span>
-                        <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: p.b.live > p.a.live ? C.turf : C.slate }}>{fmt(p.b.live)}</span>
-                        <span className="truncate pl-2 text-right" style={{ fontWeight: 600 }}>{p.b.coach}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Week-X live matchups list removed 2026-08-20 at her request
+                  -- redundant with Sleeper's own live view. matchupsCache/
+                  pairs plumbing left in place in case it's needed again for
+                  something else later. */}
 
               {SHOW_BRACKETS && standingsSeason !== CURRENT_SEASON && HISTORICAL_FINAL_ORDER[standingsSeason] && HISTORICAL_FINAL_ORDER[standingsSeason][tierKey] && (() => {
                 const order = HISTORICAL_FINAL_ORDER[standingsSeason][tierKey];
