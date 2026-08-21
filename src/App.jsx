@@ -25,7 +25,8 @@ import {
   setWeeklyResult,
   addClub300Entry,
   watchClub300Live,
-  writeClub300HistoricalEntry,
+  club300HistoricalKey,
+  replaceClub300Historical,
   watchClub300Historical,
   addClub4000Entry,
   watchClub4000Live,
@@ -910,7 +911,13 @@ const TIERS = [
 
 // Some historical records (300 Club, older exports) abbreviate conferences
 // slightly differently than the site's TIERS keys — map the ones that differ.
-const CONF_TO_TIER_KEY = { XII: "BIG XII", FHS: "FLHS", BIG10: "TEN" };
+// "PAC 12" added 2026-08-21, confirmed by Lainey: the exact same rebrand
+// as BIG10 above — TEN's tier was branded "PAC-12" for 2022 before her
+// 2024 rebrand to Big Ten, same underlying Sleeper league. NOT the same
+// situation as "PION" (a genuinely separate, now-discontinued 2022-only
+// league) — that one stays unmapped on purpose, its own bucket everywhere
+// this alias table is consulted.
+const CONF_TO_TIER_KEY = { XII: "BIG XII", FHS: "FLHS", BIG10: "TEN", "PAC 12": "TEN" };
 
 // NFL division numbers as configured in Sleeper -> real conference/division
 // names. Confirmed directly by Lainey.
@@ -9903,29 +9910,31 @@ export default function App() {
     };
   }, []);
 
-  // Admin action — ONE-TIME migration of the curated CLUB_300 historical
-  // array (154 games) into its own Firestore collection, club300Historical,
-  // so future corrections/additions to 300 Club history don't require a
-  // code deploy. Safe to re-click any time — deterministic doc IDs
-  // overwrite rather than duplicate. This does NOT yet change what
-  // club300All reads from: CLUB_300 stays the active source until the
-  // migration is confirmed (watch the live count next to the button —
-  // should read 154 / 154), at which point a follow-up change switches
-  // club300All over to read club300Historical instead, and CLUB_300
-  // becomes a commented-out backup rather than deleted.
+  // Admin action — ONE-TIME (but safely re-runnable) migration of the
+  // curated CLUB_300 historical array (154 games) into its own Firestore
+  // collection, club300Historical, so future corrections/additions to 300
+  // Club history don't require a code deploy. Self-healing: fetches what's
+  // actually there and deletes anything that doesn't match a freshly
+  // computed key before writing (see replaceClub300Historical's comment in
+  // storage.js for why a naive per-entry overwrite isn't actually safe to
+  // re-click). This does NOT yet change what club300All reads from:
+  // CLUB_300 stays the active source until the migration is confirmed
+  // (watch the live count next to the button — should read 154 / 154),
+  // at which point a follow-up change switches club300All over to read
+  // club300Historical instead, and CLUB_300 becomes a commented-out
+  // backup rather than deleted.
   const runClub300HistoricalMigration = useCallback(async () => {
     setClub300MigrationRunning(true);
     try {
-      for (const entry of CLUB_300) {
+      const freshEntries = CLUB_300.map((entry) => {
         const tierKey = CONF_TO_TIER_KEY[entry.conf] || entry.conf;
-        try {
-          await writeClub300HistoricalEntry(tierKey, entry).then((local) => {
-            if (local) setClub300Historical(local);
-          });
-        } catch (e) {
-          console.error(`club300Historical migration failed for ${entry.coach} (${entry.year} wk${entry.week})`, e);
-        }
-      }
+        const key = club300HistoricalKey(tierKey, entry.week, entry.year, entry.pts);
+        return [key, entry];
+      });
+      const local = await replaceClub300Historical(freshEntries);
+      if (local) setClub300Historical(local);
+    } catch (e) {
+      console.error("club300Historical migration failed", e);
     } finally {
       setClub300MigrationRunning(false);
     }
@@ -11663,7 +11672,13 @@ export default function App() {
   }, [club300Live]);
   const club300TopCoaches = useMemo(() => tally(club300All, (r) => r.coach).slice(0, 10), [club300All]);
   const club300TopTeams = useMemo(() => tally(club300All, (r) => r.team).slice(0, 8), [club300All]);
-  const club300ByConf = useMemo(() => tally(club300All, (r) => r.conf), [club300All]);
+  // Resolved through CONF_TO_TIER_KEY (not raw r.conf) so a rebranded
+  // tier's pre-rebrand games count toward the same bar as its current
+  // name — e.g. a 2022 "PAC 12" game shows under "TEN", not its own
+  // separate bucket. Genuinely separate historical leagues that aren't in
+  // the alias table (e.g. "PION") still fall through to their own bucket
+  // via the `|| r.conf` default, which is correct for those.
+  const club300ByConf = useMemo(() => tally(club300All, (r) => CONF_TO_TIER_KEY[r.conf] || r.conf), [club300All]);
 
   // ── The 4000 Club ──
   // CLUB_4000 is the static curated list (2022-2025, hand-exported from

@@ -423,16 +423,41 @@ function club300HistoricalKey(tierKey, week, year, pts) {
   return `${tierKey}_${week}_${year}_${pts.toFixed(2)}`;
 }
 
-export async function writeClub300HistoricalEntry(tierKey, entry) {
-  const key = club300HistoricalKey(tierKey, entry.week, entry.year, entry.pts);
+// Bulk, SELF-HEALING replace — not a per-entry overwrite. The naive
+// version (write each entry to its deterministic key, one at a time) looks
+// idempotent but isn't: the key depends on resolving `conf` through
+// CONF_TO_TIER_KEY, and that alias table can gain new entries later (it
+// already did — "PAC 12" -> TEN, added the same day this shipped). When an
+// alias changes, an entry's computed key changes with it, so a naive
+// re-write leaves the OLD key's doc sitting in Firestore as an orphan
+// instead of overwriting it — silent duplicate data, the exact class of
+// bug this project's mistakes.md already warns about. This version instead
+// fetches what's actually in the collection, deletes anything that isn't
+// in the freshly-computed key set, then writes the fresh set — safe to
+// re-click after ANY future alias/data change, not just today's.
+//
+// freshEntries: array of [key, entry] pairs, already keyed by the caller
+// via club300HistoricalKey (exported below so App.jsx can build them).
+export { club300HistoricalKey };
+
+export async function replaceClub300Historical(freshEntries) {
   if (!firebaseReady) {
-    const all = localGet("pfa-club300-historical") || {};
-    all[key] = entry;
+    const all = {};
+    for (const [key, entry] of freshEntries) all[key] = entry;
     localSet("pfa-club300-historical", all);
     return Object.values(all); // local fallback only; Firebase updates via watchClub300Historical's snapshot
   }
   await ensureDb();
-  await fs.setDoc(fs.doc(db, "club300Historical", key), entry);
+  const freshKeys = new Set(freshEntries.map(([key]) => key));
+  const snap = await fs.getDocs(fs.collection(db, "club300Historical"));
+  const deletions = [];
+  snap.forEach((d) => {
+    if (!freshKeys.has(d.id)) deletions.push(fs.deleteDoc(d.ref));
+  });
+  await Promise.all(deletions);
+  for (const [key, entry] of freshEntries) {
+    await fs.setDoc(fs.doc(db, "club300Historical", key), entry);
+  }
   return null;
 }
 
