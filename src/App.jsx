@@ -11,6 +11,7 @@ import {
   removeChatMessage,
   pinChatMessage,
   watchApplications,
+  watchPendingApprovalCount,
   submitApplication,
   hireApplicant,
   unhireApplicant,
@@ -9404,6 +9405,7 @@ export default function App() {
   const [editNewsTag, setEditNewsTag] = useState("NEWS");
   const [newsError, setNewsError] = useState("");
   const [applications, setApplications] = useState([]);
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
   const [promotionWindowOpen, setPromotionWindowOpen] = useState(false);
   const [hireTimers, setHireTimers] = useState([]);
   const [timerDrafts, setTimerDrafts] = useState({}); // key: `${tierKey}__${team}` -> datetime-local input value
@@ -10215,6 +10217,7 @@ export default function App() {
       if (items && items.length) setNews(items);
     });
     const unsubApps = watchApplications((apps) => setApplications(apps));
+    const unsubPendingApprovals = watchPendingApprovalCount((count) => setPendingApprovalCount(count));
     const unsubPromo = watchPromotionWindow((open) => setPromotionWindowOpen(open));
     const unsubClub300 = watchClub300Live((entries) => setClub300Live(entries));
     const unsubClub300Historical = watchClub300Historical((entries) => setClub300Historical(entries));
@@ -10230,6 +10233,7 @@ export default function App() {
       unsubChat();
       unsubNews();
       unsubApps();
+      unsubPendingApprovals();
       unsubPromo();
       unsubClub300();
       unsubClub300Historical();
@@ -13824,23 +13828,37 @@ export default function App() {
                 ["penalties", "Penalties"],
                 ["users", "Users"],
                 ["engineRoom", "Engine Room"],
-              ].map(([id, label]) => (
-                <button
-                  key={id}
-                  onClick={() => setAdminSubTab(id)}
-                  className="px-3.5 py-1.5 text-sm tracking-widest uppercase transition-colors rounded-sm"
-                  style={{
-                    fontFamily: "'Barlow Condensed', sans-serif",
-                    fontWeight: 600,
-                    letterSpacing: "0.1em",
-                    color: adminSubTab === id ? C.ink : C.slate,
-                    background: adminSubTab === id ? C.gold : "transparent",
-                    border: `1px solid ${adminSubTab === id ? C.gold : C.line}`,
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
+              ].map(([id, label]) => {
+                // Visual cue for pending user approvals: the Users tab
+                // turns green (C.turf) whenever pendingApprovalCount > 0,
+                // regardless of whether it's the currently active tab —
+                // the whole point is to be noticeable while browsing a
+                // DIFFERENT admin tab, not just when Users is already
+                // open. Same visual structure as the normal active/
+                // inactive treatment (filled background when active,
+                // outlined when not), just green instead of gold/slate
+                // when there's something waiting on this tab specifically.
+                const hasPendingApprovals = id === "users" && pendingApprovalCount > 0;
+                const isActive = adminSubTab === id;
+                const accent = hasPendingApprovals ? C.turf : C.gold;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setAdminSubTab(id)}
+                    className="px-3.5 py-1.5 text-sm tracking-widest uppercase transition-colors rounded-sm"
+                    style={{
+                      fontFamily: "'Barlow Condensed', sans-serif",
+                      fontWeight: 600,
+                      letterSpacing: "0.1em",
+                      color: isActive ? C.ink : hasPendingApprovals ? C.turf : C.slate,
+                      background: isActive ? accent : "transparent",
+                      border: `1px solid ${isActive ? accent : hasPendingApprovals ? C.turf : C.line}`,
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
             {adminSubTab === "applications" && (
             <section className="mb-8">

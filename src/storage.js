@@ -165,6 +165,30 @@ export function watchApplications(cb) {
   return () => unsub();
 }
 
+// Counts users awaiting approval (pendingApproval === true on their
+// /users/{uid} doc) so the Admin tab's "Users" button can show a visual
+// cue without needing the full Users tab UI to compute it. Deliberately a
+// separate, lightweight query kept here rather than routed through
+// AdminPanel.jsx (the component that actually renders the Users tab's
+// approve/reject UI) -- that file wasn't part of this session, so adding
+// a callback prop through it would mean re-verifying its current
+// internals sight-unseen. The users/{uid} read rule is open to any
+// authenticated user (allow read: if request.auth != null, no role
+// check), so this is safe to watch regardless of who's logged in, even
+// though only the count matters for anyone who isn't an admin.
+export function watchPendingApprovalCount(cb) {
+  if (!firebaseReady) {
+    cb(0); // no meaningful local-fallback count without a real backend
+    return () => {};
+  }
+  let unsub = () => {};
+  ensureDb().then(() => {
+    const q = fs.query(fs.collection(db, "users"), fs.where("pendingApproval", "==", true));
+    unsub = fs.onSnapshot(q, (snap) => cb(snap.size));
+  });
+  return () => unsub();
+}
+
 export async function submitApplication(app) {
   if (!firebaseReady) {
     const entry = { ...app, id: `local-${Date.now()}-${Math.random().toString(36).slice(2)}` };
