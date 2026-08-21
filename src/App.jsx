@@ -6848,9 +6848,16 @@ const R3_LIVE = {
 
 // ===========================================================================
 // LIVE-SCORED PLAYOFF BRACKETS (top8-cascade tiers) -- automates what used
-// to need a full CSV backfill after the season. Pilot on SEC only for now
-// (her request 2026-08-20); bump this list to extend to BIG XII/ACC/TEN,
-// which share the identical top8-cascade shape.
+// to need a full CSV backfill after the season. Piloted on SEC alone
+// 2026-08-20, extended to all four top8-cascade tiers same day once the
+// pilot's logic was verified against synthetic mock data (all four --
+// SEC/BIG XII/ACC/TEN -- share the identical shape, confirmed via
+// PLAYOFF_FORMAT and R3_LIVE both having real entries for each). The other
+// 9 tiers (conference-top4/division-only tiers, NFL, USFL/XFL) use
+// different bracket shapes and are NOT covered here -- each would need its
+// own resolver built the same way, deliberately held off until this batch
+// is confirmed working against real live data once this season's playoffs
+// actually happen (weeks 15-17 haven't occurred yet as of this writing).
 //
 // Two things she confirmed 2026-08-20 that this whole approach rests on:
 // (1) Sleeper's own playoff mode is OFF in every league and its native
@@ -6874,7 +6881,7 @@ const R3_LIVE = {
 // declaration, so calling it here is safe (no TDZ risk, unlike a `const`
 // arrow function would be) -- same reasoning already used elsewhere in this
 // file for exactly this kind of forward reference.
-const LIVE_BRACKET_SCORED_TIERS = ["SEC"];
+const LIVE_BRACKET_SCORED_TIERS = ["SEC", "BIG XII", "ACC", "TEN"];
 
 // One resolved game -> the [name,score,name,score] tuple r3ChampHalf/
 // r3ConsoHalf expect. Shows the team name with a blank score once a game's
