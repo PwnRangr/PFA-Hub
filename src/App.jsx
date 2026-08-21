@@ -112,6 +112,40 @@ const LEAGUE_HISTORY = {
     GLIAC: "1054450442576519168",
     FLHS: "1054451264907468800",
   },
+  2022: {
+    NFL: "834855301529305088",
+    USFL: "786691248676257792",
+    XFL: "789358209147228160",
+    SEC: "794997790685118464",
+    "BIG XII": "785428494569037824",
+    ACC: "811303831173513216",
+    TEN: "786795571468972032",
+    SUN: "834881793474797568",
+    SOCO: "802696676669263872",
+    IVY: "797899210321149952",
+    SWAC: "813634931736547328",
+    GLIAC: "787964269688946688",
+    FLHS: "797891236408176640",
+    // Pioneer: "806355824665542656" — the folded league confirmed
+    // 2026-08-21 to be the GLIAC/FLHS CP gap (see CHAMPION_CP_16's
+    // comment). Not a LEAGUE_HISTORY object key like the 13 real tiers on
+    // purpose — nothing in TIERS/PLAYOFF_FORMAT/CHAMPION_CP_16 knows what
+    // to do with a 14th key, and the Finalize Season backfill buttons
+    // loop over Object.entries(LEAGUE_HISTORY[year]) directly, so a live
+    // key here would send a real Sleeper fetch for a tier the rest of the
+    // app has no config for. Kept as a comment, same treatment the 2023
+    // block already gave it — just confirmed now instead of guessed.
+    //
+    // DISCREPANCY WORTH HER ATTENTION: the 2023 block below has its own
+    // commented "Pioneer" entry, ID "919371831558131712", marked "year
+    // unconfirmed" — a DIFFERENT ID than this one. She's confirmed
+    // Pioneer only played in 2022, which points to THIS id (806...) being
+    // the real one and the 2023 block's 919... being either wrong or a
+    // leftover reference to something else entirely. Flagging rather than
+    // silently deleting either — an old commented guess isn't proof of
+    // anything on its own, but two different IDs for a supposedly
+    // single-season league is a real conflict, not a formatting choice.
+  },
   2023: {
     NFL: "919396554954412032",
     USFL: "919396344941445120",
@@ -126,9 +160,13 @@ const LEAGUE_HISTORY = {
     SWAC: "919392917653901312",
     GLIAC: "919392125446373376",
     FLHS: "919369950941241344",
-    // Pioneer: "919371831558131712" — folded league, year unconfirmed
+    // Pioneer: "919371831558131712" — folded league, year unconfirmed.
+    // See the 2022 block above for a real conflict this raises: she's
+    // confirmed Pioneer only played in 2022, and 2022's actual Pioneer ID
+    // (806355824665542656) is different from this one. This ID may be
+    // wrong, or may not actually be Pioneer's — worth asking her before
+    // trusting either further.
   },
-  // 2022: { ... },
 };
 
 // Bumping this each new season? FAAB_STARTING_BUDGET (below, near
