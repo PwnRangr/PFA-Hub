@@ -25,8 +25,6 @@ import {
   setWeeklyResult,
   addClub300Entry,
   watchClub300Live,
-  club300HistoricalKey,
-  replaceClub300Historical,
   watchClub300Historical,
   addClub4000Entry,
   watchClub4000Live,
@@ -1630,19 +1628,22 @@ const SETTINGS_LEAGUE_SECTIONS = [
   },
 ];
 
-// CLUB_300 — the curated 300 Club historical data, 154 games. As of
-// 2026-08-21 this is NO LONGER read directly by the live 300 Club page —
-// club300All now reads from the Firestore collection club300Historical
-// instead (migrated off this exact array, confirmed 154/154). This array
-// stays fully active in code on purpose, not commented out: the Admin
-// "Migrate 300 Club Historical Data" button (Finalize Season sub-tab)
-// still reads it as the source of truth any time a re-sync is needed
-// (e.g. a future CONF_TO_TIER_KEY alias change, same as the "PAC 12" fix
-// this session) — so it's the backup AND the live source for that one
-// button, not a dead reference. If it's ever edited (a new game added, a
-// score corrected), re-click that Admin button to push the change into
-// club300Historical — editing this array alone does nothing for the live
-// site anymore.
+// CLUB_300_ARCHIVE — the curated 300 Club historical data, 154 games,
+// permanently retired 2026-08-21. club300All reads from the Firestore
+// collection club300Historical now (migrated off this exact array,
+// confirmed 154/154 across two runs — the second run after the "PAC 12"
+// alias fix, confirmed clean). She's confident in the migrated data and
+// wants this permanent, so the one-time Admin "Migrate 300 Club
+// Historical Data" button (and its handler, storage.js functions, and
+// state) has been removed — there's no live code path left that reads
+// this array. Left here as an inert historical record only, block-
+// commented rather than deleted, matching her original "keep as a
+// backup" preference. If a correction to 300 Club history is ever needed
+// again, it'll take a fresh one-off fix directly against
+// club300Historical (same as how CAREER_STATS/COACH_TROPHIES
+// corrections already work) — this array is not a live source for that
+// anymore.
+/*
 const CLUB_300 = [
   { coach: "Harvey28", team: "Carolina Chanticleers", conf: "SUN", pts: 388.1, week: 15, year: 2022 },
   { coach: "mchostetler1", team: "Florida Gators", conf: "SEC", pts: 384.85, week: 2, year: 2024 },
@@ -1799,6 +1800,7 @@ const CLUB_300 = [
   { coach: "jaquise", team: "Austin Peay Governors", conf: "SOCO", pts: 300.1, week: 6, year: 2022 },
   { coach: "finnbar3", team: "Detroit Drive", conf: "USFL", pts: 300.05, week: 3, year: 2023 },
 ];
+*/
 
 // The 4000 Club: 4,000+ combined points across a full regular season
 // (weeks 1-17), the season-long sibling of CLUB_300 above. Sourced from
@@ -9877,7 +9879,6 @@ export default function App() {
   const [backfillRunning, setBackfillRunning] = useState(false);
   const [cpLockRunning, setCpLockRunning] = useState(false);
   const [strengthBackfillRunning, setStrengthBackfillRunning] = useState(false);
-  const [club300MigrationRunning, setClub300MigrationRunning] = useState(false);
   const runStreakBonusBackfill = useCallback(async () => {
     setBackfillRunning(true);
     try {
@@ -9921,35 +9922,6 @@ export default function App() {
       ...scoreConferencePool(rowsByTier, ALLIANCE_POOL),
       ...scoreConferencePool(rowsByTier, PRO_POOL),
     };
-  }, []);
-
-  // Admin action — safely re-runnable migration/re-sync of the curated
-  // CLUB_300 array (154 games) into its own Firestore collection,
-  // club300Historical, which is what club300All actually reads from now
-  // (confirmed 154/154, cut over 2026-08-21). CLUB_300 stays fully active
-  // in code — not commented out — specifically so this button keeps
-  // working: it's the one remaining consumer of the array, the source of
-  // truth any time a re-sync is needed (a corrected score, a new game
-  // added, or a CONF_TO_TIER_KEY alias changing again). Self-healing:
-  // fetches what's actually in the collection and deletes anything that
-  // doesn't match a freshly computed key before writing (see
-  // replaceClub300Historical's comment in storage.js for why a naive
-  // per-entry overwrite isn't actually safe to re-click).
-  const runClub300HistoricalMigration = useCallback(async () => {
-    setClub300MigrationRunning(true);
-    try {
-      const freshEntries = CLUB_300.map((entry) => {
-        const tierKey = CONF_TO_TIER_KEY[entry.conf] || entry.conf;
-        const key = club300HistoricalKey(tierKey, entry.week, entry.year, entry.pts);
-        return [key, entry];
-      });
-      const local = await replaceClub300Historical(freshEntries);
-      if (local) setClub300Historical(local);
-    } catch (e) {
-      console.error("club300Historical migration failed", e);
-    } finally {
-      setClub300MigrationRunning(false);
-    }
   }, []);
 
   // Admin action — computes and stores League Strength for every tier for
@@ -11643,14 +11615,14 @@ export default function App() {
   );
 
   // 300 Club: club300Historical (Firestore — migrated 2026-08-21 off the
-  // old static CLUB_300 array, confirmed 154/154) merged with live-detected
-  // entries, sorted highest score first. CLUB_300 itself is no longer read
-  // here — it stays in the file, still fully active code (not commented
-  // out), because the "Migrate 300 Club Historical Data" admin button
-  // still reads from it as the source of truth for any future re-sync
-  // (e.g. if a CONF_TO_TIER_KEY alias changes again, same as the PAC-12
-  // fix this session). Its role changed from "the display's data source"
-  // to "the migration's data source" — nothing was deleted.
+  // old static CLUB_300 array, confirmed 154/154 across two runs) merged
+  // with live-detected entries, sorted highest score first. The migration
+  // is now permanent — she's confident in the data, so the one-time Admin
+  // button, its handler, and the now-inert CLUB_300 array (block-commented
+  // near the top of this file) have all been retired. A future correction
+  // to 300 Club history would need a fresh one-off fix against
+  // club300Historical directly, same as CAREER_STATS/COACH_TROPHIES
+  // corrections already work.
   //
   // Two defensive filters, both needed because of the detect300 bug fixed
   // just above (it used to fire on every past week Weekly Awards browsed,
@@ -14010,32 +13982,6 @@ export default function App() {
                   >
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2024/2025)"}
                   </button>
-                </div>
-                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
-                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
-                    Syncs the curated 300 Club historical list (CLUB_300 in code) into its own Firestore collection
-                    (<code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>club300Historical</code>), which the
-                    live 300 Club page reads from directly. Safe to re-click any time — self-healing, so it cleans
-                    up stale docs if a game's data or a conference alias ever changes.
-                  </div>
-                  <button
-                    onClick={runClub300HistoricalMigration}
-                    disabled={club300MigrationRunning}
-                    style={{
-                      padding: "8px 14px",
-                      borderRadius: 4,
-                      border: `1px solid ${C.gold}`,
-                      background: club300MigrationRunning ? "transparent" : C.gold,
-                      color: club300MigrationRunning ? C.slate : C.ink,
-                      fontWeight: 600,
-                      cursor: club300MigrationRunning ? "default" : "pointer",
-                    }}
-                  >
-                    {club300MigrationRunning ? "Running…" : "Migrate 300 Club Historical Data"}
-                  </button>
-                  <span style={{ marginLeft: 12, fontSize: 12, color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>
-                    {club300Historical.length} / {CLUB_300.length} migrated
-                  </span>
                 </div>
               </section>
             )}

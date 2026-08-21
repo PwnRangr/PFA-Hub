@@ -403,22 +403,26 @@ export function watchClub300Live(cb) {
   return () => unsub();
 }
 
-// ── 300 Club (historical, one-time migration off the curated CLUB_300
-// array) ──
+// ── 300 Club (historical, migrated off the curated CLUB_300 array,
+// 2026-08-21) ──
 // Separate collection from club300Live on purpose. club300All (App.jsx)
 // deliberately drops any club300Live entry whose year isn't the current
 // season — that filter exists because of a real bug with stale metadata
 // on leftover past-season live-detected entries, and it needs to keep
 // applying ONLY to club300Live. This collection instead holds the
-// trusted, curated historical migration (the old CLUB_300 array, written
-// once via the Admin "Migrate 300 Club Historical Data" button), so no
-// such filter applies here — it merges in for every year unconditionally.
-// Deterministic key mirrors the same tier+week+year+points fingerprint
-// club300All already uses for dedup, so re-clicking the migration button
-// just overwrites the same 154 docs rather than duplicating them.
-// Entry shape is identical to CLUB_300's own array entries — { coach,
-// team, conf, pts, week, year } — nothing downstream (tally-by-conf, the
-// dedup/sort in club300All) needs to change to read it.
+// trusted, curated historical migration — no such filter applies here,
+// it merges in for every year unconditionally.
+//
+// PERMANENT as of 2026-08-21: she's confident in the migrated data (154
+// games, confirmed clean across two runs — the second after a
+// CONF_TO_TIER_KEY alias fix), so the Admin "Migrate 300 Club Historical
+// Data" button and its App.jsx handler have been retired. Nothing in
+// App.jsx calls these two functions anymore. Left here rather than
+// deleted, same "keep as a backup" spirit as the now-block-commented
+// CLUB_300 array in App.jsx — if a correction to 300 Club history is
+// ever needed again, this is the machinery a future one-off fix would
+// reuse (build a small fresh entries array, call replaceClub300Historical
+// directly) rather than writing it from scratch.
 function club300HistoricalKey(tierKey, week, year, pts) {
   return `${tierKey}_${week}_${year}_${pts.toFixed(2)}`;
 }
@@ -436,8 +440,7 @@ function club300HistoricalKey(tierKey, week, year, pts) {
 // in the freshly-computed key set, then writes the fresh set — safe to
 // re-click after ANY future alias/data change, not just today's.
 //
-// freshEntries: array of [key, entry] pairs, already keyed by the caller
-// via club300HistoricalKey (exported below so App.jsx can build them).
+// freshEntries: array of [key, entry] pairs, keyed via club300HistoricalKey.
 export { club300HistoricalKey };
 
 export async function replaceClub300Historical(freshEntries) {
