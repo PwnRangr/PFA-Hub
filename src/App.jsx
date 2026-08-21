@@ -29,6 +29,8 @@ import {
   addClub4000Entry,
   watchClub4000Live,
   watchClub4000Historical,
+  replaceCoachTrophiesHistorical,
+  watchCoachTrophiesHistorical,
   getClub4000ProcessedYear,
   markClub4000ProcessedYear,
   addStreakBonusEntry,
@@ -9333,6 +9335,7 @@ export default function App() {
   const [club300Historical, setClub300Historical] = useState([]);
   const [club4000Live, setClub4000Live] = useState([]);
   const [club4000Historical, setClub4000Historical] = useState([]);
+  const [coachTrophiesHistorical, setCoachTrophiesHistorical] = useState({});
   const [streakBonusesLive, setStreakBonusesLive] = useState([]);
   const [manualPenalties, setManualPenalties] = useState([]);
   // The permanent, locked Season CP record for completed tier/years — see
@@ -9954,6 +9957,31 @@ export default function App() {
   const [backfillRunning, setBackfillRunning] = useState(false);
   const [cpLockRunning, setCpLockRunning] = useState(false);
   const [strengthBackfillRunning, setStrengthBackfillRunning] = useState(false);
+  const [trophiesMigrationRunning, setTrophiesMigrationRunning] = useState(false);
+  // Admin action — migration/re-sync of the curated COACH_TROPHIES object
+  // (36 coaches, 50 individual trophy entries) into its own Firestore
+  // collection, coachTrophiesHistorical. Staged the same way 300/4000
+  // Club's first turn was: this does NOT yet change what TrophyBadges
+  // reads from — COACH_TROPHIES stays the active source until the count
+  // next to the button is confirmed (should read 36 / 36), at which point
+  // a follow-up switches TrophyBadges over and retires COACH_TROPHIES the
+  // same way CLUB_300/CLUB_4000 were retired. Self-healing from the start
+  // (see replaceCoachTrophiesHistorical's comment in storage.js) — though
+  // notably this key (the coach name itself) doesn't have the alias-table
+  // fragility club300/4000's keys did, since there's no CONF_TO_TIER_KEY-
+  // style resolution involved in building it.
+  const runCoachTrophiesHistoricalMigration = useCallback(async () => {
+    setTrophiesMigrationRunning(true);
+    try {
+      const freshEntries = Object.entries(COACH_TROPHIES);
+      const local = await replaceCoachTrophiesHistorical(freshEntries);
+      if (local) setCoachTrophiesHistorical(local);
+    } catch (e) {
+      console.error("coachTrophiesHistorical migration failed", e);
+    } finally {
+      setTrophiesMigrationRunning(false);
+    }
+  }, []);
   const runStreakBonusBackfill = useCallback(async () => {
     setBackfillRunning(true);
     try {
@@ -10200,6 +10228,7 @@ export default function App() {
     const unsubClub300Historical = watchClub300Historical((entries) => setClub300Historical(entries));
     const unsubClub4000 = watchClub4000Live((entries) => setClub4000Live(entries));
     const unsubClub4000Historical = watchClub4000Historical((entries) => setClub4000Historical(entries));
+    const unsubCoachTrophiesHistorical = watchCoachTrophiesHistorical((obj) => setCoachTrophiesHistorical(obj));
     const unsubStreakBonuses = watchStreakBonusesLive((entries) => setStreakBonusesLive(entries));
     const unsubManualPenalties = watchManualPenalties((entries) => setManualPenalties(entries));
     const unsubSeasonCPFinal = watchSeasonCPFinal((entries) => setSeasonCPFinal(entries));
@@ -10214,6 +10243,7 @@ export default function App() {
       unsubClub300Historical();
       unsubClub4000();
       unsubClub4000Historical();
+      unsubCoachTrophiesHistorical();
       unsubStreakBonuses();
       unsubManualPenalties();
       unsubSeasonCPFinal();
@@ -14068,6 +14098,32 @@ export default function App() {
                   >
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2024/2025)"}
                   </button>
+                </div>
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                    Migrates the curated Trophy list (36 coaches, 50 trophies) into its own Firestore collection
+                    (<code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>coachTrophiesHistorical</code>).
+                    Same pattern as 300/4000 Club — doesn't change the live Trophy badges yet, that switch happens
+                    once the count below reads 36 / 36. Safe to re-click any time (self-healing).
+                  </div>
+                  <button
+                    onClick={runCoachTrophiesHistoricalMigration}
+                    disabled={trophiesMigrationRunning}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 4,
+                      border: `1px solid ${C.gold}`,
+                      background: trophiesMigrationRunning ? "transparent" : C.gold,
+                      color: trophiesMigrationRunning ? C.slate : C.ink,
+                      fontWeight: 600,
+                      cursor: trophiesMigrationRunning ? "default" : "pointer",
+                    }}
+                  >
+                    {trophiesMigrationRunning ? "Running…" : "Migrate Trophy Historical Data"}
+                  </button>
+                  <span style={{ marginLeft: 12, fontSize: 12, color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>
+                    {Object.keys(coachTrophiesHistorical).length} / {Object.keys(COACH_TROPHIES).length} migrated
+                  </span>
                 </div>
               </section>
             )}

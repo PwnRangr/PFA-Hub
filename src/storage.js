@@ -766,6 +766,68 @@ export function watchClub4000Historical(cb) {
   return () => unsub();
 }
 
+// ── Coach Trophies (historical, migrated off the curated COACH_TROPHIES
+// object) ──
+// Structurally different from club300Historical/club4000Historical: the
+// source data is ALREADY a map (coach key -> array of trophy objects), not
+// a flat list, so the natural fit is one Firestore doc per coach, doc ID =
+// the coach key itself (already lowercase in COACH_TROPHIES). Notably
+// SAFER than the club300/4000 key schemes: there's no alias-table
+// resolution involved in building this key at all — a coach's own name is
+// immutable raw data, not a value resolved through a lookup table that
+// could gain new entries later (see mistakes.md's "PAC 12" entry for why
+// that distinction mattered enough to rebuild a whole migration over).
+// Still built as a self-healing bulk replace for consistency, and because
+// the underlying reason for wanting that pattern doesn't disappear just
+// because THIS key happens to be stable — if a coach's entry is ever
+// removed entirely from COACH_TROPHIES, the collection should clean up
+// the stale doc rather than leave orphaned trophy data floating around
+// for a coach who no longer has any recorded.
+//
+// freshEntries: array of [coachKey, trophiesArray] pairs — literally
+// Object.entries(COACH_TROPHIES), no key-computation function needed
+// (unlike club300HistoricalKey/club4000HistoricalKey).
+export async function replaceCoachTrophiesHistorical(freshEntries) {
+  if (!firebaseReady) {
+    const all = {};
+    for (const [key, value] of freshEntries) all[key] = value;
+    localSet("pfa-coach-trophies-historical", all);
+    return all; // local fallback only; Firebase updates via watchCoachTrophiesHistorical's snapshot. Note: an OBJECT, not an array, matching COACH_TROPHIES' own shape.
+  }
+  await ensureDb();
+  const freshKeys = new Set(freshEntries.map(([key]) => key));
+  const snap = await fs.getDocs(fs.collection(db, "coachTrophiesHistorical"));
+  const deletions = [];
+  snap.forEach((d) => {
+    if (!freshKeys.has(d.id)) deletions.push(fs.deleteDoc(d.ref));
+  });
+  await Promise.all(deletions);
+  for (const [key, value] of freshEntries) {
+    // Firestore docs must be maps, not bare arrays at the top level, so
+    // the trophies array is wrapped in a { trophies: [...] } field.
+    await fs.setDoc(fs.doc(db, "coachTrophiesHistorical", key), { trophies: value });
+  }
+  return null;
+}
+
+export function watchCoachTrophiesHistorical(cb) {
+  if (!firebaseReady) {
+    cb(localGet("pfa-coach-trophies-historical") || {});
+    return () => {};
+  }
+  let unsub = () => {};
+  ensureDb().then(() => {
+    unsub = fs.onSnapshot(fs.collection(db, "coachTrophiesHistorical"), (snap) => {
+      const obj = {};
+      snap.forEach((d) => {
+        obj[d.id] = d.data().trophies;
+      });
+      cb(obj);
+    });
+  });
+  return () => unsub();
+}
+
 // Guards the 13-league sweep (see detect4000/its calling effect in App.jsx)
 // so it only actually hits Sleeper once per season, the first time anyone
 // loads the site after week 17 -- without this, EVERY page load for the
