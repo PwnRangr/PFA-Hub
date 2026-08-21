@@ -131,7 +131,7 @@ const LEAGUE_HISTORY = {
     // 2026-08-21 to be the GLIAC/FLHS CP gap (see CHAMPION_CP_16's
     // comment). Not a LEAGUE_HISTORY object key like the 13 real tiers on
     // purpose — nothing in TIERS/PLAYOFF_FORMAT/CHAMPION_CP_16 knows what
-    // to do with a 14th key, and the Finalize Season backfill buttons
+    // to do with a 14th key, and the Engine Room backfill buttons
     // loop over Object.entries(LEAGUE_HISTORY[year]) directly, so a live
     // key here would send a real Sleeper fetch for a tier the rest of the
     // app has no config for. Kept as a comment, same treatment the 2023
@@ -13822,8 +13822,8 @@ export default function App() {
               {[
                 ["applications", "Applications"],
                 ["penalties", "Penalties"],
-                ["finalize", "Finalize Season"],
                 ["users", "Users"],
+                ["engineRoom", "Engine Room"],
               ].map(([id, label]) => (
                 <button
                   key={id}
@@ -14015,10 +14015,10 @@ export default function App() {
                 2026 finishes and again once historical League Strength
                 exists; the streak backfill is safe to re-click any time a
                 past season's underlying data changes. */}
-            {adminSubTab === "finalize" && (
+            {adminSubTab === "engineRoom" && (
               <section className="mb-8">
                 <h3 className="text-xl uppercase leading-none mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
-                  Finalize Season
+                  Engine Room
                 </h3>
                 <p className="text-sm mb-4" style={{ color: C.slate }}>
                   Run these in order for a completed season: backfill streak bonuses, compute League Strength,
