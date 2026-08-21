@@ -9143,7 +9143,7 @@ function RulesAndSettingsContent({ openRuleSections, setOpenRuleSections }) {
 
             <div className="mt-8 pt-4 text-xs" style={{ borderTop: `1px solid ${C.line}`, color: C.slate }}>
               <div>Alliance creator: <span style={{ color: C.chalk, fontWeight: 600 }}>PwnRangr</span></div>
-              <div className="mt-1">Contributors: Davidsstone, Deevel, Gavdjedi, Vastettler</div>
+              <div className="mt-1">Contributors: Claude, Lainey Schooltree, Davidsstone, Deevel, Gavdjedi, Vastettler</div>
             </div>
           </section>
 
