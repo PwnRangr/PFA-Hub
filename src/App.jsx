@@ -420,12 +420,15 @@ const HISTORICAL_FINAL_ORDER = {
     // matching same-numbered game losers across NFC/AFC, rather than
     // staying within-conference the way 2023-2025 do -- confirmed with her
     // directly 2026-08-22 after an initial misread. See the note on
-    // NFL_2022_PLAYOFFS itself for the full breakdown.
+    // NFL_2022_PLAYOFFS itself for the full breakdown. Team names use
+    // TEAM_CLR's city/location keys (e.g. "Minnesota" not "Vikings") --
+    // same convention as 2023-2025, caught after the first pass used
+    // nicknames and rendered with no team colors.
     NFL: [
-      "Eagles", "Broncos", "Falcons", "Bengals", "Jets", "Chargers", "Rams", "Bears",
-      "Lions", "Saints", "Dolphins", "Vikings", "Bills", "Texans", "Colts", "Giants",
-      "Cowboys", "Raiders", "Packers", "Jaguars", "Browns", "Seahawks", "Ravens", "Commanders",
-      "Steelers", "Panthers", "Patriots", "Chiefs", "49ers", "Cardinals", "Buccaneers", "Titans",
+      "Philadelphia", "Denver", "Atlanta", "Cincinnati", "NY Jets", "LA Chargers", "LA Rams", "Chicago",
+      "Detroit", "New Orleans", "Miami", "Minnesota", "Buffalo", "Houston", "Indianapolis", "NY Giants",
+      "Dallas", "Las Vegas", "Green Bay", "Jacksonville", "Cleveland", "Seattle", "Baltimore", "Washington",
+      "Pittsburgh", "Carolina", "New England", "Kansas City", "San Francisco", "Arizona", "Tampa Bay", "Tennessee",
     ],
   },
   2024: {
@@ -4065,35 +4068,39 @@ const NFL_2023_CONSOLATION = brChampHalf({
 // conference groupings. Kept as its own likely-one-off quirk (not "fixed"
 // to match 2023-2025's pattern), same principle as the ACC 2023 preserved
 // bracket mistake.
+// Team names use TEAM_CLR's city/location keys (e.g. "Minnesota" not
+// "Vikings", "LA Rams" not "Rams") -- same convention as NFL_2023-2025.
+// Caught and fixed 2026-08-22 after the first pass used nicknames and
+// rendered with no team colors.
 const NFL_2022_PLAYOFFS = brChampHalf({
   east: {
-    r1: [["Vikings", "166.95", "Bears", "167.85"], ["Falcons", "166.25", "Lions", "162.85"],
-         ["Eagles", "184.7", "Giants", "109.3"], ["Rams", "141.75", "Saints", "107.6"]],
-    r2: [["Bears", "177.45", "Falcons", "227.4"], ["Eagles", "181.60", "Rams", "171.7"]],
-    r3: ["Falcons", "190.25", "Eagles", "218.75"],
-    lr1: [["Lions", "216.5", "Texans", "97.8"], ["Vikings", "244.15", "Colts", "161.7"]],
-    lr2w: ["Lions", "237.8", "Vikings", "173.9"],
-    lr2l: ["Texans", "223.85", "Colts", "165.75"],
-    r2lose: ["Bears", "129.6", "Jets", "185.15"],
+    r1: [["Minnesota", "166.95", "Chicago", "167.85"], ["Atlanta", "166.25", "Detroit", "162.85"],
+         ["Philadelphia", "184.7", "NY Giants", "109.3"], ["LA Rams", "141.75", "New Orleans", "107.6"]],
+    r2: [["Chicago", "177.45", "Atlanta", "227.4"], ["Philadelphia", "181.60", "LA Rams", "171.7"]],
+    r3: ["Atlanta", "190.25", "Philadelphia", "218.75"],
+    lr1: [["Detroit", "216.5", "Houston", "97.8"], ["Minnesota", "244.15", "Indianapolis", "161.7"]],
+    lr2w: ["Detroit", "237.8", "Minnesota", "173.9"],
+    lr2l: ["Houston", "223.85", "Indianapolis", "165.75"],
+    r2lose: ["Chicago", "129.6", "NY Jets", "185.15"],
   },
   west: {
-    r1: [["Jets", "161.15", "Colts", "110.3"], ["Texans", "171.3", "Broncos", "195.15"],
-         ["Bengals", "195.7", "Dolphins", "151.95"], ["Chargers", "211.55", "Bills", "139.9"]],
-    r2: [["Jets", "201.30", "Broncos", "241.9"], ["Bengals", "196.3", "Chargers", "172.5"]],
-    r3: ["Broncos", "311.2", "Bengals", "203.25"],
-    lr1: [["Saints", "170.85", "Bills", "152.75"], ["Dolphins", "227.4", "Giants", "118.25"]],
-    lr2w: ["Saints", "199.45", "Dolphins", "199.15"],
-    lr2l: ["Bills", "133.35", "Giants", "115.05"],
-    r2lose: ["Chargers", "182.35", "Rams", "167.45"],
+    r1: [["NY Jets", "161.15", "Indianapolis", "110.3"], ["Houston", "171.3", "Denver", "195.15"],
+         ["Cincinnati", "195.7", "Miami", "151.95"], ["LA Chargers", "211.55", "Buffalo", "139.9"]],
+    r2: [["NY Jets", "201.30", "Denver", "241.9"], ["Cincinnati", "196.3", "LA Chargers", "172.5"]],
+    r3: ["Denver", "311.2", "Cincinnati", "203.25"],
+    lr1: [["New Orleans", "170.85", "Buffalo", "152.75"], ["Miami", "227.4", "NY Giants", "118.25"]],
+    lr2w: ["New Orleans", "199.45", "Miami", "199.15"],
+    lr2l: ["Buffalo", "133.35", "NY Giants", "115.05"],
+    r2lose: ["LA Chargers", "182.35", "LA Rams", "167.45"],
   },
-  champ: ["Eagles", "165.45", "Broncos", "150.05"],
-  third: ["Falcons", "223.6", "Bengals", "156.35"],
-  fifth: ["Jets", "168.15", "Chargers", "154.95"],
-  seventh: ["Bears", "71.9", "Rams", "158.5"],
-  ninth: ["Lions", "200.85", "Saints", "183.7"],
-  eleventh: ["Vikings", "177.3", "Dolphins", "225.1"],
-  thirteenth: ["Texans", "144.85", "Bills", "150.95"],
-  fifteenth: ["Colts", "138.1", "Giants", "76.9"],
+  champ: ["Philadelphia", "165.45", "Denver", "150.05"],
+  third: ["Atlanta", "223.6", "Cincinnati", "156.35"],
+  fifth: ["NY Jets", "168.15", "LA Chargers", "154.95"],
+  seventh: ["Chicago", "71.9", "LA Rams", "158.5"],
+  ninth: ["Detroit", "200.85", "New Orleans", "183.7"],
+  eleventh: ["Minnesota", "177.3", "Miami", "225.1"],
+  thirteenth: ["Houston", "144.85", "Buffalo", "150.95"],
+  fifteenth: ["Indianapolis", "138.1", "NY Giants", "76.9"],
   banners: BR_BANNERS, brMainPaths: BR_MAIN_PATHS, logo: "NFL", logoSrc: NFL_MARK,
   championSub: "PainBowl I",
   champSlots: [[448, 16, 100, 150, "Trophy", NFL_TROPHY], [448, 334, 100, 100, "PFA", PFA_MARK]],
@@ -4109,36 +4116,37 @@ const NFL_2022_PLAYOFFS = brChampHalf({
 
 // --- 2022 NFL, ranks 17-32 (consolation half) --------------------------------
 // Same source/confirmation as the playoffs half above -- same conference-
-// mixing rule applies throughout the ladder here too.
+// mixing rule applies throughout the ladder here too. Same city/location
+// naming fix as the playoffs half.
 const NFL_2022_CONSOLATION = brChampHalf({
   east: {
-    r1: [["Cardinals", "118.90", "Commanders", "125.35"], ["Packers", "117.50", "Buccaneers", "104.35"],
-         ["Cowboys", "131.90", "Panthers", "109.90"], ["Seahawks", "131.55", "49ers", "111.60"]],
-    r2: [["Commanders", "88.30", "Packers", "157.2"], ["Cowboys", "159.45", "Seahawks", "159.00"]],
-    r3: ["Packers", "119.2", "Cowboys", "168.05"],
-    lr1: [["Cardinals", "122.4", "Steelers", "215"], ["Buccaneers", "132.75", "Chiefs", "165.25"]],
-    lr2w: ["Steelers", "196.5", "Chiefs", "149.75"],
-    lr2l: ["Cardinals", "139.45", "Buccaneers", "78.7"],
-    r2lose: ["Commanders", "122.8", "Browns", "131.65"],
+    r1: [["Arizona", "118.90", "Washington", "125.35"], ["Green Bay", "117.50", "Tampa Bay", "104.35"],
+         ["Dallas", "131.90", "Carolina", "109.90"], ["Seattle", "131.55", "San Francisco", "111.60"]],
+    r2: [["Washington", "88.30", "Green Bay", "157.2"], ["Dallas", "159.45", "Seattle", "159.00"]],
+    r3: ["Green Bay", "119.2", "Dallas", "168.05"],
+    lr1: [["Arizona", "122.4", "Pittsburgh", "215"], ["Tampa Bay", "132.75", "Kansas City", "165.25"]],
+    lr2w: ["Pittsburgh", "196.5", "Kansas City", "149.75"],
+    lr2l: ["Arizona", "139.45", "Tampa Bay", "78.7"],
+    r2lose: ["Washington", "122.8", "Cleveland", "131.65"],
   },
   west: {
-    r1: [["Jaguars", "171.00", "Steelers", "148.00"], ["Chiefs", "102.20", "Browns", "117.10"],
-         ["Ravens", "131.30", "Titans", "127.90"], ["Raiders", "206.30", "Patriots", "107.25"]],
-    r2: [["Jaguars", "143.65", "Browns", "135.2"], ["Ravens", "153.7", "Raiders", "189.7"]],
-    r3: ["Jaguars", "135.65", "Raiders", "203.2"],
-    lr1: [["Panthers", "202.6", "Titans", "124.60"], ["49ers", "118.70", "Patriots", "139.55"]],
-    lr2w: ["Panthers", "171.2", "Patriots", "128.9"],
-    lr2l: ["Titans", "94.7", "49ers", "179.1"],
-    r2lose: ["Seahawks", "102.6", "Ravens", "86.05"],
+    r1: [["Jacksonville", "171.00", "Pittsburgh", "148.00"], ["Kansas City", "102.20", "Cleveland", "117.10"],
+         ["Baltimore", "131.30", "Tennessee", "127.90"], ["Las Vegas", "206.30", "New England", "107.25"]],
+    r2: [["Jacksonville", "143.65", "Cleveland", "135.2"], ["Baltimore", "153.7", "Las Vegas", "189.7"]],
+    r3: ["Jacksonville", "135.65", "Las Vegas", "203.2"],
+    lr1: [["Carolina", "202.6", "Tennessee", "124.60"], ["San Francisco", "118.70", "New England", "139.55"]],
+    lr2w: ["Carolina", "171.2", "New England", "128.9"],
+    lr2l: ["Tennessee", "94.7", "San Francisco", "179.1"],
+    r2lose: ["Seattle", "102.6", "Baltimore", "86.05"],
   },
-  champ: ["Cowboys", "151.75", "Raiders", "143.6"],
-  third: ["Packers", "135.4", "Jaguars", "80.05"],
-  fifth: ["Browns", "166.15", "Seahawks", "143.1"],
-  seventh: ["Commanders", "110", "Ravens", "144.5"],
-  ninth: ["Steelers", "165.3", "Panthers", "133.75"],
-  eleventh: ["Chiefs", "86.1", "Patriots", "106.45"],
-  thirteenth: ["Cardinals", "130.4", "49ers", "145.8"],
-  fifteenth: ["Buccaneers", "214.8", "Titans", "91.2"],
+  champ: ["Dallas", "151.75", "Las Vegas", "143.6"],
+  third: ["Green Bay", "135.4", "Jacksonville", "80.05"],
+  fifth: ["Cleveland", "166.15", "Seattle", "143.1"],
+  seventh: ["Washington", "110", "Baltimore", "144.5"],
+  ninth: ["Pittsburgh", "165.3", "Carolina", "133.75"],
+  eleventh: ["Kansas City", "86.1", "New England", "106.45"],
+  thirteenth: ["Arizona", "130.4", "San Francisco", "145.8"],
+  fifteenth: ["Tampa Bay", "214.8", "Tennessee", "91.2"],
   banners: BR_BANNERS, brMainPaths: BR_MAIN_PATHS, logo: "NFL", logoSrc: NFL_MARK,
   topWinnerY: 171, topPick: "9th pick", topLabel: "17th place",
   champSlots: [[448, 324, 100, 110, "PFA", PFA_MARK]],
