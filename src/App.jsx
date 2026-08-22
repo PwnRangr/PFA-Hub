@@ -336,11 +336,8 @@ const HISTORICAL_FINAL_ORDER = {
   },
   2022: {
     // Pre-2023 backfill, ongoing 2026-08-21 -- matches GRID_BRACKETS[2022]
-    // above exactly, same tiers done/open. 3 tiers still fully open (XFL,
-    // USFL, NFL). FLHS's order AND its GRID_BRACKETS visual bracket are
-    // both now done -- the 4 missing team colors it needed came in
-    // directly from her (sampled from her own spreadsheet screenshots),
-    // see FLHS_CLR's own comment.
+    // above exactly, same tiers done/open. 2 tiers still fully open (USFL,
+    // NFL). FLHS and XFL (same 20-team shape) are both done now.
     SEC: [
       "Ole Miss", "Vanderbilt", "Texas A&M", "Miss State", "Tennessee", "Auburn", "Kentucky", "Missouri",
       "Arkansas", "Georgia", "Florida", "Oklahoma", "South Carolina", "LSU", "Texas", "Alabama",
@@ -384,16 +381,26 @@ const HISTORICAL_FINAL_ORDER = {
     // on her sheet (Champion, 3rd, 5th, ... 19th) agrees with this order,
     // AND her sheet's own separate pick/finish reference table (a
     // pre-computed 1-20 standings list) agrees with it too. Four of these
-    // 20 teams (Coral Gables, Columbus, Flanigan, Coral Reef) don't exist
-    // in FLHS_CLR at all -- that palette was only ever built from the
-    // 2023-2025-era 16-team roster. Colors needed from her before
-    // GRID_BRACKETS[2022].FLHS (the visual bracket) can render correctly;
-    // this order itself doesn't depend on color and is confirmed as-is.
-    // "Deerfield Bch" on her sheet -> "Deerfield", matching FLHS_CLR's key.
+    // 20 teams (Coral Gables, Columbus, Flanigan, Coral Reef) needed new
+    // FLHS_CLR entries -- done, colors sampled directly from her
+    // screenshots, see FLHS_CLR's own comment. "Deerfield Bch" on her
+    // sheet -> "Deerfield", matching FLHS_CLR's existing key.
     FLHS: [
       "Miami Senior", "Southwest", "Miami Beach", "Columbus", "Western", "West Boca", "Boca Raton", "Deerfield",
       "Palmetto", "Coral Gables", "Flanigan", "Taravella", "Cypress Bay", "Coral Glades", "Miami Dade", "Coral Springs",
       "West Broward", "Coral Reef", "Dr Krop", "Stoneman",
+    ],
+    // Same 20-team/4-round/bye shape as FLHS above -- confirmed two
+    // independent ways: head-to-head scores AND all 5 of the sheet's own
+    // explicit W/L + placement labels (this sheet's reference table only
+    // lists draft-pick order, no finish column, so no shortcut available
+    // here -- derived entirely from the bracket's own games). Name
+    // normalizations: sheet uses ALL CAPS throughout, converted to
+    // XFL_CLR's Title Case keys; "SF" -> "San Francisco".
+    XFL: [
+      "Birmingham", "Brooklyn", "St Louis", "Dallas", "Tampa Bay", "New York", "New Jersey", "LAX",
+      "Seattle", "Las Vegas", "Boston", "San Francisco", "Orlando", "Houston", "DC", "Omaha",
+      "Chicago", "LAW", "Memphis", "Atlanta",
     ],
   },
   2024: {
@@ -8458,6 +8465,119 @@ const XFL_2023_CONSOLATION = {
   ],
 };
 
+// --- 2022 XFL, ranks 1-10 (championship half) -------------------------------
+// Transcribed from her PFA_Playoffs_2022_-_XFL.csv export. Same 20-team,
+// 4-round (Week 14-17) shape as FLHS 2022 and USFL/XFL's own 2023-2025
+// data -- usflXflMainBoxes/usflXflPlaceSection, not r3ChampHalf. Every
+// placement cross-validated two independent ways: head-to-head scores AND
+// all 5 of the sheet's own explicit W/L + placement labels agree with zero
+// discrepancies (this sheet's reference table only lists draft-pick order,
+// not a finish column like FLHS's did, so the order below was derived
+// entirely from the bracket's own games, not shortcut). "9th place" is a
+// genuine single game in Week 17, same bye pattern as FLHS/USFL/XFL's
+// other 9th/19th games. Name normalizations: sheet uses ALL CAPS
+// throughout ("NEW JERSEY", "ST LOUIS", etc.) -- converted to XFL_CLR's
+// exact Title Case keys; sheet's "SF" -> "San Francisco".
+//
+// PLACEMENT NOTE for whoever edits this file next: this block lives here,
+// immediately after XFL_2023_CONSOLATION, and NOT up near FLHS's other
+// entries or any other tier's 2022 block, ON PURPOSE. It depends on
+// usflXflMainBoxes/USFLXFL_PLACE_PATHS_LIVE/USFLXFL_CHAMP_PLACES/
+// USFLXFL_CONSO_PLACES, which are declared later in the file than FLHS's
+// other constants -- putting a 20-team-shape block near a 16-team tier's
+// other entries caused a real "Cannot access before initialization"
+// crash (blank screen, no visible error) for FLHS_2022 earlier this same
+// session, before the fix moved it to sit near its actual dependencies
+// like this one already does. See mistakes.md for the full writeup.
+const XFL_2022_PLAYOFFS = {
+  colors: XFL_CLR, logoSrc: XFL_MARK,
+  sections: [
+    {
+      banners: XFL_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "XFL",
+      slots: [[448, 4, 100, 84, "Trophy", XFL_TROPHY], [448, 200, 100, 96, "PFA", PFA_MARK]],
+      champion: { y: 114, label: "Champion", team: r3Winner(["Birmingham", "205.85", "Brooklyn", "190.65"]), sub: "1st place" },
+      boxes: usflXflMainBoxes({
+        playInLeft: ["New Jersey", "232.10", "Las Vegas", "156.45"],
+        byeTop: ["St Louis", "214.95", "New Jersey", "200.00"],
+        byeBot: ["New York", "161.20", "Birmingham", "235.80"],
+        semiLeft: ["St Louis", "167.40", "Birmingham", "194.40"],
+        final: ["Birmingham", "205.85", "Brooklyn", "190.65"],
+        semiRight: ["Dallas", "186.10", "Brooklyn", "243.55"],
+        byeTopR: ["LAX", "208.15", "Dallas", "233.75"],
+        byeBotR: ["Tampa Bay", "215.30", "Brooklyn", "219.30"],
+        playInRight: ["Dallas", "207.70", "Seattle", "202.45"],
+      }),
+    },
+    {
+      h: 420,
+      paths: USFLXFL_PLACE_PATHS_LIVE,
+      boxes: [
+        ...r3Split(336, 33, 560, 33, ["St Louis", "155.00", "Dallas", "115.90"]),
+        ...r3Stack(224, 95, ["New Jersey", "210.85", "New York", "227.90"]),
+        ...r3Stack(672, 95, ["LAX", "176.65", "Tampa Bay", "228.50"]),
+        ...r3Split(336, 114, 560, 114, ["New York", "219.45", "Tampa Bay", "244.75"]),
+        ...r3Split(336, 209, 560, 209, ["New Jersey", "173.05", "LAX", "168.60"]),
+      ],
+      series: [
+        [224, 341, "", "", ""], [336, 341, "242.50", "Las Vegas", "242.50", 0, true],
+        [560, 341, "258.60", "Seattle", "258.60", 1, true], [672, 341, "", "", ""],
+      ],
+      winners: [
+        [448, 14, "St Louis"], [448, 95, "Tampa Bay"],
+        [448, 190, "New Jersey"], [448, 341, "Seattle"],
+      ],
+      places: USFLXFL_CHAMP_PLACES,
+    },
+  ],
+};
+
+// --- 2022 XFL, ranks 11-20 (consolation half) -------------------------------
+// Same source/confirmation as the playoffs half above. "19th place" is the
+// other genuine single-game-in-week-17 case.
+const XFL_2022_CONSOLATION = {
+  colors: XFL_CLR, logoSrc: XFL_MARK,
+  sections: [
+    {
+      banners: XFL_CONSO_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "XFL",
+      slots: [[448, 226, 100, 70, "PFA", PFA_MARK]],
+      winners: [[448, 95, r3Winner(["San Francisco", "148.55", "Boston", "189.55"])]],
+      places: [[448, 114, "3rd pick", "11th place"]],
+      boxes: usflXflMainBoxes({
+        playInLeft: ["Atlanta", "110.20", "Omaha", "125.75"],
+        byeTop: ["Houston", "151.20", "Omaha", "151.05"],
+        byeBot: ["San Francisco", "233.65", "Chicago", "160.45"],
+        semiLeft: ["Houston", "138.45", "San Francisco", "237.80"],
+        final: ["San Francisco", "148.55", "Boston", "189.55"],
+        semiRight: ["Orlando", "200.90", "Boston", "222.95"],
+        byeTopR: ["Orlando", "201.90", "LAW", "159.15"],
+        byeBotR: ["DC", "202.80", "Boston", "246.10"],
+        playInRight: ["Memphis", "121.75", "LAW", "142.10"],
+      }),
+    },
+    {
+      h: 470,
+      paths: USFLXFL_PLACE_PATHS_LIVE,
+      boxes: [
+        ...r3Split(336, 33, 560, 33, ["Houston", "108.50", "Orlando", "159.60"]),
+        ...r3Stack(224, 95, ["Omaha", "235.40", "Chicago", "229.60"]),
+        ...r3Stack(672, 95, ["LAW", "118.90", "DC", "182.35"]),
+        ...r3Split(336, 114, 560, 114, ["Omaha", "125.50", "DC", "176.55"]),
+        ...r3Split(336, 209, 560, 209, ["Chicago", "147.25", "LAW", "140.00"]),
+      ],
+      series: [
+        [224, 341, "", "", ""], [336, 341, "161.40", "Atlanta", "161.40", 0, true],
+        [560, 341, "181.35", "Memphis", "181.35", 1, true], [672, 341, "", "", ""],
+      ],
+      winners: [
+        [448, 14, "Orlando"], [448, 95, "DC"],
+        [448, 190, "Chicago"], [448, 341, "Memphis"],
+      ],
+      places: USFLXFL_CONSO_PLACES,
+      footer: [112, 420, 772, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+    },
+  ],
+};
+
 
 // "division-playin" returns a single flat array — the half split (which
 // seeds sit left vs right) is baked into the slotting below, not a live
@@ -9193,7 +9313,7 @@ const GRID_BRACKETS = {
   2022: {
     // Pre-2023 backfill, ongoing 2026-08-21 -- transcribed from her
     // PFA_Playoffs_2022 CSV exports as they come in, full read-back
-    // confirmed for each. 3 tiers still open.
+    // confirmed for each. 2 tiers still open.
     SEC: { playoffs: SEC_2022_PLAYOFFS, consolation: SEC_2022_CONSOLATION },
     "BIG XII": { playoffs: XII_2022_PLAYOFFS, consolation: XII_2022_CONSOLATION },
     ACC: { playoffs: ACC_2022_PLAYOFFS, consolation: ACC_2022_CONSOLATION },
@@ -9208,6 +9328,10 @@ const GRID_BRACKETS = {
     // Genuinely different shape from every tier above -- 20 teams, 4
     // rounds, byes -- see the note on FLHS_2022_PLAYOFFS itself.
     FLHS: { playoffs: FLHS_2022_PLAYOFFS, consolation: FLHS_2022_CONSOLATION },
+    // Same 20-team shape as FLHS above. Unlike FLHS, this one's data
+    // constants live right next to XFL_2023 (not up here) -- see the
+    // placement note on XFL_2022_PLAYOFFS itself for why that matters.
+    XFL: { playoffs: XFL_2022_PLAYOFFS, consolation: XFL_2022_CONSOLATION },
   },
 };
 
