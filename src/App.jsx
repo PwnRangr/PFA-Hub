@@ -336,8 +336,8 @@ const HISTORICAL_FINAL_ORDER = {
   },
   2022: {
     // Pre-2023 backfill, ongoing 2026-08-21 -- matches GRID_BRACKETS[2022]
-    // above exactly, same tiers done/open. 2 tiers still fully open (USFL,
-    // NFL). FLHS and XFL (same 20-team shape) are both done now.
+    // above exactly, same tiers done/open. 1 tier still fully open (NFL).
+    // FLHS, XFL, and USFL (same 20-team shape) are all done now.
     SEC: [
       "Ole Miss", "Vanderbilt", "Texas A&M", "Miss State", "Tennessee", "Auburn", "Kentucky", "Missouri",
       "Arkansas", "Georgia", "Florida", "Oklahoma", "South Carolina", "LSU", "Texas", "Alabama",
@@ -401,6 +401,18 @@ const HISTORICAL_FINAL_ORDER = {
       "Birmingham", "Brooklyn", "St Louis", "Dallas", "Tampa Bay", "New York", "New Jersey", "LAX",
       "Seattle", "Las Vegas", "Boston", "San Francisco", "Orlando", "Houston", "DC", "Omaha",
       "Chicago", "LAW", "Memphis", "Atlanta",
+    ],
+    // Same 20-team/4-round/bye shape as FLHS/XFL above. Confirmed via the
+    // sheet's own explicit W/L + placement labels (Champion through 19th
+    // place) with zero discrepancies against head-to-head scores. Both
+    // 9th and 19th place were true byes-then-single-game (Week 15/16
+    // marked *bye on her sheet), same pattern as FLHS/XFL 2022 -- not a
+    // real 3-week series. All 20 team names already exist in USFL_CLR
+    // from 2023-2025, so no new color entries were needed here.
+    USFL: [
+      "Los Angeles", "Oklahoma", "Jacksonville", "Boston", "Philadelphia", "Oakland", "Orlando", "Arizona",
+      "San Antonio", "Houston", "Michigan", "Memphis", "Denver", "Tampa Bay", "New Jersey", "Birmingham",
+      "Chicago", "Detroit", "Washington", "Pittsburgh",
     ],
   },
   2024: {
@@ -8578,6 +8590,116 @@ const XFL_2022_CONSOLATION = {
   ],
 };
 
+// --- 2022 USFL, ranks 1-10 (championship half) ------------------------------
+// Transcribed from her PFA_Playoffs_2022_-_USFL.csv export. Same 20-team,
+// 4-round (Week 14-17) shape as FLHS/XFL 2022 -- usflXflMainBoxes/
+// USFLXFL_PLACE_PATHS_LIVE/USFLXFL_CHAMP_PLACES/USFLXFL_CONSO_PLACES, not
+// r3ChampHalf. Every placement cross-validated against the sheet's own
+// explicit W/L + placement labels (Champion through 19th place) with zero
+// discrepancies against head-to-head scores. "9th place" is a genuine
+// single game in Week 17, same true-bye pattern (marked *bye on her sheet
+// for weeks 15-16) as FLHS/XFL's own 9th/19th games -- not a real 3-week
+// series. All 20 team names already exist in USFL_CLR from 2023-2025, so
+// no new color entries were needed here (unlike FLHS 2022).
+//
+// PLACEMENT NOTE for whoever edits this file next: this block lives here,
+// immediately after XFL_2022_CONSOLATION, and NOT up near FLHS's other
+// entries or any other tier's 2022 block, ON PURPOSE -- same reason as
+// XFL_2022_PLAYOFFS above. It depends on usflXflMainBoxes/
+// USFLXFL_PLACE_PATHS_LIVE/USFLXFL_CHAMP_PLACES/USFLXFL_CONSO_PLACES,
+// which are declared later in the file than FLHS's other constants.
+// Putting a 20-team-shape block near a 16-team tier's other entries caused
+// a real blank-screen TDZ crash earlier this same backfill effort -- see
+// mistakes.md.
+const USFL_2022_PLAYOFFS = {
+  colors: USFL_CLR, logoSrc: USFL_MARK,
+  sections: [
+    {
+      banners: USFL_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "USFL",
+      slots: [[448, 4, 100, 84, "Trophy", USFL_TROPHY], [448, 200, 100, 96, "PFA", PFA_MARK]],
+      champion: { y: 114, label: "Champion", team: r3Winner(["Los Angeles", "223.95", "Oklahoma", "198.25"]), sub: "1st place" },
+      boxes: usflXflMainBoxes({
+        playInLeft: ["Houston", "217.20", "Los Angeles", "219.05"],
+        byeTop: ["Oakland", "204.40", "Los Angeles", "226.55"],
+        byeBot: ["Boston", "226.6", "Arizona", "189.4"],
+        semiLeft: ["Los Angeles", "231.4", "Boston", "181.25"],
+        final: ["Los Angeles", "223.95", "Oklahoma", "198.25"],
+        semiRight: ["Jacksonville", "184.75", "Oklahoma", "210.15"],
+        byeTopR: ["Philadelphia", "180.8", "Jacksonville", "187.00"],
+        byeBotR: ["Oklahoma", "200.1", "Orlando", "195.6"],
+        playInRight: ["San Antonio", "184.45", "Jacksonville", "231.45"],
+      }),
+    },
+    {
+      h: 420,
+      paths: USFLXFL_PLACE_PATHS_LIVE,
+      boxes: [
+        ...r3Split(336, 33, 560, 33, ["Boston", "140", "Jacksonville", "178.75"]),
+        ...r3Stack(224, 95, ["Oakland", "215.6", "Arizona", "198.45"]),
+        ...r3Stack(672, 95, ["Philadelphia", "247.35", "Orlando", "234.95"]),
+        ...r3Split(336, 114, 560, 114, ["Oakland", "162.65", "Philadelphia", "198.1"]),
+        ...r3Split(336, 209, 560, 209, ["Arizona", "133.6", "Orlando", "240.45"]),
+      ],
+      series: [
+        [224, 341, "", "", ""], [336, 341, "157.9", "Houston", "157.9", 0, true],
+        [560, 341, "204.5", "San Antonio", "204.5", 1, true], [672, 341, "", "", ""],
+      ],
+      winners: [
+        [448, 14, "Oakland"], [448, 95, "Boston"],
+        [448, 190, "Philadelphia"], [448, 341, "San Antonio"],
+      ],
+      places: USFLXFL_CHAMP_PLACES,
+    },
+  ],
+};
+
+// --- 2022 USFL, ranks 11-20 (consolation half) -------------------------------
+// Same source/confirmation as the playoffs half above. "19th place" is the
+// other genuine single-game-in-week-17 case (Pittsburgh's Relegation Bowl
+// loss).
+const USFL_2022_CONSOLATION = {
+  colors: USFL_CLR, logoSrc: USFL_MARK,
+  sections: [
+    {
+      banners: USFL_CONSO_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "USFL",
+      slots: [[448, 226, 100, 70, "PFA", PFA_MARK]],
+      winners: [[448, 95, r3Winner(["Memphis", "121.85", "Michigan", "213.1"])]],
+      places: [[448, 114, "3rd pick", "11th place"]],
+      boxes: usflXflMainBoxes({
+        playInLeft: ["Washington", "150.35", "Chicago", "164.75"],
+        byeTop: ["Denver", "162.2", "Chicago", "135.35"],
+        byeBot: ["Birmingham", "199.90", "Memphis", "212.35"],
+        semiLeft: ["Denver", "151", "Memphis", "254.95"],
+        final: ["Memphis", "121.85", "Michigan", "213.1"],
+        semiRight: ["Michigan", "188.2", "Tampa Bay", "153.35"],
+        byeTopR: ["New Jersey", "171.70", "Michigan", "174.35"],
+        byeBotR: ["Detroit", "162.15", "Tampa Bay", "186.75"],
+        playInRight: ["Michigan", "186.65", "Pittsburgh", "160.75"],
+      }),
+    },
+    {
+      h: 470,
+      paths: USFLXFL_PLACE_PATHS_LIVE,
+      boxes: [
+        ...r3Split(336, 33, 560, 33, ["Denver", "151.85", "Tampa Bay", "130.25"]),
+        ...r3Stack(224, 95, ["Chicago", "183.3", "Birmingham", "197.35"]),
+        ...r3Stack(672, 95, ["New Jersey", "212.55", "Detroit", "177.35"]),
+        ...r3Split(336, 114, 560, 114, ["Birmingham", "156.55", "New Jersey", "196.25"]),
+        ...r3Split(336, 209, 560, 209, ["Chicago", "190.2", "Detroit", "93.5"]),
+      ],
+      series: [
+        [224, 341, "", "", ""], [336, 341, "232.85", "Washington", "232.85", 0, true],
+        [560, 341, "117.3", "Pittsburgh", "117.3", 1, true], [672, 341, "", "", ""],
+      ],
+      winners: [
+        [448, 14, "Denver"], [448, 95, "New Jersey"],
+        [448, 190, "Birmingham"], [448, 341, "Washington"],
+      ],
+      places: USFLXFL_CONSO_PLACES,
+      footer: [112, 420, 772, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+    },
+  ],
+};
 
 // "division-playin" returns a single flat array — the half split (which
 // seeds sit left vs right) is baked into the slotting below, not a live
@@ -9313,7 +9435,7 @@ const GRID_BRACKETS = {
   2022: {
     // Pre-2023 backfill, ongoing 2026-08-21 -- transcribed from her
     // PFA_Playoffs_2022 CSV exports as they come in, full read-back
-    // confirmed for each. 2 tiers still open.
+    // confirmed for each. 1 tier still open (NFL).
     SEC: { playoffs: SEC_2022_PLAYOFFS, consolation: SEC_2022_CONSOLATION },
     "BIG XII": { playoffs: XII_2022_PLAYOFFS, consolation: XII_2022_CONSOLATION },
     ACC: { playoffs: ACC_2022_PLAYOFFS, consolation: ACC_2022_CONSOLATION },
@@ -9332,6 +9454,10 @@ const GRID_BRACKETS = {
     // constants live right next to XFL_2023 (not up here) -- see the
     // placement note on XFL_2022_PLAYOFFS itself for why that matters.
     XFL: { playoffs: XFL_2022_PLAYOFFS, consolation: XFL_2022_CONSOLATION },
+    // Same 20-team shape as FLHS/XFL above. Its data constants live right
+    // next to XFL_2022_CONSOLATION (not up here) -- see the placement note
+    // on USFL_2022_PLAYOFFS itself for why that matters.
+    USFL: { playoffs: USFL_2022_PLAYOFFS, consolation: USFL_2022_CONSOLATION },
   },
 };
 
