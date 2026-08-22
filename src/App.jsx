@@ -2611,7 +2611,9 @@ const ROSTER_LINKS = {
   "pittsburgh steelers": "https://sleeper.com/roster/1316582839847759872/10",
   "indianapolis colts": "https://sleeper.com/roster/1316582839847759872/20",
   "philadelphia eagles": "https://sleeper.com/roster/1316582839847759872/29",
-  "oakland raiders": "https://sleeper.com/roster/1316582839847759872/2",
+  // Renamed from "oakland raiders" 2026-08-22 -- real franchise relocation,
+  // confirmed directly against her current admin sheet.
+  "las vegas raiders": "https://sleeper.com/roster/1316582839847759872/2",
   "dallas cowboys": "https://sleeper.com/roster/1316582839847759872/9",
   "jacksonville jaguars": "https://sleeper.com/roster/1316582839847759872/4",
   "seattle seahawks": "https://sleeper.com/roster/1316582839847759872/11",
@@ -2723,8 +2725,12 @@ const ROSTER_LINKS = {
   "nc state wolfpack": "https://sleeper.com/roster/1317191636379254784/4",
   "georgiatech yellowjackets": "https://sleeper.com/roster/1317191636379254784/7",
 
-  // ---- BIG TEN (1317530523035242496) — 4 slots unfilled in source (skipped) ----
-  "the ohio state buckeyes": "https://sleeper.com/roster/1317530523035242496/4",
+  // ---- BIG TEN (1317530523035242496) — 2 slots still unfilled (Washington
+  // Huskies roster 1, Wisconsin Badgers roster 7) ----
+  // Roster 4/16 were swapped (Ohio State's name was sitting on UCLA's
+  // roster, and Ohio State's own roster had no entry at all) -- corrected
+  // 2026-08-22, confirmed directly: UCLA is roster 4, Ohio State is roster 16.
+  "ucla bruins": "https://sleeper.com/roster/1317530523035242496/4",
   "northwestern wildcats": "https://sleeper.com/roster/1317530523035242496/13",
   "indiana hoosiers": "https://sleeper.com/roster/1317530523035242496/11",
   "cal golden bears": "https://sleeper.com/roster/1317530523035242496/6",
@@ -2737,6 +2743,7 @@ const ROSTER_LINKS = {
   "maryland terps": "https://sleeper.com/roster/1317530523035242496/10",
   "rutgers scarlet knights": "https://sleeper.com/roster/1317530523035242496/14",
   "usc trojans": "https://sleeper.com/roster/1317530523035242496/5",
+  "ohio state buckeyes": "https://sleeper.com/roster/1317530523035242496/16",
 
   // ---- SUN BELT (1317557888784306176) — corrected ID; 1 slot unfilled ----
   "georgia state panthers": "https://sleeper.com/roster/1317557888784306176/7",
@@ -2788,9 +2795,11 @@ const ROSTER_LINKS = {
   "fordham rams": "https://sleeper.com/roster/1317562012057735168/1",
 
   // ---- SWAC (1317574770207789056) — corrected ID; 6 slots unfilled ----
-  // NOTE: "PFA VP" is an odd team name (roster 16) — kept as-is since it may
-  // be a real Sleeper display name, but worth a sanity check.
-  "pfa vp": "https://sleeper.com/roster/1317574770207789056/16",
+  // Roster 16's key was "pfa vp" -- that's DirtyByrd30's title (PFA VP), not
+  // a team name; the real team name had been typed "Jackston State" (typo)
+  // on her sheet. Renamed 2026-08-22, confirmed directly, typo corrected to
+  // "Jackson State".
+  "jackson state tigers": "https://sleeper.com/roster/1317574770207789056/16",
   "mississippi valley devils": "https://sleeper.com/roster/1317574770207789056/12",
   "bethune-cookman wildcats": "https://sleeper.com/roster/1317574770207789056/10",
   "grambling state tigers": "https://sleeper.com/roster/1317574770207789056/5",
