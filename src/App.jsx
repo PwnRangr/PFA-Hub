@@ -336,7 +336,7 @@ const HISTORICAL_FINAL_ORDER = {
   },
   2022: {
     // Pre-2023 backfill, ongoing 2026-08-21 -- matches GRID_BRACKETS[2022]
-    // above exactly, same tiers done/open. 6 tiers still open.
+    // above exactly, same tiers done/open. 4 tiers still open.
     SEC: [
       "Ole Miss", "Vanderbilt", "Texas A&M", "Miss State", "Tennessee", "Auburn", "Kentucky", "Missouri",
       "Arkansas", "Georgia", "Florida", "Oklahoma", "South Carolina", "LSU", "Texas", "Alabama",
@@ -364,6 +364,14 @@ const HISTORICAL_FINAL_ORDER = {
     IVY: [
       "Brown", "Colgate", "Penn", "Yale", "Harvard", "Georgetown", "Bucknell", "Columbia",
       "Lehigh", "Dartmouth", "MIT", "Holy Cross", "Cornell", "Fordham", "Princeton", "Lafayette",
+    ],
+    SWAC: [
+      "Alabama St", "Alabama A&M", "Florida A&M", "Morgan St", "Pine Bluff", "Norfolk St", "Southern U", "Jackson St",
+      "NC Central", "Alcorn", "Grambling", "PVAM", "Miss Valley", "SC St", "Bethune", "TX Southern",
+    ],
+    GLIAC: [
+      "Davenport", "Ohio N", "Wayne State", "Northwood", "Heidelberg", "JCU", "N Michigan", "Muskingum",
+      "Parkside", "Ferris State", "Baldwin", "Wilmington", "Purdue NW", "Mount Union", "Capital", "Lake Superior",
     ],
   },
   2024: {
@@ -6041,6 +6049,70 @@ const GLIAC_2023_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2022 GLIAC, ranks 1-8 (championship half) ------------------------------
+// Transcribed from her PFA_Playoffs_2022_-_GLIAC.csv export. Every winner
+// cross-validated two independent ways (head-to-head score comparison AND
+// the sheet's own explicit W/L + placement labels), zero discrepancies.
+// Full read-back confirmed 2026-08-21 -- including the 9th-place
+// consolation margin (Parkside 160.30 over Ferris State 159.30), a
+// razor-thin 1.00-point gap flagged to her explicitly and confirmed
+// correct as transcribed, not a typo. Name normalizations (matching
+// GLIAC_CLR): sheet's "Heidelburg" -> "Heidelberg" (her sheet's spelling,
+// not the site's); "Ohio Northern" -> "Ohio N"; "Purdue" -> "Purdue NW".
+// Left/right split by the same convention established for every prior
+// 2022 tier.
+const GLIAC_2022_PLAYOFFS = r3ChampHalf({
+  colors: GLIAC_CLR, logo: "GLIAC", logoSrc: GLIAC_MARK, trophy: GLIAC_TROPHY,
+  banners: GLIAC_BANNERS,
+  wk15: [
+    ["Northwood", "222.60", "N Michigan", "135.55"],
+    ["JCU", "159.30", "Davenport", "254.65"],
+    ["Ohio N", "261.15", "Muskingum", "234.70"],
+    ["Wayne State", "224.55", "Heidelberg", "178.70"],
+  ],
+  semis: [
+    ["Northwood", "241.30", "Davenport", "288.15"],
+    ["Ohio N", "270.95", "Wayne State", "233.35"],
+  ],
+  final: ["Davenport", "266.55", "Ohio N", "216.50"],
+  third: ["Northwood", "165.95", "Wayne State", "177.65"],
+  fifth: {
+    leftQual: ["N Michigan", "157.25", "JCU", "169.35"],
+    rightQual: ["Muskingum", "204.05", "Heidelberg", "221.50"],
+    final: ["JCU", "115.20", "Heidelberg", "183.45"],
+  },
+  seventh: ["N Michigan", "240.45", "Muskingum", "208.10"],
+});
+
+// --- 2022 GLIAC, ranks 9-16 (consolation half) ------------------------------
+// Same source/confirmation as the playoffs half above. Consolation
+// left/right split by structural analogy to the confirmed championship
+// split, same assumption pattern as every prior 2022 tier (confirmed
+// correct every time so far).
+const GLIAC_2022_CONSOLATION = r3ConsoHalf({
+  colors: GLIAC_CLR, logo: "GLIAC", logoSrc: GLIAC_MARK,
+  banners: GLIAC_CONSO_BANNERS,
+  wk15: [
+    ["Baldwin", "220.15", "Lake Superior", "198.40"],
+    ["Parkside", "265.95", "Mount Union", "156.65"],
+    ["Ferris State", "214.00", "Capital", "163.40"],
+    ["Purdue NW", "177.10", "Wilmington", "228.80"],
+  ],
+  semis: [
+    ["Baldwin", "165.55", "Parkside", "231.00"],
+    ["Ferris State", "205.50", "Wilmington", "193.20"],
+  ],
+  final: ["Parkside", "160.30", "Ferris State", "159.30"],
+  eleventh: ["Baldwin", "171.30", "Wilmington", "142.10"],
+  thirteenth: {
+    leftQual: ["Lake Superior", "165.30", "Mount Union", "290.60"],
+    rightQual: ["Capital", "144.60", "Purdue NW", "253.75"],
+    final: ["Mount Union", "213.50", "Purdue NW", "235.00"],
+  },
+  fifteenth: ["Lake Superior", "107.80", "Capital", "143.30"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // --- 2024 SWAC, ranks 1-8 (championship half) -------------------------------
 // Transcribed from her PFA_Playoffs_2024 - SWAC.csv export, same mirrored
 // bracket-sheet layout as FLHS/GLIAC 2024 above, confirmed 2026-08-17.
@@ -6154,6 +6226,73 @@ const SWAC_2023_CONSOLATION = r3ConsoHalf({
     final: ["Miss Valley", "221.30", "Alcorn", "153.95"],
   },
   fifteenth: ["Alabama A&M", "196.60", "Morgan St", "145.00"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
+// --- 2022 SWAC, ranks 1-8 (championship half) -------------------------------
+// Transcribed from her PFA_Playoffs_2022_-_SWAC.csv export. Every winner
+// cross-validated two independent ways (head-to-head score comparison AND
+// the sheet's own explicit W/L + placement labels), zero discrepancies.
+// Full read-back confirmed 2026-08-21. Name normalizations (matching
+// SWAC_CLR): sheet's "Alabama State" -> "Alabama St"; "Arkansas PB" ->
+// "Pine Bluff"; "Morgan State" -> "Morgan St"; "Jackson State" -> "Jackson
+// St"; "Norfolk State" -> "Norfolk St"; "SC State" -> "SC St". Plain
+// r3ChampHalf here, NOT r3ChampHalfBowl -- unlike 2023-2025, this sheet's
+// 7th-place game label is plain "7th Place" with no novelty bowl name
+// anywhere on it. If the 7-11 tradition existed in 2022 under some name,
+// it wasn't captured in this export; flagged to her, no name supplied, so
+// this year renders with the generic label until/unless one turns up.
+// Left/right split by the same convention established for every prior
+// 2022 tier.
+const SWAC_2022_PLAYOFFS = r3ChampHalf({
+  colors: SWAC_CLR, logo: "SWAC", logoSrc: SWAC_MARK, trophy: SWAC_TROPHY,
+  banners: SWAC_BANNERS,
+  wk15: [
+    ["Alabama St", "316.35", "Pine Bluff", "270.20"],
+    ["Southern U", "163.15", "Morgan St", "254.25"],
+    ["Jackson St", "178.00", "Alabama A&M", "251.80"],
+    ["Norfolk St", "199.40", "Florida A&M", "223.90"],
+  ],
+  semis: [
+    ["Alabama St", "225.60", "Morgan St", "223.85"],
+    ["Alabama A&M", "259.90", "Florida A&M", "176.05"],
+  ],
+  final: ["Alabama St", "168.00", "Alabama A&M", "150.30"],
+  third: ["Morgan St", "135.10", "Florida A&M", "172.00"],
+  fifth: {
+    leftQual: ["Pine Bluff", "244.85", "Southern U", "212.30"],
+    rightQual: ["Jackson St", "230.10", "Norfolk St", "271.90"],
+    final: ["Pine Bluff", "230.70", "Norfolk St", "155.05"],
+  },
+  seventh: ["Southern U", "238.70", "Jackson St", "234.05"],
+});
+
+// --- 2022 SWAC, ranks 9-16 (consolation half) -------------------------------
+// Same source/confirmation as the playoffs half above. Consolation
+// left/right split by structural analogy to the confirmed championship
+// split, same assumption pattern as every prior 2022 tier (confirmed
+// correct every time so far).
+const SWAC_2022_CONSOLATION = r3ConsoHalf({
+  colors: SWAC_CLR, logo: "SWAC", logoSrc: SWAC_MARK,
+  banners: SWAC_CONSO_BANNERS,
+  wk15: [
+    ["Miss Valley", "191.60", "TX Southern", "143.20"],
+    ["Alcorn", "208.35", "SC St", "193.35"],
+    ["PVAM", "254.35", "Bethune", "237.90"],
+    ["NC Central", "221.60", "Grambling", "215.70"],
+  ],
+  semis: [
+    ["Miss Valley", "194.40", "Alcorn", "172.90"],
+    ["PVAM", "231.55", "NC Central", "252.05"],
+  ],
+  final: ["Miss Valley", "175.45", "NC Central", "187.20"],
+  eleventh: ["Alcorn", "187.25", "PVAM", "185.25"],
+  thirteenth: {
+    leftQual: ["TX Southern", "99.95", "SC St", "206.25"],
+    rightQual: ["Bethune", "238.05", "Grambling", "251.80"],
+    final: ["SC St", "136.25", "Grambling", "192.05"],
+  },
+  fifteenth: ["TX Southern", "144.00", "Bethune", "278.45"],
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
@@ -8913,7 +9052,7 @@ const GRID_BRACKETS = {
   2022: {
     // Pre-2023 backfill, ongoing 2026-08-21 -- transcribed from her
     // PFA_Playoffs_2022 CSV exports as they come in, full read-back
-    // confirmed for each. 6 tiers still open.
+    // confirmed for each. 4 tiers still open.
     SEC: { playoffs: SEC_2022_PLAYOFFS, consolation: SEC_2022_CONSOLATION },
     "BIG XII": { playoffs: XII_2022_PLAYOFFS, consolation: XII_2022_CONSOLATION },
     ACC: { playoffs: ACC_2022_PLAYOFFS, consolation: ACC_2022_CONSOLATION },
@@ -8923,6 +9062,8 @@ const GRID_BRACKETS = {
     SUN: { playoffs: SUN_2022_PLAYOFFS, consolation: SUN_2022_CONSOLATION },
     SOCO: { playoffs: SOCO_2022_PLAYOFFS, consolation: SOCO_2022_CONSOLATION },
     IVY: { playoffs: IVY_2022_PLAYOFFS, consolation: IVY_2022_CONSOLATION },
+    SWAC: { playoffs: SWAC_2022_PLAYOFFS, consolation: SWAC_2022_CONSOLATION },
+    GLIAC: { playoffs: GLIAC_2022_PLAYOFFS, consolation: GLIAC_2022_CONSOLATION },
   },
 };
 
