@@ -336,7 +336,7 @@ const HISTORICAL_FINAL_ORDER = {
   },
   2022: {
     // Pre-2023 backfill, ongoing 2026-08-21 -- matches GRID_BRACKETS[2022]
-    // above exactly, same tiers done/open. 7 tiers still open.
+    // above exactly, same tiers done/open. 6 tiers still open.
     SEC: [
       "Ole Miss", "Vanderbilt", "Texas A&M", "Miss State", "Tennessee", "Auburn", "Kentucky", "Missouri",
       "Arkansas", "Georgia", "Florida", "Oklahoma", "South Carolina", "LSU", "Texas", "Alabama",
@@ -360,6 +360,10 @@ const HISTORICAL_FINAL_ORDER = {
     SOCO: [
       "VMI", "Austin Peay", "Elon", "Jax State", "Tenn Tech", "Tenn State", "Belmont", "Chattanooga",
       "Nicholls", "Martin", "E Tenn", "Murray State", "Carolina", "Samford", "Mercer", "Citadel",
+    ],
+    IVY: [
+      "Brown", "Colgate", "Penn", "Yale", "Harvard", "Georgetown", "Bucknell", "Columbia",
+      "Lehigh", "Dartmouth", "MIT", "Holy Cross", "Cornell", "Fordham", "Princeton", "Lafayette",
     ],
   },
   2024: {
@@ -6263,6 +6267,65 @@ const IVY_2023_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2022 IVY, ranks 1-8 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2022_-_Ivy.csv export. Every winner
+// cross-validated two independent ways (head-to-head score comparison AND
+// the sheet's own explicit W/L + placement labels), zero discrepancies.
+// Full read-back confirmed 2026-08-21. No name normalizations needed --
+// all 16 teams already match IVY_CLR exactly. Left/right split by the
+// same convention established for every prior 2022 tier.
+const IVY_2022_PLAYOFFS = r3ChampHalf({
+  colors: IVY_CLR, logo: "IVY", logoSrc: IVY_MARK, trophy: IVY_TROPHY,
+  banners: IVY_BANNERS,
+  wk15: [
+    ["Brown", "286.95", "Columbia", "210.60"],
+    ["Penn", "304.80", "Georgetown", "271.75"],
+    ["Colgate", "239.05", "Bucknell", "203.10"],
+    ["Harvard", "187.50", "Yale", "218.45"],
+  ],
+  semis: [
+    ["Brown", "247.75", "Penn", "203.55"],
+    ["Colgate", "253.45", "Yale", "218.35"],
+  ],
+  final: ["Brown", "186.60", "Colgate", "175.05"],
+  third: ["Penn", "184.75", "Yale", "151.70"],
+  fifth: {
+    leftQual: ["Columbia", "202.85", "Georgetown", "267.10"],
+    rightQual: ["Bucknell", "169.90", "Harvard", "222.70"],
+    final: ["Georgetown", "139.65", "Harvard", "245.15"],
+  },
+  seventh: ["Columbia", "187.00", "Bucknell", "203.20"],
+});
+
+// --- 2022 IVY, ranks 9-16 (consolation half) --------------------------------
+// Same source/confirmation as the playoffs half above. Consolation
+// left/right split by structural analogy to the confirmed championship
+// split, same assumption pattern as every prior 2022 tier (confirmed
+// correct every time so far).
+const IVY_2022_CONSOLATION = r3ConsoHalf({
+  colors: IVY_CLR, logo: "IVY", logoSrc: IVY_MARK,
+  banners: IVY_CONSO_BANNERS,
+  wk15: [
+    ["Lehigh", "210.20", "Fordham", "171.10"],
+    ["MIT", "233.00", "Princeton", "162.10"],
+    ["Holy Cross", "289.90", "Cornell", "207.95"],
+    ["Dartmouth", "197.70", "Lafayette", "176.00"],
+  ],
+  semis: [
+    ["Lehigh", "241.05", "MIT", "218.90"],
+    ["Holy Cross", "229.70", "Dartmouth", "257.85"],
+  ],
+  final: ["Lehigh", "230.45", "Dartmouth", "196.40"],
+  eleventh: ["MIT", "185.05", "Holy Cross", "151.90"],
+  thirteenth: {
+    leftQual: ["Fordham", "180.90", "Princeton", "172.15"],
+    rightQual: ["Cornell", "192.00", "Lafayette", "134.25"],
+    final: ["Fordham", "123.75", "Cornell", "183.30"],
+  },
+  fifteenth: ["Princeton", "167.30", "Lafayette", "129.30"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // --- 2024 SOCO, ranks 1-8 (championship half) -------------------------------
 // Transcribed from her PFA_Playoffs_2024 - SOCO.csv export, confirmed 2026-08-17.
 const SOCO_2024_PLAYOFFS = r3ChampHalf({
@@ -8850,7 +8913,7 @@ const GRID_BRACKETS = {
   2022: {
     // Pre-2023 backfill, ongoing 2026-08-21 -- transcribed from her
     // PFA_Playoffs_2022 CSV exports as they come in, full read-back
-    // confirmed for each. 7 tiers still open.
+    // confirmed for each. 6 tiers still open.
     SEC: { playoffs: SEC_2022_PLAYOFFS, consolation: SEC_2022_CONSOLATION },
     "BIG XII": { playoffs: XII_2022_PLAYOFFS, consolation: XII_2022_CONSOLATION },
     ACC: { playoffs: ACC_2022_PLAYOFFS, consolation: ACC_2022_CONSOLATION },
@@ -8859,6 +8922,7 @@ const GRID_BRACKETS = {
     TEN: { playoffs: PAC12_2022_PLAYOFFS, consolation: PAC12_2022_CONSOLATION },
     SUN: { playoffs: SUN_2022_PLAYOFFS, consolation: SUN_2022_CONSOLATION },
     SOCO: { playoffs: SOCO_2022_PLAYOFFS, consolation: SOCO_2022_CONSOLATION },
+    IVY: { playoffs: IVY_2022_PLAYOFFS, consolation: IVY_2022_CONSOLATION },
   },
 };
 
