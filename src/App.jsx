@@ -2823,7 +2823,14 @@ const ROSTER_LINKS = {
   "lake superior lakers": "https://sleeper.com/roster/1317895570131546112/1",
   "purdue nw pride": "https://sleeper.com/roster/1317895570131546112/14",
 
-  // ---- FLHS (1317921468134232064) — now complete (was broken/missing before) ----
+  // ---- FLHS (1317921468134232064) — actually complete now, 16/16 -----------
+  // The previous "now complete" comment here was itself stale -- only 7 of
+  // 16 were actually present. Confirmed against her admin sheet 2026-08-22
+  // (coach-assignment status is separate from ROSTER_LINKS presence: 15/16
+  // teams have a real coach, but that's unrelated to whether this table has
+  // an entry -- 9 were simply missing regardless of coach status). Roster
+  // 14 (Coral Gables Cavaliers) is included even though it's currently
+  // vacant, same as any other team, so it still has a working page/link.
   "western wildcats": "https://sleeper.com/roster/1317921468134232064/7",
   "west broward bobcats": "https://sleeper.com/roster/1317921468134232064/6",
   "west boca raton bulls": "https://sleeper.com/roster/1317921468134232064/2",
@@ -2831,6 +2838,15 @@ const ROSTER_LINKS = {
   "coral glades jaguars": "https://sleeper.com/roster/1317921468134232064/9",
   "stoneman douglas eagles": "https://sleeper.com/roster/1317921468134232064/5",
   "miami senior stingrays": "https://sleeper.com/roster/1317921468134232064/8",
+  "palmetto panthers": "https://sleeper.com/roster/1317921468134232064/1",
+  "boca raton wolverines": "https://sleeper.com/roster/1317921468134232064/3",
+  "taravella trojans": "https://sleeper.com/roster/1317921468134232064/4",
+  "deerfield beach bucks": "https://sleeper.com/roster/1317921468134232064/10",
+  "miami dade buccaneers": "https://sleeper.com/roster/1317921468134232064/11",
+  "cypress bay lightning": "https://sleeper.com/roster/1317921468134232064/12",
+  "miami beach hi tides": "https://sleeper.com/roster/1317921468134232064/13",
+  "coral gables cavaliers": "https://sleeper.com/roster/1317921468134232064/14",
+  "coral springs colts": "https://sleeper.com/roster/1317921468134232064/16",
 };
 
 function TeamProfileModal({ team, onClose, draftPicks, draftPicksLoading, sheetRosterLinks }) {
