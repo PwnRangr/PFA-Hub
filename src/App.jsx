@@ -335,9 +335,10 @@ const HISTORICAL_FINAL_ORDER = {
     ],
   },
   2022: {
-    // Pre-2023 backfill, ongoing 2026-08-21 -- matches GRID_BRACKETS[2022]
-    // above exactly, same tiers done/open. 1 tier still fully open (NFL).
-    // FLHS, XFL, and USFL (same 20-team shape) are all done now.
+    // 2022 backfill complete as of 2026-08-22 -- matches GRID_BRACKETS[2022]
+    // above exactly, all 13 tiers now done. NFL's ladder mixes conferences
+    // once teams are eliminated from the main bracket -- see the note on
+    // NFL_2022_PLAYOFFS itself.
     SEC: [
       "Ole Miss", "Vanderbilt", "Texas A&M", "Miss State", "Tennessee", "Auburn", "Kentucky", "Missouri",
       "Arkansas", "Georgia", "Florida", "Oklahoma", "South Carolina", "LSU", "Texas", "Alabama",
@@ -413,6 +414,18 @@ const HISTORICAL_FINAL_ORDER = {
       "Los Angeles", "Oklahoma", "Jacksonville", "Boston", "Philadelphia", "Oakland", "Orlando", "Arizona",
       "San Antonio", "Houston", "Michigan", "Memphis", "Denver", "Tampa Bay", "New Jersey", "Birmingham",
       "Chicago", "Detroit", "Washington", "Pittsburgh",
+    ],
+    // 32-team NFL shape. Unlike every tier above, the ladder rounds (once a
+    // team is out of its own conference's main bracket) mix conferences by
+    // matching same-numbered game losers across NFC/AFC, rather than
+    // staying within-conference the way 2023-2025 do -- confirmed with her
+    // directly 2026-08-22 after an initial misread. See the note on
+    // NFL_2022_PLAYOFFS itself for the full breakdown.
+    NFL: [
+      "Eagles", "Broncos", "Falcons", "Bengals", "Jets", "Chargers", "Rams", "Bears",
+      "Lions", "Saints", "Dolphins", "Vikings", "Bills", "Texans", "Colts", "Giants",
+      "Cowboys", "Raiders", "Packers", "Jaguars", "Browns", "Seahawks", "Ravens", "Commanders",
+      "Steelers", "Panthers", "Patriots", "Chiefs", "49ers", "Cardinals", "Buccaneers", "Titans",
     ],
   },
   2024: {
@@ -4018,6 +4031,114 @@ const NFL_2023_CONSOLATION = brChampHalf({
   eleventh: ["NY Giants", "134.70", "Pittsburgh", "152.20"],
   thirteenth: ["Atlanta", "78.20", "Indianapolis", "116.80"],
   fifteenth: ["Washington", "98.90", "Tennessee", "142.30"],
+  banners: BR_BANNERS, brMainPaths: BR_MAIN_PATHS, logo: "NFL", logoSrc: NFL_MARK,
+  topWinnerY: 171, topPick: "9th pick", topLabel: "17th place",
+  champSlots: [[448, 324, 100, 110, "PFA", PFA_MARK]],
+  ladderH: 730,
+  ladderPaths: [],
+  places: [
+    [448, 33, "11th pick", "19th place"], [448, 133, "13th pick", "21st place"],
+    [448, 233, "15th pick", "23rd place"], [448, 333, "3rd pick", "25th place"],
+    [448, 433, "5th pick", "27th place"], [448, 533, "7th pick", "29th place"],
+    [448, 633, "2nd pick", "31st place"],
+  ],
+  footer: [336, 680, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
+// --- 2022 NFL, ranks 1-16 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2022_-_NFL.csv export. Same brChampHalf
+// 32-team shape as 2023-2025 (8 seeds/conference, r1/r2/r3 wild
+// card->divisional->conf championship), BUT with one genuine structural
+// difference she confirmed directly 2026-08-22: once a team is out of the
+// main per-conference bracket, the consolation ladder MIXES conferences --
+// a wildcard-round loser is re-paired against the OTHER conference's
+// same-numbered game's loser (that conference's g1-loser plays the other
+// conference's g1-loser, g2 plays g2, etc.), not kept within its own
+// conference the way 2023-2025 real data does. This holds for every ladder
+// round (lr1, lr2w, lr2l, and the divisional-round r2lose feeding 5th/7th)
+// in both the playoffs and consolation halves -- verified by matching every
+// one of the sheet's own W/L + placement labels against actual scores with
+// zero discrepancies once this was accounted for. `east`/`west` below are
+// therefore NFC/AFC ONLY for r1/r2/r3 (main bracket) -- once you reach
+// lr1/lr2w/lr2l/r2lose, "east"/"west" are just left/right RENDER SLOTS
+// holding whichever cross-conference pairing landed there, not real
+// conference groupings. Kept as its own likely-one-off quirk (not "fixed"
+// to match 2023-2025's pattern), same principle as the ACC 2023 preserved
+// bracket mistake.
+const NFL_2022_PLAYOFFS = brChampHalf({
+  east: {
+    r1: [["Vikings", "166.95", "Bears", "167.85"], ["Falcons", "166.25", "Lions", "162.85"],
+         ["Eagles", "184.7", "Giants", "109.3"], ["Rams", "141.75", "Saints", "107.6"]],
+    r2: [["Bears", "177.45", "Falcons", "227.4"], ["Eagles", "181.60", "Rams", "171.7"]],
+    r3: ["Falcons", "190.25", "Eagles", "218.75"],
+    lr1: [["Lions", "216.5", "Texans", "97.8"], ["Vikings", "244.15", "Colts", "161.7"]],
+    lr2w: ["Lions", "237.8", "Vikings", "173.9"],
+    lr2l: ["Texans", "223.85", "Colts", "165.75"],
+    r2lose: ["Bears", "129.6", "Jets", "185.15"],
+  },
+  west: {
+    r1: [["Jets", "161.15", "Colts", "110.3"], ["Texans", "171.3", "Broncos", "195.15"],
+         ["Bengals", "195.7", "Dolphins", "151.95"], ["Chargers", "211.55", "Bills", "139.9"]],
+    r2: [["Jets", "201.30", "Broncos", "241.9"], ["Bengals", "196.3", "Chargers", "172.5"]],
+    r3: ["Broncos", "311.2", "Bengals", "203.25"],
+    lr1: [["Saints", "170.85", "Bills", "152.75"], ["Dolphins", "227.4", "Giants", "118.25"]],
+    lr2w: ["Saints", "199.45", "Dolphins", "199.15"],
+    lr2l: ["Bills", "133.35", "Giants", "115.05"],
+    r2lose: ["Chargers", "182.35", "Rams", "167.45"],
+  },
+  champ: ["Eagles", "165.45", "Broncos", "150.05"],
+  third: ["Falcons", "223.6", "Bengals", "156.35"],
+  fifth: ["Jets", "168.15", "Chargers", "154.95"],
+  seventh: ["Bears", "71.9", "Rams", "158.5"],
+  ninth: ["Lions", "200.85", "Saints", "183.7"],
+  eleventh: ["Vikings", "177.3", "Dolphins", "225.1"],
+  thirteenth: ["Texans", "144.85", "Bills", "150.95"],
+  fifteenth: ["Colts", "138.1", "Giants", "76.9"],
+  banners: BR_BANNERS, brMainPaths: BR_MAIN_PATHS, logo: "NFL", logoSrc: NFL_MARK,
+  championSub: "PainBowl I",
+  champSlots: [[448, 16, 100, 150, "Trophy", NFL_TROPHY], [448, 334, 100, 100, "PFA", PFA_MARK]],
+  ladderH: 690,
+  ladderPaths: [],
+  places: [
+    [448, 33, "29th pick", "3rd place"], [448, 133, "25th pick", "5th place"],
+    [448, 233, "27th pick", "7th place"], [448, 333, "17th pick", "9th place"],
+    [448, 433, "19th pick", "11th place"], [448, 533, "21st pick", "13th place"],
+    [448, 633, "23rd pick", "15th place"],
+  ],
+});
+
+// --- 2022 NFL, ranks 17-32 (consolation half) --------------------------------
+// Same source/confirmation as the playoffs half above -- same conference-
+// mixing rule applies throughout the ladder here too.
+const NFL_2022_CONSOLATION = brChampHalf({
+  east: {
+    r1: [["Cardinals", "118.90", "Commanders", "125.35"], ["Packers", "117.50", "Buccaneers", "104.35"],
+         ["Cowboys", "131.90", "Panthers", "109.90"], ["Seahawks", "131.55", "49ers", "111.60"]],
+    r2: [["Commanders", "88.30", "Packers", "157.2"], ["Cowboys", "159.45", "Seahawks", "159.00"]],
+    r3: ["Packers", "119.2", "Cowboys", "168.05"],
+    lr1: [["Cardinals", "122.4", "Steelers", "215"], ["Buccaneers", "132.75", "Chiefs", "165.25"]],
+    lr2w: ["Steelers", "196.5", "Chiefs", "149.75"],
+    lr2l: ["Cardinals", "139.45", "Buccaneers", "78.7"],
+    r2lose: ["Commanders", "122.8", "Browns", "131.65"],
+  },
+  west: {
+    r1: [["Jaguars", "171.00", "Steelers", "148.00"], ["Chiefs", "102.20", "Browns", "117.10"],
+         ["Ravens", "131.30", "Titans", "127.90"], ["Raiders", "206.30", "Patriots", "107.25"]],
+    r2: [["Jaguars", "143.65", "Browns", "135.2"], ["Ravens", "153.7", "Raiders", "189.7"]],
+    r3: ["Jaguars", "135.65", "Raiders", "203.2"],
+    lr1: [["Panthers", "202.6", "Titans", "124.60"], ["49ers", "118.70", "Patriots", "139.55"]],
+    lr2w: ["Panthers", "171.2", "Patriots", "128.9"],
+    lr2l: ["Titans", "94.7", "49ers", "179.1"],
+    r2lose: ["Seahawks", "102.6", "Ravens", "86.05"],
+  },
+  champ: ["Cowboys", "151.75", "Raiders", "143.6"],
+  third: ["Packers", "135.4", "Jaguars", "80.05"],
+  fifth: ["Browns", "166.15", "Seahawks", "143.1"],
+  seventh: ["Commanders", "110", "Ravens", "144.5"],
+  ninth: ["Steelers", "165.3", "Panthers", "133.75"],
+  eleventh: ["Chiefs", "86.1", "Patriots", "106.45"],
+  thirteenth: ["Cardinals", "130.4", "49ers", "145.8"],
+  fifteenth: ["Buccaneers", "214.8", "Titans", "91.2"],
   banners: BR_BANNERS, brMainPaths: BR_MAIN_PATHS, logo: "NFL", logoSrc: NFL_MARK,
   topWinnerY: 171, topPick: "9th pick", topLabel: "17th place",
   champSlots: [[448, 324, 100, 110, "PFA", PFA_MARK]],
@@ -9433,9 +9554,10 @@ const GRID_BRACKETS = {
     NFL: { playoffs: NFL_2023_PLAYOFFS, consolation: NFL_2023_CONSOLATION },
   },
   2022: {
-    // Pre-2023 backfill, ongoing 2026-08-21 -- transcribed from her
-    // PFA_Playoffs_2022 CSV exports as they come in, full read-back
-    // confirmed for each. 1 tier still open (NFL).
+    // 2022 backfill complete as of 2026-08-22 -- all 13 tiers done. NFL was
+    // last, and unlike every tier above, its ladder mixes conferences once
+    // teams are eliminated from the main bracket -- see the note on
+    // NFL_2022_PLAYOFFS itself.
     SEC: { playoffs: SEC_2022_PLAYOFFS, consolation: SEC_2022_CONSOLATION },
     "BIG XII": { playoffs: XII_2022_PLAYOFFS, consolation: XII_2022_CONSOLATION },
     ACC: { playoffs: ACC_2022_PLAYOFFS, consolation: ACC_2022_CONSOLATION },
@@ -9458,6 +9580,7 @@ const GRID_BRACKETS = {
     // next to XFL_2022_CONSOLATION (not up here) -- see the placement note
     // on USFL_2022_PLAYOFFS itself for why that matters.
     USFL: { playoffs: USFL_2022_PLAYOFFS, consolation: USFL_2022_CONSOLATION },
+    NFL: { playoffs: NFL_2022_PLAYOFFS, consolation: NFL_2022_CONSOLATION },
   },
 };
 
