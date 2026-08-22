@@ -5966,117 +5966,6 @@ const FLHS_2023_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
-// --- 2022 FLHS, ranks 1-10 (championship half) ------------------------------
-// Transcribed from her PFA_Playoffs_2022_-_FHS_R4.csv export. GENUINELY
-// DIFFERENT SHAPE from 2023+ above: this was a 20-team, 4-round (Week
-// 14-17) bracket with byes -- the same usflXflMainBoxes/usflXflPlaceSection
-// shape USFL/XFL use, not r3ChampHalf's clean 16-team/3-round shape. Every
-// placement cross-validated three independent ways: head-to-head scores,
-// all 10 of the sheet's own explicit W/L + placement labels, and her
-// sheet's own separate pick/finish reference table (a pre-computed 1-20
-// standings list) -- all three agree with zero discrepancies. A round
-// initially missed entirely (the Week 16 qualifying games feeding 5th/7th
-// place) was caught and corrected by her directly before this was written.
-// The "9th place" game is a genuine single game in Week 17 -- she
-// confirmed Coral Gables and Palmetto played NO games in weeks 15-16
-// (true byes, not a real multi-week series like USFL/XFL's own 2023/2024
-// data happens to show for their equivalent game) -- so unlike USFL/XFL's
-// series arrays, cum equals that single score exactly, and the bye-week
-// slots are blank, matching the established blank-series convention in
-// usflXflPlaceSection's own live template. Four of the 20 teams (Coral
-// Gables, Columbus, Flanigan, Coral Reef) needed new FLHS_CLR entries --
-// see the note there. One name normalization: sheet's "Deerfield Bch" ->
-// "Deerfield", matching FLHS_CLR's existing key.
-const FLHS_2022_PLAYOFFS = {
-  colors: FLHS_CLR, logoSrc: FLHS_MARK,
-  sections: [
-    {
-      banners: FLHS_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "FHSAA",
-      slots: [[448, 4, 100, 84, "Trophy", FLHS_TROPHY], [448, 200, 100, 96, "PFA", PFA_MARK]],
-      champion: { y: 114, label: "Champion", team: r3Winner(["Miami Senior", "271.60", "Southwest", "191.85"]), sub: "1st place" },
-      boxes: usflXflMainBoxes({
-        playInLeft: ["Coral Gables", "174.60", "Deerfield", "181.90"],
-        byeTop: ["Miami Senior", "226.20", "Deerfield", "179.20"],
-        byeBot: ["Western", "209.30", "Miami Beach", "216.65"],
-        semiLeft: ["Miami Senior", "258.10", "Miami Beach", "191.20"],
-        final: ["Miami Senior", "271.60", "Southwest", "191.85"],
-        semiRight: ["Columbus", "182.05", "Southwest", "193.75"],
-        byeTopR: ["Columbus", "224.55", "West Boca", "176.70"],
-        byeBotR: ["Boca Raton", "219.00", "Southwest", "241.55"],
-        playInRight: ["West Boca", "242.65", "Palmetto", "225.95"],
-      }),
-    },
-    {
-      h: 420,
-      paths: USFLXFL_PLACE_PATHS_LIVE,
-      boxes: [
-        ...r3Split(336, 33, 560, 33, ["Miami Beach", "232.60", "Columbus", "138.95"]),
-        ...r3Stack(224, 95, ["Deerfield", "180.60", "Western", "206.50"]),
-        ...r3Stack(672, 95, ["West Boca", "212.45", "Boca Raton", "194.80"]),
-        ...r3Split(336, 114, 560, 114, ["Western", "235.00", "West Boca", "176.30"]),
-        ...r3Split(336, 209, 560, 209, ["Deerfield", "124.80", "Boca Raton", "135.95"]),
-      ],
-      series: [
-        [224, 341, "", "", ""], [336, 341, "144.10", "Coral Gables", "144.10", 0, true],
-        [560, 341, "184.05", "Palmetto", "184.05", 1, true], [672, 341, "", "", ""],
-      ],
-      winners: [
-        [448, 14, "Miami Beach"], [448, 95, "Western"],
-        [448, 190, "Boca Raton"], [448, 341, "Palmetto"],
-      ],
-      places: USFLXFL_CHAMP_PLACES,
-    },
-  ],
-};
-
-// --- 2022 FLHS, ranks 11-20 (consolation half) ------------------------------
-// Same source/confirmation as the playoffs half above. "19th place" is the
-// other genuine single-game-in-week-17 case -- she confirmed Stoneman and
-// Dr Krop played no games weeks 15-16 either.
-const FLHS_2022_CONSOLATION = {
-  colors: FLHS_CLR, logoSrc: FLHS_MARK,
-  sections: [
-    {
-      banners: FLHS_CONSO_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "FHSAA",
-      slots: [[448, 226, 100, 70, "PFA", PFA_MARK]],
-      winners: [[448, 95, r3Winner(["Taravella", "123.85", "Flanigan", "158.85"])]],
-      places: [[448, 114, "3rd pick", "11th place"]],
-      boxes: usflXflMainBoxes({
-        playInLeft: ["Stoneman", "115.50", "Coral Springs", "158.60"],
-        byeTop: ["Taravella", "157.55", "Coral Springs", "152.45"],
-        byeBot: ["Cypress Bay", "209.30", "West Broward", "138.05"],
-        semiLeft: ["Taravella", "215.20", "Cypress Bay", "208.20"],
-        final: ["Taravella", "123.85", "Flanigan", "158.85"],
-        semiRight: ["Flanigan", "194.45", "Coral Glades", "194.20"],
-        byeTopR: ["Flanigan", "296.55", "Miami Dade", "163.90"],
-        byeBotR: ["Coral Reef", "125.40", "Coral Glades", "218.20"],
-        playInRight: ["Dr Krop", "166.45", "Miami Dade", "183.30"],
-      }),
-    },
-    {
-      h: 470,
-      paths: USFLXFL_PLACE_PATHS_LIVE,
-      boxes: [
-        ...r3Split(336, 33, 560, 33, ["Cypress Bay", "175.25", "Coral Glades", "157.65"]),
-        ...r3Stack(224, 95, ["Coral Springs", "175.75", "West Broward", "164.85"]),
-        ...r3Stack(672, 95, ["Miami Dade", "217.10", "Coral Reef", "134.55"]),
-        ...r3Split(336, 114, 560, 114, ["Coral Springs", "153.70", "Miami Dade", "173.60"]),
-        ...r3Split(336, 209, 560, 209, ["West Broward", "177.00", "Coral Reef", "165.05"]),
-      ],
-      series: [
-        [224, 341, "", "", ""], [336, 341, "161.00", "Stoneman", "161.00", 0, true],
-        [560, 341, "175.45", "Dr Krop", "175.45", 1, true], [672, 341, "", "", ""],
-      ],
-      winners: [
-        [448, 14, "Cypress Bay"], [448, 95, "Miami Dade"],
-        [448, 190, "West Broward"], [448, 341, "Dr Krop"],
-      ],
-      places: USFLXFL_CONSO_PLACES,
-      footer: [112, 420, 772, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
-    },
-  ],
-};
-
 // --- 2024 GLIAC, ranks 1-8 (championship half) ------------------------------
 // Transcribed from her PFA_Playoffs_2024 - GLIAC.numbers export, same
 // mirrored bracket-sheet layout as FLHS 2024 above, confirmed 2026-08-17.
@@ -8352,6 +8241,117 @@ const XFL_2024_CONSOLATION = {
       winners: [
         [448, 14, "Atlanta"], [448, 95, "New York"],
         [448, 190, "Las Vegas"], [448, 341, "Brooklyn"],
+      ],
+      places: USFLXFL_CONSO_PLACES,
+      footer: [112, 420, 772, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+    },
+  ],
+};
+
+// --- 2022 FLHS, ranks 1-10 (championship half) ------------------------------
+// Transcribed from her PFA_Playoffs_2022_-_FHS_R4.csv export. GENUINELY
+// DIFFERENT SHAPE from 2023+ above: this was a 20-team, 4-round (Week
+// 14-17) bracket with byes -- the same usflXflMainBoxes/usflXflPlaceSection
+// shape USFL/XFL use, not r3ChampHalf's clean 16-team/3-round shape. Every
+// placement cross-validated three independent ways: head-to-head scores,
+// all 10 of the sheet's own explicit W/L + placement labels, and her
+// sheet's own separate pick/finish reference table (a pre-computed 1-20
+// standings list) -- all three agree with zero discrepancies. A round
+// initially missed entirely (the Week 16 qualifying games feeding 5th/7th
+// place) was caught and corrected by her directly before this was written.
+// The "9th place" game is a genuine single game in Week 17 -- she
+// confirmed Coral Gables and Palmetto played NO games in weeks 15-16
+// (true byes, not a real multi-week series like USFL/XFL's own 2023/2024
+// data happens to show for their equivalent game) -- so unlike USFL/XFL's
+// series arrays, cum equals that single score exactly, and the bye-week
+// slots are blank, matching the established blank-series convention in
+// usflXflPlaceSection's own live template. Four of the 20 teams (Coral
+// Gables, Columbus, Flanigan, Coral Reef) needed new FLHS_CLR entries --
+// see the note there. One name normalization: sheet's "Deerfield Bch" ->
+// "Deerfield", matching FLHS_CLR's existing key.
+const FLHS_2022_PLAYOFFS = {
+  colors: FLHS_CLR, logoSrc: FLHS_MARK,
+  sections: [
+    {
+      banners: FLHS_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "FHSAA",
+      slots: [[448, 4, 100, 84, "Trophy", FLHS_TROPHY], [448, 200, 100, 96, "PFA", PFA_MARK]],
+      champion: { y: 114, label: "Champion", team: r3Winner(["Miami Senior", "271.60", "Southwest", "191.85"]), sub: "1st place" },
+      boxes: usflXflMainBoxes({
+        playInLeft: ["Coral Gables", "174.60", "Deerfield", "181.90"],
+        byeTop: ["Miami Senior", "226.20", "Deerfield", "179.20"],
+        byeBot: ["Western", "209.30", "Miami Beach", "216.65"],
+        semiLeft: ["Miami Senior", "258.10", "Miami Beach", "191.20"],
+        final: ["Miami Senior", "271.60", "Southwest", "191.85"],
+        semiRight: ["Columbus", "182.05", "Southwest", "193.75"],
+        byeTopR: ["Columbus", "224.55", "West Boca", "176.70"],
+        byeBotR: ["Boca Raton", "219.00", "Southwest", "241.55"],
+        playInRight: ["West Boca", "242.65", "Palmetto", "225.95"],
+      }),
+    },
+    {
+      h: 420,
+      paths: USFLXFL_PLACE_PATHS_LIVE,
+      boxes: [
+        ...r3Split(336, 33, 560, 33, ["Miami Beach", "232.60", "Columbus", "138.95"]),
+        ...r3Stack(224, 95, ["Deerfield", "180.60", "Western", "206.50"]),
+        ...r3Stack(672, 95, ["West Boca", "212.45", "Boca Raton", "194.80"]),
+        ...r3Split(336, 114, 560, 114, ["Western", "235.00", "West Boca", "176.30"]),
+        ...r3Split(336, 209, 560, 209, ["Deerfield", "124.80", "Boca Raton", "135.95"]),
+      ],
+      series: [
+        [224, 341, "", "", ""], [336, 341, "144.10", "Coral Gables", "144.10", 0, true],
+        [560, 341, "184.05", "Palmetto", "184.05", 1, true], [672, 341, "", "", ""],
+      ],
+      winners: [
+        [448, 14, "Miami Beach"], [448, 95, "Western"],
+        [448, 190, "Boca Raton"], [448, 341, "Palmetto"],
+      ],
+      places: USFLXFL_CHAMP_PLACES,
+    },
+  ],
+};
+
+// --- 2022 FLHS, ranks 11-20 (consolation half) ------------------------------
+// Same source/confirmation as the playoffs half above. "19th place" is the
+// other genuine single-game-in-week-17 case -- she confirmed Stoneman and
+// Dr Krop played no games weeks 15-16 either.
+const FLHS_2022_CONSOLATION = {
+  colors: FLHS_CLR, logoSrc: FLHS_MARK,
+  sections: [
+    {
+      banners: FLHS_CONSO_BANNERS, h: 280, paths: USFL_MAIN_PATHS, logo: "FHSAA",
+      slots: [[448, 226, 100, 70, "PFA", PFA_MARK]],
+      winners: [[448, 95, r3Winner(["Taravella", "123.85", "Flanigan", "158.85"])]],
+      places: [[448, 114, "3rd pick", "11th place"]],
+      boxes: usflXflMainBoxes({
+        playInLeft: ["Stoneman", "115.50", "Coral Springs", "158.60"],
+        byeTop: ["Taravella", "157.55", "Coral Springs", "152.45"],
+        byeBot: ["Cypress Bay", "209.30", "West Broward", "138.05"],
+        semiLeft: ["Taravella", "215.20", "Cypress Bay", "208.20"],
+        final: ["Taravella", "123.85", "Flanigan", "158.85"],
+        semiRight: ["Flanigan", "194.45", "Coral Glades", "194.20"],
+        byeTopR: ["Flanigan", "296.55", "Miami Dade", "163.90"],
+        byeBotR: ["Coral Reef", "125.40", "Coral Glades", "218.20"],
+        playInRight: ["Dr Krop", "166.45", "Miami Dade", "183.30"],
+      }),
+    },
+    {
+      h: 470,
+      paths: USFLXFL_PLACE_PATHS_LIVE,
+      boxes: [
+        ...r3Split(336, 33, 560, 33, ["Cypress Bay", "175.25", "Coral Glades", "157.65"]),
+        ...r3Stack(224, 95, ["Coral Springs", "175.75", "West Broward", "164.85"]),
+        ...r3Stack(672, 95, ["Miami Dade", "217.10", "Coral Reef", "134.55"]),
+        ...r3Split(336, 114, 560, 114, ["Coral Springs", "153.70", "Miami Dade", "173.60"]),
+        ...r3Split(336, 209, 560, 209, ["West Broward", "177.00", "Coral Reef", "165.05"]),
+      ],
+      series: [
+        [224, 341, "", "", ""], [336, 341, "161.00", "Stoneman", "161.00", 0, true],
+        [560, 341, "175.45", "Dr Krop", "175.45", 1, true], [672, 341, "", "", ""],
+      ],
+      winners: [
+        [448, 14, "Cypress Bay"], [448, 95, "Miami Dade"],
+        [448, 190, "West Broward"], [448, 341, "Dr Krop"],
       ],
       places: USFLXFL_CONSO_PLACES,
       footer: [112, 420, 772, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
