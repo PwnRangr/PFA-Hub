@@ -336,7 +336,7 @@ const HISTORICAL_FINAL_ORDER = {
   },
   2022: {
     // Pre-2023 backfill, ongoing 2026-08-21 -- matches GRID_BRACKETS[2022]
-    // above exactly, same tiers done/open. 10 tiers still open.
+    // above exactly, same tiers done/open. 9 tiers still open.
     SEC: [
       "Ole Miss", "Vanderbilt", "Texas A&M", "Miss State", "Tennessee", "Auburn", "Kentucky", "Missouri",
       "Arkansas", "Georgia", "Florida", "Oklahoma", "South Carolina", "LSU", "Texas", "Alabama",
@@ -348,6 +348,10 @@ const HISTORICAL_FINAL_ORDER = {
     ACC: [
       "Virginia", "Boston College", "Louisville", "Clemson", "N Carolina", "Pittsburgh", "Maryland", "Syracuse",
       "Miami", "GA Tech", "Wake Forest", "Notre Dame", "NC State", "Duke", "Virginia Tech", "Florida St",
+    ],
+    TEN: [
+      "Washington State", "Colorado", "Washington", "San Diego State", "UCLA", "Eastern Washington", "Arizona", "Stanford",
+      "Boise State", "Arizona State", "Portland State", "Cal Poly", "Oregon State", "Oregon", "Cal", "Utah",
     ],
   },
   2024: {
@@ -6567,6 +6571,69 @@ const PAC12_2023_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2022 PAC-12 (tierKey TEN), ranks 1-8 (championship half) --------------
+// Transcribed from her PFA_Playoffs_2022_-_PAC_12.csv export. Every winner
+// cross-validated two independent ways (head-to-head score comparison AND
+// the sheet's own explicit W/L + placement labels), zero discrepancies.
+// Full read-back confirmed 2026-08-21. Same name normalizations 2023
+// already established (matching PAC12_CLR): "WA" -> "Washington", "WA
+// State" -> "Washington State", "SD State" -> "San Diego State", "Eastern
+// WA" -> "Eastern Washington", "AZ State" -> "Arizona State", "OR State"
+// -> "Oregon State", "Boise" -> "Boise State", "Portland" -> "Portland
+// State". Left/right split by the same convention established for
+// SEC/BIG XII/ACC 2022.
+const PAC12_2022_PLAYOFFS = r3ChampHalf({
+  colors: PAC12_CLR, logo: "PAC-12", logoSrc: PAC12_MARK, trophy: PAC12_TROPHY,
+  banners: PAC12_BANNERS,
+  wk15: [
+    ["Arizona", "213.10", "Washington", "269.30"],
+    ["Washington State", "227.70", "UCLA", "179.25"],
+    ["San Diego State", "233.75", "Eastern Washington", "222.40"],
+    ["Colorado", "246.05", "Stanford", "226.05"],
+  ],
+  semis: [
+    ["Washington", "213.65", "Washington State", "259.60"],
+    ["San Diego State", "172.70", "Colorado", "212.95"],
+  ],
+  final: ["Washington State", "167.55", "Colorado", "157.85"],
+  third: ["Washington", "254.30", "San Diego State", "180.30"],
+  fifth: {
+    leftQual: ["Arizona", "267.30", "UCLA", "312.15"],
+    rightQual: ["Eastern Washington", "248.45", "Stanford", "154.95"],
+    final: ["UCLA", "176.40", "Eastern Washington", "143.60"],
+  },
+  seventh: ["Arizona", "232.25", "Stanford", "163.80"],
+});
+
+// --- 2022 PAC-12 (tierKey TEN), ranks 9-16 (consolation half) --------------
+// Same source/confirmation as the playoffs half above. Consolation
+// left/right split by structural analogy to the confirmed championship
+// split, same assumption pattern as SEC/BIG XII/ACC 2022 (confirmed
+// correct every time so far).
+const PAC12_2022_CONSOLATION = r3ConsoHalf({
+  colors: PAC12_CLR, logo: "PAC-12", logoSrc: PAC12_MARK,
+  banners: PAC12_CONSO_BANNERS,
+  wk15: [
+    ["Oregon State", "157.50", "Portland State", "158.15"],
+    ["Arizona State", "181.10", "Utah", "153.40"],
+    ["Boise State", "220.10", "Cal", "131.15"],
+    ["Cal Poly", "214.40", "Oregon", "148.80"],
+  ],
+  semis: [
+    ["Portland State", "209.55", "Arizona State", "210.65"],
+    ["Boise State", "241.25", "Cal Poly", "174.60"],
+  ],
+  final: ["Arizona State", "181.25", "Boise State", "181.90"],
+  eleventh: ["Portland State", "175.70", "Cal Poly", "118.55"],
+  thirteenth: {
+    leftQual: ["Oregon State", "171.35", "Utah", "107.90"],
+    rightQual: ["Cal", "148.55", "Oregon", "154.60"],
+    final: ["Oregon State", "191.40", "Oregon", "158.20"],
+  },
+  fifteenth: ["Utah", "127.95", "Cal", "151.85"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // --- 2024 ACC, ranks 1-8 (championship half) --------------------------------
 // Transcribed from her PFA_Playoffs_2024 - ACC.csv export, confirmed 2026-08-17.
 // Note: the qualifying game deciding who'd play for 13th was a 0.05-point
@@ -8654,10 +8721,13 @@ const GRID_BRACKETS = {
   2022: {
     // Pre-2023 backfill, ongoing 2026-08-21 -- transcribed from her
     // PFA_Playoffs_2022 CSV exports as they come in, full read-back
-    // confirmed for each. 10 tiers still open.
+    // confirmed for each. 9 tiers still open.
     SEC: { playoffs: SEC_2022_PLAYOFFS, consolation: SEC_2022_CONSOLATION },
     "BIG XII": { playoffs: XII_2022_PLAYOFFS, consolation: XII_2022_CONSOLATION },
     ACC: { playoffs: ACC_2022_PLAYOFFS, consolation: ACC_2022_CONSOLATION },
+    // Branded "PAC-12" for 2022 (same as 2023) -- see the note on
+    // PAC12_CLR. Still tierKey TEN, same underlying league.
+    TEN: { playoffs: PAC12_2022_PLAYOFFS, consolation: PAC12_2022_CONSOLATION },
   },
 };
 
