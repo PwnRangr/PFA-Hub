@@ -222,7 +222,7 @@ const HISTORICAL_FINAL_ORDER = {
       "SMU", "GA Tech", "Wake Forest", "Pittsburgh", "Florida St", "Miami", "NC State", "Boston College",
     ],
     "BIG XII": [
-      "OSU", "S Dakota", "Cincinnati", "N Iowa", "Houston", "BYU", "Iowa State", "Denver",
+      "OSU", "S Dakota", "Cincinnati", "Arizona", "Houston", "BYU", "Iowa State", "Denver",
       "Baylor", "TCU", "Kansas", "N Colorado", "W Virginia", "UCF", "Kansas State", "Texas Tech",
     ],
     NFL: [
@@ -790,7 +790,14 @@ const CAREER_STATS = {
   "chorn16": [{ "tierKey": "TEN", "team": "Michigan Wolverines", "stats": { "Career CP": "208.56", "Career Avg CP": "52.14", "Record": "18-16", "Win %": "52.9%", "Total Points": "6932.60", "Avg Pts / Season": "198.43", "Alliance High Score": "0", "Alliance Low Score": "3", "League High Score": "0", "League Low Score": "3", "Best Manager": "-2", "Conference Wins": "0", "Division Wins": "0", "Playoff Wins": "0" } }],
   "chrisevans": [{ "tierKey": "IVY", "team": "MIT Engineers", "stats": { "Career CP": "385.16", "Career Avg CP": "96.29", "Record": "28-40", "Win %": "41.2%", "Total Points": "13834.20", "Avg Pts / Season": "197.92", "Alliance High Score": "0", "Alliance Low Score": "2", "League High Score": "1", "League Low Score": "2", "Best Manager": "-2", "Conference Wins": "0", "Division Wins": "0", "Playoff Wins": "0" } }],
   "chuckiv": [{ "tierKey": "NFL", "team": "Dallas Cowboys", "stats": { "Career CP": "821.05", "Career Avg CP": "205.26", "Record": "39-29", "Win %": "57.4%", "Total Points": "11403.20", "Avg Pts / Season": "162.95", "Alliance High Score": "0", "Alliance Low Score": "0", "League High Score": "0", "League Low Score": "0", "Best Manager": "3", "Conference Wins": "0", "Division Wins": "0", "Playoff Wins": "3" } }],
-  "coopdaddy510": [{ "tierKey": "BIG XII", "team": "Northern Iowa Panthers", "stats": { "Career CP": "546.90", "Career Avg CP": "136.73", "Record": "31-20", "Win %": "60.8%", "Total Points": "10839.05", "Avg Pts / Season": "204.62", "Alliance High Score": "0", "Alliance Low Score": "0", "League High Score": "1", "League Low Score": "0", "Best Manager": "1", "Conference Wins": "0", "Division Wins": "0", "Playoff Wins": "4" } }],
+  // Team corrected 2026-08-22: Arizona replaced Northern Iowa in BIG XII
+  // starting 2024 (real conference move, confirmed directly) -- this is his
+  // CURRENT team, so it takes the current name per the same rule already
+  // used for Coral Gables Cavaliers. His 2022/2023 seasons correctly stay
+  // "Northern Iowa Panthers" wherever they're recorded historically
+  // (GRID_BRACKETS/HISTORICAL_FINAL_ORDER for those years) -- this entry is
+  // his aggregate career total, so it reflects who he plays for now.
+  "coopdaddy510": [{ "tierKey": "BIG XII", "team": "Arizona Wildcats", "stats": { "Career CP": "546.90", "Career Avg CP": "136.73", "Record": "31-20", "Win %": "60.8%", "Total Points": "10839.05", "Avg Pts / Season": "204.62", "Alliance High Score": "0", "Alliance Low Score": "0", "League High Score": "1", "League Low Score": "0", "Best Manager": "1", "Conference Wins": "0", "Division Wins": "0", "Playoff Wins": "4" } }],
   "cozzin": [{ "tierKey": "SOCO", "team": "Tenn Tech Eagles", "stats": { "Career CP": "273.98", "Career Avg CP": "68.50", "Record": "21-30", "Win %": "41.2%", "Total Points": "9456.40", "Avg Pts / Season": "178.78", "Alliance High Score": "0", "Alliance Low Score": "0", "League High Score": "1", "League Low Score": "0", "Best Manager": "-1", "Conference Wins": "0", "Division Wins": "0", "Playoff Wins": "1" } }],
   "crb2121": [{ "tierKey": "SUN", "team": "South Alabama Jaguars", "stats": { "Career CP": "283.44", "Career Avg CP": "70.86", "Record": "21-13", "Win %": "61.8%", "Total Points": "7521.25", "Avg Pts / Season": "214.83", "Alliance High Score": "0", "Alliance Low Score": "0", "League High Score": "3", "League Low Score": "0", "Best Manager": "4", "Conference Wins": "0", "Division Wins": "0", "Playoff Wins": "0" } }],
   "cre8t1v3": [{ "tierKey": "XFL", "team": "Los Angeles Wildcats", "stats": { "Career CP": "604.49", "Career Avg CP": "151.12", "Record": "34-32", "Win %": "51.5%", "Total Points": "13575.49", "Avg Pts / Season": "202.67", "Alliance High Score": "0", "Alliance Low Score": "3", "League High Score": "7", "League Low Score": "3", "Best Manager": "-1", "Conference Wins": "0", "Division Wins": "0", "Playoff Wins": "2" } }],
@@ -2690,7 +2697,12 @@ const ROSTER_LINKS = {
   "texas longhorns": "https://sleeper.com/roster/1316594738958192640/1",
 
   // ---- BIG XII (1317152669235703808) ----
-  "north colorado bears": "https://sleeper.com/roster/1317152669235703808/18",
+  // "north colorado bears" (roster 18) was wrong on two counts, fixed
+  // 2026-08-22: BIG XII only has 16 rosters (1-16), so 18 doesn't even
+  // exist in this league -- and the correct spelling is "Northern Colorado
+  // Bears" (matching TEAM_ART's own key), not the truncated "North
+  // Colorado." Real roster is 11, confirmed against her admin sheet.
+  "northern colorado bears": "https://sleeper.com/roster/1317152669235703808/11",
   "iowa state cyclones": "https://sleeper.com/roster/1317152669235703808/15",
   "south dakota state": "https://sleeper.com/roster/1317152669235703808/16",
   "houston cougars": "https://sleeper.com/roster/1317152669235703808/6",
@@ -5114,6 +5126,12 @@ const XII_CLR = {
 };
 
 const XII_2025_PLAYOFFS = {
+  // Corrected 2026-08-22: this half's boxes said "N Iowa" -- wrong for 2025.
+  // Confirmed directly: Arizona replaced Northern Iowa in BIG XII starting
+  // 2024 (a real conference move, not the spreadsheet artifact a 2026-08-07
+  // session mistakenly concluded -- that "fix" was itself backwards and is
+  // now reverted here; 2022/2023 correctly keep Northern Iowa, and 2024's
+  // own backfill already had this right independently, see XII_2024_PLAYOFFS).
   colors: XII_CLR,
   logoSrc: XII_MARK,
   sections: [
@@ -5127,15 +5145,15 @@ const XII_2025_PLAYOFFS = {
         [224, 19, "OSU", "260.35", 1], [224, 133, "Cincinnati", "234.40"],
         [336, 76, "OSU", "226.10", 1],
         [560, 76, "S Dakota", "164.00"],
-        [672, 19, "S Dakota", "266.00", 1], [672, 133, "N Iowa", "165.75"],
+        [672, 19, "S Dakota", "266.00", 1], [672, 133, "Arizona", "165.75"],
         [784, 0, "S Dakota", "238.25", 1], [784, 38, "BYU", "223.70"],
-        [784, 114, "Denver", "162.35"], [784, 152, "N Iowa", "184.30", 1],
+        [784, 114, "Denver", "162.35"], [784, 152, "Arizona", "184.30", 1],
       ],
     },
     {
       cols: WK_COLS_3, h: 258, paths: R3_PLACE_PATHS,
       boxes: [
-        [336, 38, "Cincinnati", "245.25", 1], [560, 38, "N Iowa", "210.70"],
+        [336, 38, "Cincinnati", "245.25", 1], [560, 38, "Arizona", "210.70"],
         [224, 95, "Iowa State", "205.55"], [224, 133, "Houston", "243.40", 1],
         [336, 114, "Houston", "227.10", 1],
         [560, 114, "BYU", "181.65"],
@@ -5812,12 +5830,27 @@ const TEAM_ART = {
     [normTeamKey("Kansas State Wildcats")]: teamArtPath("BIG XII", "xii-team-kansas-state-wildcats.png"),
     [normTeamKey("Texas Tech Red Raiders")]: teamArtPath("BIG XII", "xii-team-texas-tech-red-raiders.png"),
     [normTeamKey("Northern Iowa Panthers")]: teamArtPath("BIG XII", "xii-team-northern-iowa-panthers.png"),
-    // "Arizona" was a data artifact in her spreadsheet, corrected
-    // 2026-08-07 — this slot's real team is Northern Iowa Panthers (see
-    // XII_CLR/aliases above). Logo resent and added 2026-08-07, closing
-    // out BIG XII's TEAM_ART at a genuine 16/16. Oklahoma Sooners is
-    // still correctly unused (a different real-world school than this
-    // tier's "OSU" = Oklahoma State).
+    // 2026-08-07 note (now known wrong, corrected 2026-08-22): a session
+    // that day concluded "Arizona" was a spreadsheet artifact and that
+    // Northern Iowa was the real, ongoing team, renaming XII_CLR's
+    // "Arizona" key to "N Iowa" and calling BIG XII's TEAM_ART "closed" at
+    // 16/16. That conclusion was itself a mistake, confirmed directly by
+    // her: Arizona genuinely replaced Northern Iowa in BIG XII starting
+    // 2024 (a real conference realignment -- Arizona left the Pac-12/TEN
+    // tier after 2023 and joined BIG XII). A 2026-08-17 session already
+    // independently rediscovered this when backfilling 2024 (see
+    // XII_2024_PLAYOFFS) and added a real XII_CLR "Arizona" entry, but
+    // never went back to fix 2025's live bracket or this TEAM_ART gap --
+    // both fixed now. Northern Iowa Panthers stays exactly as-is above for
+    // 2022/2023 historical accuracy; Arizona Wildcats gets its own new
+    // entry below for 2024-onward. This is 17 real logo slots for a
+    // 16-team-per-season tier, not a miscount -- the tier's roster changed
+    // membership partway through its history, so two different real
+    // schools legitimately occupy the same seed across different years,
+    // exactly like TEN's own PAC-12-era schools sit alongside its Big Ten
+    // roster. Oklahoma Sooners is still correctly unused (a different
+    // real-world school than this tier's "OSU" = Oklahoma State).
+    [normTeamKey("Arizona Wildcats")]: teamArtPath("BIG XII", "xii-team-arizona-wildcats.png"),
   },
   // SEC (10th tier, 2026-08-07). All 16 arrived as clean transparent
   // PNGs, no cutout needed. Names cross-checked against CAREER_STATS
@@ -7704,12 +7737,13 @@ const R3_LIVE = {
     banners: XII_BANNERS, consoBanners: XII_CONSO_BANNERS,
     // "West Virgnia Mountaineers" is misspelled in the source data; without
     // this it renders as the full misspelled name in the default colour.
-    // "Arizona" was a data artifact in her spreadsheet — this slot's real
-    // team is Northern Iowa Panthers (corrected by her 2026-08-07,
-    // XII_CLR key renamed "Arizona"->"N Iowa" to match). Alias kept
-    // explicit rather than relying on token matching, since this tier
-    // also has "Iowa State" and a token-based match risks colliding
-    // with it.
+    // "Northern Iowa Panthers" needs an explicit alias too (not just
+    // "Arizona" needing token-matching) since "Northern" doesn't
+    // auto-expand to match the "N Iowa" key's "North" the way a bare "N"
+    // would. Full history on Arizona replacing Northern Iowa in this tier
+    // (a real 2024 conference move, not a spreadsheet artifact -- an
+    // earlier 2026-08-07 conclusion said the opposite and was itself
+    // wrong, corrected 2026-08-22) lives on the TEAM_ART entries above.
     aliases: { "West Virgnia Mountaineers": "W Virginia", "Northern Iowa Panthers": "N Iowa" },
   },
   ACC: {
