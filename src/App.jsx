@@ -336,7 +336,10 @@ const HISTORICAL_FINAL_ORDER = {
   },
   2022: {
     // Pre-2023 backfill, ongoing 2026-08-21 -- matches GRID_BRACKETS[2022]
-    // above exactly, same tiers done/open. 4 tiers still open.
+    // above exactly, same tiers done/open. 3 tiers still fully open (XFL,
+    // USFL, NFL). FLHS's order is done and confirmed below, but its
+    // GRID_BRACKETS visual bracket is still waiting on 4 missing team
+    // colors from her -- see the note on the FLHS entry below.
     SEC: [
       "Ole Miss", "Vanderbilt", "Texas A&M", "Miss State", "Tennessee", "Auburn", "Kentucky", "Missouri",
       "Arkansas", "Georgia", "Florida", "Oklahoma", "South Carolina", "LSU", "Texas", "Alabama",
@@ -372,6 +375,24 @@ const HISTORICAL_FINAL_ORDER = {
     GLIAC: [
       "Davenport", "Ohio N", "Wayne State", "Northwood", "Heidelberg", "JCU", "N Michigan", "Muskingum",
       "Parkside", "Ferris State", "Baldwin", "Wilmington", "Purdue NW", "Mount Union", "Capital", "Lake Superior",
+    ],
+    // FLHS 2022 was a 20-team, 4-round (Week 14-17) bracket with byes --
+    // structurally different from 2023+'s clean 16-team shape (see the
+    // matching note on GRID_BRACKETS[2022].FLHS below). Confirmed two
+    // independent ways: every one of the 10 explicit W/L placement labels
+    // on her sheet (Champion, 3rd, 5th, ... 19th) agrees with this order,
+    // AND her sheet's own separate pick/finish reference table (a
+    // pre-computed 1-20 standings list) agrees with it too. Four of these
+    // 20 teams (Coral Gables, Columbus, Flanigan, Coral Reef) don't exist
+    // in FLHS_CLR at all -- that palette was only ever built from the
+    // 2023-2025-era 16-team roster. Colors needed from her before
+    // GRID_BRACKETS[2022].FLHS (the visual bracket) can render correctly;
+    // this order itself doesn't depend on color and is confirmed as-is.
+    // "Deerfield Bch" on her sheet -> "Deerfield", matching FLHS_CLR's key.
+    FLHS: [
+      "Miami Senior", "Southwest", "Miami Beach", "Columbus", "Western", "West Boca", "Boca Raton", "Deerfield",
+      "Palmetto", "Coral Gables", "Flanigan", "Taravella", "Cypress Bay", "Coral Glades", "Miami Dade", "Coral Springs",
+      "West Broward", "Coral Reef", "Dr Krop", "Stoneman",
     ],
   },
   2024: {
