@@ -336,7 +336,7 @@ const HISTORICAL_FINAL_ORDER = {
   },
   2022: {
     // Pre-2023 backfill, ongoing 2026-08-21 -- matches GRID_BRACKETS[2022]
-    // above exactly, same tiers done/open. 9 tiers still open.
+    // above exactly, same tiers done/open. 7 tiers still open.
     SEC: [
       "Ole Miss", "Vanderbilt", "Texas A&M", "Miss State", "Tennessee", "Auburn", "Kentucky", "Missouri",
       "Arkansas", "Georgia", "Florida", "Oklahoma", "South Carolina", "LSU", "Texas", "Alabama",
@@ -352,6 +352,14 @@ const HISTORICAL_FINAL_ORDER = {
     TEN: [
       "Washington State", "Colorado", "Washington", "San Diego State", "UCLA", "Eastern Washington", "Arizona", "Stanford",
       "Boise State", "Arizona State", "Portland State", "Cal Poly", "Oregon State", "Oregon", "Cal", "Utah",
+    ],
+    SUN: [
+      "Carolina", "ULM", "JMU", "Old Dominion", "Troy", "AK State", "S Miss", "GA State",
+      "S Alabama", "App State", "Texas State", "Louisiana", "Little Rock", "GA Southern", "Arlington", "Marshall",
+    ],
+    SOCO: [
+      "VMI", "Austin Peay", "Elon", "Jax State", "Tenn Tech", "Tenn State", "Belmont", "Chattanooga",
+      "Nicholls", "Martin", "E Tenn", "Murray State", "Carolina", "Samford", "Mercer", "Citadel",
     ],
   },
   2024: {
@@ -6363,6 +6371,66 @@ const SOCO_2023_CONSOLATION = r3ConsoHalf({
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
+// --- 2022 SOCO, ranks 1-8 (championship half) -------------------------------
+// Transcribed from her PFA_Playoffs_2022_-_SoCon.csv export. Every winner
+// cross-validated two independent ways (head-to-head score comparison AND
+// the sheet's own explicit W/L + placement labels), zero discrepancies.
+// Full read-back confirmed 2026-08-21. Same name normalization 2023
+// already established (matching SOCO_CLR): sheet's "Tenn" -> "E Tenn".
+// Left/right split by the same convention established for every prior
+// 2022 tier.
+const SOCO_2022_PLAYOFFS = r3ChampHalf({
+  colors: SOCO_CLR, logo: "SoCon", logoSrc: SOCO_MARK, trophy: SOCO_TROPHY,
+  banners: SOCO_BANNERS,
+  wk15: [
+    ["Jax State", "194.10", "Chattanooga", "119.50"],
+    ["VMI", "264.40", "Tenn Tech", "162.70"],
+    ["Austin Peay", "300.35", "Belmont", "213.65"],
+    ["Tenn State", "183.00", "Elon", "258.15"],
+  ],
+  semis: [
+    ["Jax State", "213.00", "VMI", "233.45"],
+    ["Austin Peay", "250.95", "Elon", "170.70"],
+  ],
+  final: ["VMI", "283.35", "Austin Peay", "135.50"],
+  third: ["Jax State", "212.65", "Elon", "230.40"],
+  fifth: {
+    leftQual: ["Chattanooga", "105.10", "Tenn Tech", "256.00"],
+    rightQual: ["Belmont", "209.85", "Tenn State", "260.65"],
+    final: ["Tenn Tech", "201.00", "Tenn State", "168.20"],
+  },
+  seventh: ["Chattanooga", "94.80", "Belmont", "176.95"],
+});
+
+// --- 2022 SOCO, ranks 9-16 (consolation half) -------------------------------
+// Same source/confirmation as the playoffs half above. Consolation
+// left/right split by structural analogy to the confirmed championship
+// split, same assumption pattern as every prior 2022 tier (confirmed
+// correct every time so far).
+const SOCO_2022_CONSOLATION = r3ConsoHalf({
+  colors: SOCO_CLR, logo: "SoCon", logoSrc: SOCO_MARK,
+  banners: SOCO_CONSO_BANNERS,
+  wk15: [
+    ["Martin", "248.40", "Mercer", "220.40"],
+    ["E Tenn", "212.00", "Samford", "178.60"],
+    ["Carolina", "153.15", "Nicholls", "217.75"],
+    ["Murray State", "205.40", "Citadel", "203.60"],
+  ],
+  semis: [
+    ["Martin", "227.20", "E Tenn", "176.20"],
+    ["Nicholls", "185.90", "Murray State", "174.35"],
+  ],
+  final: ["Martin", "165.55", "Nicholls", "198.70"],
+  eleventh: ["E Tenn", "206.70", "Murray State", "139.80"],
+  thirteenth: {
+    leftQual: ["Mercer", "194.65", "Samford", "206.45"],
+    rightQual: ["Carolina", "245.45", "Citadel", "207.25"],
+    final: ["Samford", "112.05", "Carolina", "173.40"],
+  },
+  fifteenth: ["Mercer", "182.40", "Citadel", "126.00"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
 // --- 2024 SUN, ranks 1-8 (championship half) --------------------------------
 // Transcribed from her PFA_Playoffs_2024 - SUN.csv export, confirmed 2026-08-17.
 const SUN_2024_PLAYOFFS = r3ChampHalf({
@@ -6464,6 +6532,67 @@ const SUN_2023_CONSOLATION = r3ConsoHalf({
     final: ["JMU", "193.40", "S Miss", "184.10"],
   },
   fifteenth: ["Old Dominion", "210.00", "ULM", "176.40"],
+  footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
+});
+
+// --- 2022 SUN, ranks 1-8 (championship half) --------------------------------
+// Transcribed from her PFA_Playoffs_2022_-_Sun_Belt.csv export. Every
+// winner cross-validated two independent ways (head-to-head score
+// comparison AND the sheet's own explicit W/L + placement labels), zero
+// discrepancies. Full read-back confirmed 2026-08-21. Same name
+// normalizations 2023 already established (matching SUN_CLR): "S
+// Mississippi" -> "S Miss", "UT Arlington" -> "Arlington", "Texas St" ->
+// "Texas State". Left/right split by the same convention established for
+// SEC/BIG XII/ACC/TEN 2022.
+const SUN_2022_PLAYOFFS = r3ChampHalf({
+  colors: SUN_CLR, logo: "Sun Belt", logoSrc: SUN_MARK, trophy: SUN_TROPHY,
+  banners: SUN_BANNERS,
+  wk15: [
+    ["Carolina", "388.10", "GA State", "163.50"],
+    ["Old Dominion", "219.00", "Troy", "198.20"],
+    ["S Miss", "173.10", "ULM", "213.30"],
+    ["AK State", "180.85", "JMU", "208.50"],
+  ],
+  semis: [
+    ["Carolina", "267.25", "Old Dominion", "233.15"],
+    ["ULM", "252.30", "JMU", "200.85"],
+  ],
+  final: ["Carolina", "284.90", "ULM", "219.30"],
+  third: ["Old Dominion", "153.95", "JMU", "198.60"],
+  fifth: {
+    leftQual: ["GA State", "191.05", "Troy", "222.40"],
+    rightQual: ["S Miss", "189.00", "AK State", "217.75"],
+    final: ["Troy", "261.25", "AK State", "221.05"],
+  },
+  seventh: ["GA State", "168.80", "S Miss", "173.95"],
+});
+
+// --- 2022 SUN, ranks 9-16 (consolation half) --------------------------------
+// Same source/confirmation as the playoffs half above. Consolation
+// left/right split by structural analogy to the confirmed championship
+// split, same assumption pattern as every prior 2022 tier (confirmed
+// correct every time so far).
+const SUN_2022_CONSOLATION = r3ConsoHalf({
+  colors: SUN_CLR, logo: "Sun Belt", logoSrc: SUN_MARK,
+  banners: SUN_CONSO_BANNERS,
+  wk15: [
+    ["Little Rock", "144.90", "App State", "240.50"],
+    ["Arlington", "201.75", "Louisiana", "233.20"],
+    ["Texas State", "217.45", "Marshall", "167.40"],
+    ["S Alabama", "207.70", "GA Southern", "116.45"],
+  ],
+  semis: [
+    ["App State", "225.60", "Louisiana", "220.80"],
+    ["Texas State", "172.65", "S Alabama", "191.45"],
+  ],
+  final: ["App State", "134.15", "S Alabama", "157.15"],
+  eleventh: ["Louisiana", "143.80", "Texas State", "211.90"],
+  thirteenth: {
+    leftQual: ["Little Rock", "200.50", "Arlington", "122.90"],
+    rightQual: ["Marshall", "144.30", "GA Southern", "202.95"],
+    final: ["Little Rock", "177.55", "GA Southern", "114.85"],
+  },
+  fifteenth: ["Arlington", "128.60", "Marshall", "119.90"],
   footer: [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"],
 });
 
@@ -8721,13 +8850,15 @@ const GRID_BRACKETS = {
   2022: {
     // Pre-2023 backfill, ongoing 2026-08-21 -- transcribed from her
     // PFA_Playoffs_2022 CSV exports as they come in, full read-back
-    // confirmed for each. 9 tiers still open.
+    // confirmed for each. 7 tiers still open.
     SEC: { playoffs: SEC_2022_PLAYOFFS, consolation: SEC_2022_CONSOLATION },
     "BIG XII": { playoffs: XII_2022_PLAYOFFS, consolation: XII_2022_CONSOLATION },
     ACC: { playoffs: ACC_2022_PLAYOFFS, consolation: ACC_2022_CONSOLATION },
     // Branded "PAC-12" for 2022 (same as 2023) -- see the note on
     // PAC12_CLR. Still tierKey TEN, same underlying league.
     TEN: { playoffs: PAC12_2022_PLAYOFFS, consolation: PAC12_2022_CONSOLATION },
+    SUN: { playoffs: SUN_2022_PLAYOFFS, consolation: SUN_2022_CONSOLATION },
+    SOCO: { playoffs: SOCO_2022_PLAYOFFS, consolation: SOCO_2022_CONSOLATION },
   },
 };
 
