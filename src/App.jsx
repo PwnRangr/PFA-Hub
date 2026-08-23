@@ -6589,6 +6589,66 @@ function findChampionCoach(trophies, tierLeagueName, year) {
   return null;
 }
 
+// Text-fitting for the banner, added 2026-08-22 after her screenshots
+// showed several team names overflowing past the shape's edges
+// (Washington State Cougars, Jacksonville State Gamecocks, Tennessee
+// Martin Skyhawks). The prior line-split just divided by WORD COUNT
+// (`Math.ceil(words.length / 2)` words on line 1, rest on line 2),
+// which ignores how long those words actually are — for "Jacksonville
+// State Gamecocks" that put "JACKSONVILLE STATE" (19 characters) on one
+// line and "GAMECOCKS" (9) on the other, when splitting after just
+// "JACKSONVILLE" (12 vs 15) balances far better. No real text-measurement
+// API is available in this render path, so width is estimated (a
+// standard technique for icon/badge generation without a live DOM to
+// measure against) rather than measured exactly — the two functions
+// below are deliberately conservative, and the safety-net compression
+// catches anything the estimate still gets wrong.
+function estimateTextWidth(text, fontSize, letterSpacing = 0) {
+  // ~0.6× font-size per character is a reasonable average for a bold
+  // uppercase grotesque sans (Urbanist) — real glyph widths vary, but
+  // erring slightly wide (over-estimating) is the safe direction here,
+  // since it means the compression safety net below triggers a little
+  // more often rather than a little less.
+  return text.length * (fontSize * 0.6 + letterSpacing);
+}
+
+// Splits a team's full name across up to 2 lines, choosing the word-break
+// point that MINIMIZES the longer of the two resulting lines' estimated
+// widths -- not simply "half the words on each line". Tries every
+// possible break point (cheap: real team names are at most 4-5 words)
+// and keeps the best-balanced one.
+function splitTeamName(fullName, fontSize, letterSpacing) {
+  const words = fullName.toUpperCase().split(" ");
+  if (words.length === 1) return [words[0]];
+  let best = null;
+  for (let i = 1; i < words.length; i++) {
+    const line1 = words.slice(0, i).join(" ");
+    const line2 = words.slice(i).join(" ");
+    const maxW = Math.max(
+      estimateTextWidth(line1, fontSize, letterSpacing),
+      estimateTextWidth(line2, fontSize, letterSpacing)
+    );
+    if (!best || maxW < best.maxW) best = { line1, line2, maxW };
+  }
+  return [best.line1, best.line2];
+}
+
+// Safety net for whatever the estimate above still gets wrong (or any
+// single word too long to split around at all, e.g. a long one-word
+// mascot name): if a line's estimated width exceeds the available space,
+// return SVG's own textLength/lengthAdjust attributes to compress it to
+// fit, instead of letting it overflow. Returns {} (no compression) when
+// the line already fits, so short names render at their natural width
+// rather than being stretched to fill the max.
+function fitTextWidth(text, fontSize, maxWidth, letterSpacing = 0) {
+  const estimated = estimateTextWidth(text, fontSize, letterSpacing);
+  return estimated > maxWidth ? { textLength: maxWidth, lengthAdjust: "spacingAndGlyphs" } : {};
+}
+// Max width for any single line of banner text -- the shape's flat top
+// is 220 units wide (x=20 to x=240); this leaves 15 units of margin on
+// each side.
+const BANNER_TEXT_MAX_WIDTH = 190;
+
 // One shield banner. All text uppercase per the approved design (not a
 // site-wide convention — specific to this component). Colors come
 // straight from TEAM_CLR (already confirmed real per-team colors, same
@@ -6677,22 +6737,19 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
           inconsistency to fix later. */}
       {fullName.toUpperCase().split(" ").length > 1 ? (
         (() => {
-          const words = fullName.toUpperCase().split(" ");
-          const mid = Math.ceil(words.length / 2);
-          const line1 = words.slice(0, mid).join(" ");
-          const line2 = words.slice(mid).join(" ");
+          const [line1, line2] = splitTeamName(fullName, 24, 0.5);
           return (
             <>
-              <text x="130" y="56" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5, ...outline(2) }}>{line1}</text>
-              <text x="130" y="82" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5, ...outline(2) }}>{line2}</text>
+              <text x="130" y="56" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5, ...outline(2) }} {...fitTextWidth(line1, 24, BANNER_TEXT_MAX_WIDTH, 0.5)}>{line1}</text>
+              <text x="130" y="82" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5, ...outline(2) }} {...fitTextWidth(line2, 24, BANNER_TEXT_MAX_WIDTH, 0.5)}>{line2}</text>
             </>
           );
         })()
       ) : (
-        <text x="130" y="70" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5, ...outline(2) }}>{fullName.toUpperCase()}</text>
+        <text x="130" y="70" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5, ...outline(2) }} {...fitTextWidth(fullName.toUpperCase(), 24, BANNER_TEXT_MAX_WIDTH, 0.5)}>{fullName.toUpperCase()}</text>
       )}
       {coachKey && (
-        <text x="130" y="104" textAnchor="middle" fill={C.chalk} opacity="0.85" style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: 1, ...outline(1.1) }}>
+        <text x="130" y="104" textAnchor="middle" fill={C.chalk} opacity="0.85" style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: 1, ...outline(1.1) }} {...fitTextWidth(`COACH ${coachKey.toUpperCase()}`, 13, BANNER_TEXT_MAX_WIDTH, 1)}>
           COACH {coachKey.toUpperCase()}
         </text>
       )}
@@ -6705,8 +6762,10 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
       <rect x="70" y="214" width="120" height="3" rx="1.5" fill={darkColor} />
       {/* Headline split into two lines 2026-08-22 (her request) -- tier
           name on its own line, "CHAMPIONS" below it, instead of one long
-          line that overflowed the shape's edges for longer tier names. */}
-      <text x="130" y="240" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: 1, ...outline(1.7) }}>
+          line that overflowed the shape's edges for longer tier names.
+          Same compression safety net as the team name, in case a future
+          tier's name is long enough to need it. */}
+      <text x="130" y="240" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: 1, ...outline(1.7) }} {...fitTextWidth(tierLabel.toUpperCase(), 20, BANNER_TEXT_MAX_WIDTH, 1)}>
         {tierLabel.toUpperCase()}
       </text>
       <text x="130" y="266" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: 1, ...outline(1.7) }}>
