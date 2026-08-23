@@ -31,6 +31,12 @@ import {
   watchClub4000Live,
   watchClub4000Historical,
   watchCoachTrophiesHistorical,
+  // Re-imported 2026-08-22 for a one-off correction only -- see
+  // runCrazyKirtTrophyFix below and its own comment. This mirrors exactly
+  // what storage.js's own comment on replaceCoachTrophiesHistorical says
+  // to do: "the machinery a future one-off correction would reuse."
+  // Remove this import again once the fix has actually been run.
+  replaceCoachTrophiesHistorical,
   getClub4000ProcessedYear,
   markClub4000ProcessedYear,
   addStreakBonusEntry,
@@ -2493,6 +2499,58 @@ const COACH_TROPHIES = {
   austin3x: [{ award: "Coach of the Year", league: "Sun Belt", year: 2025 }],
 };
 */
+
+// One-off correction, 2026-08-22: CrazyKirt (UCLA Bruins, TEN) was
+// missing from coachTrophiesHistorical for both years he actually won --
+// confirmed via this file's own historical weekly-high-score data, which
+// already shows him coaching UCLA Bruins in TEN for exactly 2023 and
+// 2024, and confirmed no other coach is currently (incorrectly) attached
+// to Big Ten 2023/2024 in the trophy data. This is the FULL current
+// 36-coach/50-trophy dataset (the same one in the COACH_TROPHIES archive
+// comment above, itself confirmed 100% accurate via the 2026-08-22 spot-
+// check) plus exactly those 2 new entries -- replaceCoachTrophiesHistorical
+// is a full bulk-replace, so this has to be the complete set, not a diff.
+// DELETE this constant, the button below, and the storage.js import above
+// once she's clicked the button once on her live site.
+const CRAZYKIRT_TROPHY_FIX = [
+  ["josssock", [{ award: "League Champion", league: "NFL", year: 2023 }]],
+  ["aziv49", [{ award: "League Champion", league: "SEC", year: 2022 }]],
+  ["harvey28", [{ award: "League Champion", league: "NFL", year: 2025 }, { award: "League Champion", league: "Sun Belt", year: 2022 }]],
+  ["huibuh", [{ award: "League Champion", league: "NFL", year: 2024 }]],
+  ["foggybuckets", [{ award: "League Champion", league: "SWAC", year: 2022 }]],
+  ["firephool", [{ award: "League Champion", league: "Big XII", year: 2025 }]],
+  ["mvpmalik2", [{ award: "League Champion", league: "GLIAC", year: 2024 }]],
+  ["spacebarracecar", [{ award: "League Champion", league: "USFL", year: 2025 }]],
+  ["redphoenix437", [{ award: "League Champion", league: "USFL", year: 2022 }, { award: "League Champion", league: "USFL", year: 2023 }]],
+  ["noga2003", [{ award: "League Champion", league: "XFL", year: 2025 }]],
+  ["z1856z", [{ award: "League Champion", league: "XFL", year: 2023 }]],
+  ["tylerwt003", [{ award: "League Champion", league: "ACC", year: 2025 }]],
+  ["wonks l", [{ award: "League Champion", league: "ACC", year: 2022 }]],
+  ["juugking", [{ award: "League Champion", league: "Sun Belt", year: 2025 }]],
+  ["acubes21", [{ award: "League Champion", league: "SoCon", year: 2025 }]],
+  ["jamie04", [{ award: "League Champion", league: "SoCon", year: 2024 }, { award: "Coach of the Year", league: "SoCon", year: 2024 }]],
+  ["bradlevo", [{ award: "League Champion", league: "SoCon", year: 2023 }]],
+  ["dylan3380", [{ award: "League Champion", league: "SoCon", year: 2022 }]],
+  ["jorgeortiz11", [{ award: "League Champion", league: "GLIAC", year: 2025 }]],
+  ["stokescity", [{ award: "League Champion", league: "FLHS", year: 2025 }]],
+  ["mbulls", [{ award: "League Champion", league: "FLHS", year: 2022 }]],
+  ["pwnrangr", [{ award: "League Champion", league: "FLHS", year: 2023 }, { award: "League Champion", league: "Big Ten", year: 2022 }, { award: "Coach of the Year", league: "Big Ten", year: 2022 }]],
+  ["glang727", [{ award: "League Champion", league: "SWAC", year: 2023 }]],
+  ["harold2576", [{ award: "League Champion", league: "GLIAC", year: 2023 }]],
+  ["dilly314", [{ award: "League Champion", league: "Ivy League", year: 2024 }]],
+  ["wynnguy", [{ award: "Coach of the Year", league: "Ivy League", year: 2025 }, { award: "League Champion", league: "Ivy League", year: 2022 }, { award: "League Champion", league: "Ivy League", year: 2025 }]],
+  ["ziplocbaggins", [{ award: "League Champion", league: "Big XII", year: 2024 }, { award: "League Champion", league: "Big XII", year: 2023 }]],
+  ["garmstrong2002", [{ award: "League Champion", league: "GLIAC", year: 2022 }]],
+  ["zero00", [{ award: "League Champion", league: "SEC", year: 2024 }, { award: "Coach of the Year", league: "SEC", year: 2024 }, { award: "League Champion", league: "ACC", year: 2023 }, { award: "League Champion", league: "USFL", year: 2024 }, { award: "League Champion", league: "ACC", year: 2024 }, { award: "Coach of the Year", league: "ACC", year: 2025 }]],
+  ["samwow123", [{ award: "League Champion", league: "SEC", year: 2025 }, { award: "League Champion", league: "Big Ten", year: 2025 }]],
+  ["rifelife520", [{ award: "League Champion", league: "SEC", year: 2023 }]],
+  ["mambasdisciples", [{ award: "League Champion", league: "SWAC", year: 2024 }]],
+  ["finnbar3", [{ award: "Coach of the Year", league: "NFL", year: 2024 }]],
+  ["wdh76", [{ award: "Coach of the Year", league: "Big XII", year: 2023 }]],
+  ["mrcoolbuns", [{ award: "Coach of the Year", league: "XFL", year: 2023 }]],
+  ["austin3x", [{ award: "Coach of the Year", league: "Sun Belt", year: 2025 }]],
+  ["crazykirt", [{ award: "League Champion", league: "Big Ten", year: 2023 }, { award: "League Champion", league: "Big Ten", year: 2024 }]],
+];
 
 // Original, generic badge shapes — not a recreation of any real trophy —
 // just enough to visually distinguish the two award categories.
@@ -12240,6 +12298,27 @@ export default function App() {
     }
   }, [streakBonusesLive, manualPenalties, conferenceStrengthHistorical]);
 
+  // One-off correction, 2026-08-22 -- see CRAZYKIRT_TROPHY_FIX's own
+  // comment above for the full story (CrazyKirt's missing UCLA/TEN
+  // 2023+2024 trophies, confirmed via this file's own historical
+  // high-score data before accepting it). replaceCoachTrophiesHistorical
+  // is a full bulk-replace (deletes any doc not in the fresh set), so
+  // this passes the COMPLETE 37-coach dataset, not just the addition --
+  // same shape every other Firestore migration in this file already
+  // uses. DELETE this function, its button below, CRAZYKIRT_TROPHY_FIX,
+  // and the storage.js import above once she's clicked the button once.
+  const [crazyKirtFixRunning, setCrazyKirtFixRunning] = useState(false);
+  const runCrazyKirtTrophyFix = useCallback(async () => {
+    setCrazyKirtFixRunning(true);
+    try {
+      await replaceCoachTrophiesHistorical(CRAZYKIRT_TROPHY_FIX);
+    } catch (e) {
+      console.error("CrazyKirt trophy fix failed", e);
+    } finally {
+      setCrazyKirtFixRunning(false);
+    }
+  }, []);
+
   // Sleeper's own playoff bracket — this is the actual round-by-round
   // winner/loser data (roster IDs, not just seeding), separate from the
   // standings fetch above. Whether this lines up cleanly with our custom
@@ -16210,6 +16289,35 @@ export default function App() {
                     }}
                   >
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2023/2024/2025)"}
+                  </button>
+                </div>
+                {/* One-off correction, 2026-08-22 -- NOT a permanent Engine
+                    Room step like the two buttons above. Styled with
+                    C.ember (the site's error/warning color) instead of
+                    C.gold specifically so it doesn't look like a normal
+                    recurring action -- click once, then this whole block,
+                    runCrazyKirtTrophyFix, CRAZYKIRT_TROPHY_FIX, and the
+                    storage.js import above should all be deleted. */}
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.ember}`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                    One-time fix: adds CrazyKirt's missing UCLA Bruins (TEN) League Champion trophies for 2023 and
+                    2024 to coachTrophiesHistorical. Confirmed against this file's own historical high-score data
+                    before building this — safe to click once, then this button should be removed.
+                  </div>
+                  <button
+                    onClick={runCrazyKirtTrophyFix}
+                    disabled={crazyKirtFixRunning}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 4,
+                      border: `1px solid ${C.ember}`,
+                      background: crazyKirtFixRunning ? "transparent" : C.ember,
+                      color: crazyKirtFixRunning ? C.slate : C.ink,
+                      fontWeight: 600,
+                      cursor: crazyKirtFixRunning ? "default" : "pointer",
+                    }}
+                  >
+                    {crazyKirtFixRunning ? "Running…" : "Fix Trophy Data (Add CrazyKirt 2023/2024)"}
                   </button>
                 </div>
               </section>
