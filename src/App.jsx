@@ -31,6 +31,10 @@ import {
   watchClub4000Live,
   watchClub4000Historical,
   watchCoachTrophiesHistorical,
+  // Re-imported 2026-08-22 for a one-off correction only -- see
+  // runRetiredCoachesTrophyFix below and its own comment. Remove this
+  // import again once the fix has actually been run.
+  replaceCoachTrophiesHistorical,
   getClub4000ProcessedYear,
   markClub4000ProcessedYear,
   addStreakBonusEntry,
@@ -2487,20 +2491,91 @@ const COACH_TROPHIES = {
   ],
   rifelife520: [{ award: "League Champion", league: "SEC", year: 2023 }],
   mambasdisciples: [{ award: "League Champion", league: "SWAC", year: 2024 }],
+  finnbar3: [{ award: "Coach of the Year", league: "NFL", year: 2024 }],
+  wdh76: [{ award: "Coach of the Year", league: "Big XII", year: 2023 }],
+  mrcoolbuns: [{ award: "Coach of the Year", league: "XFL", year: 2023 }],
   austin3x: [{ award: "Coach of the Year", league: "Sun Belt", year: 2025 }],
 };
 */
-// UPDATE, 2026-08-22: this archive snapshot is now stale by exactly 2
-// entries, on purpose -- it's a frozen historical record of what the
-// 2026-08-21 migration moved, not a live mirror. CrazyKirt's UCLA Bruins
-// (TEN) League Champion trophies for 2023 and 2024 were confirmed
-// missing (a real gap, not a migration error) and added directly to
-// live Firestore via a one-off correction the same day. The archive
-// above intentionally isn't touched to reflect that -- it exists to
-// document the migration itself, not to double as an ongoing mirror of
-// coachTrophiesHistorical's current contents. coachTrophiesHistorical
-// is genuinely 37 coaches/52 trophies now; this comment says so, the
-// object above still says 36/50, and that's correct, not a bug.
+// UPDATE, 2026-08-22: this archive snapshot is stale on purpose — it's a
+// frozen historical record of what the 2026-08-21 migration moved, not a
+// live mirror. Two separate one-off corrections have been applied
+// directly to live Firestore since: CrazyKirt's UCLA Bruins (TEN)
+// trophies for 2023/2024, and 9 more retired coaches (left the alliance
+// before this admin/roster build existed) confirmed missing the same
+// way. The archive above intentionally isn't touched to reflect either
+// one — it exists to document the original migration, not to double as
+// an ongoing mirror of coachTrophiesHistorical's current contents.
+// coachTrophiesHistorical is genuinely 45 coaches/61 trophies now; this
+// comment says so, the object above still says 36/50, and that's
+// correct, not a bug.
+
+// One-off correction, 2026-08-22: 9 more retired coaches (left the
+// alliance before this admin/roster build existed) were confirmed
+// missing from coachTrophiesHistorical, the same shape of gap as
+// CrazyKirt above. Cross-checked each against this file's own historical
+// weekly-high-score data before accepting them: 3 matched exactly
+// (TheColburnator01/IVY/2023, spicyftbaltakes/BIG XII/2022, Runhaags/
+// SUN/2024), 2 had a year that didn't match what this file's own data
+// showed (OlaveGarden18 and Broncos8804) -- flagged directly, she
+// double-checked and confirmed her original years were right, so those
+// are used as given rather than "corrected" to match incomplete
+// secondary data. LittenGiants and Rhoads have no corroborating record
+// anywhere in this file at all, consistent with predating whatever this
+// file's own historical tracking captures. This is the FULL current
+// 37-coach/52-trophy live dataset (36/50 confirmed-accurate archive +
+// CrazyKirt, already applied) plus exactly these 9 new entries --
+// replaceCoachTrophiesHistorical is a full bulk-replace, so this has to
+// be the complete set, not a diff. DELETE this constant, the button
+// below, and the storage.js import above once she's clicked the button
+// once on her live site.
+const RETIRED_COACHES_TROPHY_FIX = [
+  ["josssock", [{ award: "League Champion", league: "NFL", year: 2023 }]],
+  ["aziv49", [{ award: "League Champion", league: "SEC", year: 2022 }]],
+  ["harvey28", [{ award: "League Champion", league: "NFL", year: 2025 }, { award: "League Champion", league: "Sun Belt", year: 2022 }]],
+  ["huibuh", [{ award: "League Champion", league: "NFL", year: 2024 }]],
+  ["foggybuckets", [{ award: "League Champion", league: "SWAC", year: 2022 }]],
+  ["firephool", [{ award: "League Champion", league: "Big XII", year: 2025 }]],
+  ["mvpmalik2", [{ award: "League Champion", league: "GLIAC", year: 2024 }]],
+  ["spacebarracecar", [{ award: "League Champion", league: "USFL", year: 2025 }]],
+  ["redphoenix437", [{ award: "League Champion", league: "USFL", year: 2022 }, { award: "League Champion", league: "USFL", year: 2023 }]],
+  ["noga2003", [{ award: "League Champion", league: "XFL", year: 2025 }]],
+  ["z1856z", [{ award: "League Champion", league: "XFL", year: 2023 }]],
+  ["tylerwt003", [{ award: "League Champion", league: "ACC", year: 2025 }]],
+  ["wonks l", [{ award: "League Champion", league: "ACC", year: 2022 }]],
+  ["juugking", [{ award: "League Champion", league: "Sun Belt", year: 2025 }]],
+  ["acubes21", [{ award: "League Champion", league: "SoCon", year: 2025 }]],
+  ["jamie04", [{ award: "League Champion", league: "SoCon", year: 2024 }, { award: "Coach of the Year", league: "SoCon", year: 2024 }]],
+  ["bradlevo", [{ award: "League Champion", league: "SoCon", year: 2023 }]],
+  ["dylan3380", [{ award: "League Champion", league: "SoCon", year: 2022 }]],
+  ["jorgeortiz11", [{ award: "League Champion", league: "GLIAC", year: 2025 }]],
+  ["stokescity", [{ award: "League Champion", league: "FLHS", year: 2025 }]],
+  ["mbulls", [{ award: "League Champion", league: "FLHS", year: 2022 }]],
+  ["pwnrangr", [{ award: "League Champion", league: "FLHS", year: 2023 }, { award: "League Champion", league: "Big Ten", year: 2022 }, { award: "Coach of the Year", league: "Big Ten", year: 2022 }]],
+  ["glang727", [{ award: "League Champion", league: "SWAC", year: 2023 }]],
+  ["harold2576", [{ award: "League Champion", league: "GLIAC", year: 2023 }]],
+  ["dilly314", [{ award: "League Champion", league: "Ivy League", year: 2024 }]],
+  ["wynnguy", [{ award: "Coach of the Year", league: "Ivy League", year: 2025 }, { award: "League Champion", league: "Ivy League", year: 2022 }, { award: "League Champion", league: "Ivy League", year: 2025 }]],
+  ["ziplocbaggins", [{ award: "League Champion", league: "Big XII", year: 2024 }, { award: "League Champion", league: "Big XII", year: 2023 }]],
+  ["garmstrong2002", [{ award: "League Champion", league: "GLIAC", year: 2022 }]],
+  ["zero00", [{ award: "League Champion", league: "SEC", year: 2024 }, { award: "Coach of the Year", league: "SEC", year: 2024 }, { award: "League Champion", league: "ACC", year: 2023 }, { award: "League Champion", league: "USFL", year: 2024 }, { award: "League Champion", league: "ACC", year: 2024 }, { award: "Coach of the Year", league: "ACC", year: 2025 }]],
+  ["samwow123", [{ award: "League Champion", league: "SEC", year: 2025 }, { award: "League Champion", league: "Big Ten", year: 2025 }]],
+  ["rifelife520", [{ award: "League Champion", league: "SEC", year: 2023 }]],
+  ["mambasdisciples", [{ award: "League Champion", league: "SWAC", year: 2024 }]],
+  ["finnbar3", [{ award: "Coach of the Year", league: "NFL", year: 2024 }]],
+  ["wdh76", [{ award: "Coach of the Year", league: "Big XII", year: 2023 }]],
+  ["mrcoolbuns", [{ award: "Coach of the Year", league: "XFL", year: 2023 }]],
+  ["austin3x", [{ award: "Coach of the Year", league: "Sun Belt", year: 2025 }]],
+  ["crazykirt", [{ award: "League Champion", league: "Big Ten", year: 2023 }, { award: "League Champion", league: "Big Ten", year: 2024 }]],
+  ["runhaags", [{ award: "League Champion", league: "Sun Belt", year: 2023 }, { award: "League Champion", league: "Sun Belt", year: 2024 }]],
+  ["thecolburnator01", [{ award: "League Champion", league: "Ivy League", year: 2023 }]],
+  ["littengiants", [{ award: "League Champion", league: "XFL", year: 2022 }]],
+  ["benchedballers", [{ award: "League Champion", league: "XFL", year: 2024 }]],
+  ["rhoads", [{ award: "League Champion", league: "NFL", year: 2022 }]],
+  ["spicyftbaltakes", [{ award: "League Champion", league: "Big XII", year: 2022 }]],
+  ["olavegarden18", [{ award: "League Champion", league: "SWAC", year: 2025 }]],
+  ["broncos8804", [{ award: "League Champion", league: "FLHS", year: 2024 }]],
+];
 
 // Original, generic badge shapes — not a recreation of any real trophy —
 // just enough to visually distinguish the two award categories.
@@ -12248,6 +12323,27 @@ export default function App() {
     }
   }, [streakBonusesLive, manualPenalties, conferenceStrengthHistorical]);
 
+  // One-off correction, 2026-08-22 -- see RETIRED_COACHES_TROPHY_FIX's own
+  // comment above for the full story (9 retired coaches missing from
+  // coachTrophiesHistorical, each cross-checked before accepting).
+  // replaceCoachTrophiesHistorical is a full bulk-replace (deletes any
+  // doc not in the fresh set), so this passes the COMPLETE 45-coach
+  // dataset, not just the 9 additions -- same shape as the CrazyKirt fix
+  // earlier the same day. DELETE this function, its button below,
+  // RETIRED_COACHES_TROPHY_FIX, and the storage.js import above once
+  // she's clicked the button once.
+  const [retiredCoachesFixRunning, setRetiredCoachesFixRunning] = useState(false);
+  const runRetiredCoachesTrophyFix = useCallback(async () => {
+    setRetiredCoachesFixRunning(true);
+    try {
+      await replaceCoachTrophiesHistorical(RETIRED_COACHES_TROPHY_FIX);
+    } catch (e) {
+      console.error("Retired coaches trophy fix failed", e);
+    } finally {
+      setRetiredCoachesFixRunning(false);
+    }
+  }, []);
+
   // Sleeper's own playoff bracket — this is the actual round-by-round
   // winner/loser data (roster IDs, not just seeding), separate from the
   // standings fetch above. Whether this lines up cleanly with our custom
@@ -16218,6 +16314,35 @@ export default function App() {
                     }}
                   >
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2023/2024/2025)"}
+                  </button>
+                </div>
+                {/* One-off correction, 2026-08-22 -- NOT a permanent Engine
+                    Room step like the two buttons above. Same ember
+                    styling as the CrazyKirt fix earlier the same day, for
+                    the same reason -- click once, then this whole block,
+                    runRetiredCoachesTrophyFix, RETIRED_COACHES_TROPHY_FIX,
+                    and the storage.js import above should all be deleted. */}
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.ember}`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                    One-time fix: adds 9 retired coaches' missing League Champion trophies to coachTrophiesHistorical
+                    (Runhaags, TheColburnator01, LittenGiants, BenchedBallers, Rhoads, spicyftbaltakes,
+                    OlaveGarden18, Broncos8804 — see RETIRED_COACHES_TROPHY_FIX's own comment for which year/league
+                    each one is). Safe to click once, then this button should be removed.
+                  </div>
+                  <button
+                    onClick={runRetiredCoachesTrophyFix}
+                    disabled={retiredCoachesFixRunning}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 4,
+                      border: `1px solid ${C.ember}`,
+                      background: retiredCoachesFixRunning ? "transparent" : C.ember,
+                      color: retiredCoachesFixRunning ? C.slate : C.ink,
+                      fontWeight: 600,
+                      cursor: retiredCoachesFixRunning ? "default" : "pointer",
+                    }}
+                  >
+                    {retiredCoachesFixRunning ? "Running…" : "Fix Trophy Data (Add 9 Retired Coaches)"}
                   </button>
                 </div>
               </section>
