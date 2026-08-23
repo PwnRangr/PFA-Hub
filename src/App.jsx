@@ -6139,6 +6139,13 @@ const TEAM_ART = {
     [normTeamKey("Northwestern Wildcats")]: teamArtPath("TEN", "ten-team-northwestern-wildcats.png"),
     [normTeamKey("UCLA Bruins")]: teamArtPath("TEN", "ten-team-ucla-bruins.png"),
     [normTeamKey("Washington Huskies")]: teamArtPath("TEN", "ten-team-washington-huskies.png"),
+    // Added 2026-08-22 -- she provided the actual logo file. Was a known,
+    // documented gap (see the Champion Banners section elsewhere in this
+    // file): Washington State Cougars is a real 2022 TEN champion from
+    // the tier's PAC-12 era, confirmed to have no art yet the moment that
+    // feature shipped. Filename follows this tier's own convention
+    // exactly like every other entry here.
+    [normTeamKey("Washington State Cougars")]: teamArtPath("TEN", "ten-team-washington-state-cougars.png"),
     [normTeamKey("Ohio State Buckeyes")]: teamArtPath("TEN", "ten-team-ohio-state-buckeyes.png"),
     [normTeamKey("California Golden Bears")]: teamArtPath("TEN", "ten-team-california-golden-bears.png"),
     [normTeamKey("Indiana Hoosiers")]: teamArtPath("TEN", "ten-team-indiana-hoosiers.png"),
@@ -6789,6 +6796,21 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
 // in case), so a call site only ever needs to pass tierKey and can't
 // repeat the tier.name/tierKey near-miss from this feature's first
 // version.
+//
+// bannerDisplayLabel (added 2026-08-22, her request) is deliberately
+// SEPARATE from tierLabel: TEN's 2022/2023 banners should visually say
+// "PAC-12" (the tier's real branding in those years, same PAC-12 era
+// already documented elsewhere in this file), but the underlying trophy
+// data was confirmed to store "Big Ten" for every TEN year regardless of
+// era -- including 2022 -- so the COACH LOOKUP below still has to use
+// `tierLabel` ("Big Ten") unconditionally, or it would silently stop
+// finding 2022/2023 coaches. Only the text actually rendered on the
+// banner changes; the data lookup that already worked doesn't.
+function bannerDisplayLabel(tierKey, tierLabel, year) {
+  if (tierKey === "TEN" && year <= 2023) return "PAC-12";
+  return tierLabel;
+}
+
 function ChampionBanners({ tierKey, coachTrophies }) {
   const shortToFull = TIER_SHORT_TO_FULL[tierKey];
   if (!shortToFull) return null;
@@ -6803,8 +6825,11 @@ function ChampionBanners({ tierKey, coachTrophies }) {
       const shortName = HISTORICAL_FINAL_ORDER[year][tierKey][0];
       const fullName = shortToFull[shortName];
       if (!fullName || !colorMap[shortName]) return null;
+      // Coach lookup uses tierLabel ("Big Ten"), NOT the display label --
+      // see this function's own comment above for why those two need to
+      // stay independent.
       const coachKey = findChampionCoach(coachTrophies, tierLabel, year);
-      return { year, shortName, fullName, coachKey };
+      return { year, shortName, fullName, coachKey, displayLabel: bannerDisplayLabel(tierKey, tierLabel, year) };
     })
     .filter(Boolean);
   if (!banners.length) return null;
@@ -6825,7 +6850,7 @@ function ChampionBanners({ tierKey, coachTrophies }) {
           <div key={b.year} className="flex-shrink-0">
             <ChampionBanner
               tierKey={tierKey}
-              tierLabel={tierLabel}
+              tierLabel={b.displayLabel}
               year={b.year}
               shortName={b.shortName}
               fullName={b.fullName}
