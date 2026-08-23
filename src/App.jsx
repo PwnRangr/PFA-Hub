@@ -6589,15 +6589,37 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
   const [c1, c2] = colorMap[shortName] || ["#2A3550", C.chalk];
   const logoSrc = TEAM_ART[tierKey] && TEAM_ART[tierKey][normTeamKey(fullName)];
   const gradId = `championBannerFill-${tierKey}-${year}`;
+  // Text outline, added 2026-08-22 (her contrast report): several teams'
+  // SECOND color -- c2, rendered at the gradient's 0% stop, which is
+  // where the top of the banner (team name/coach text) actually sits --
+  // is pure white or near-white (Arkansas State, Georgia State, Brown,
+  // Georgetown all confirmed via TEAM_CLR-equivalent lookup, not
+  // guessed), so light chalk text on light backgrounds was unreadable
+  // exactly the way she described. A per-team "pick readable text color"
+  // check was considered and rejected: the banner is a vertical GRADIENT,
+  // so a single text color can't be right for both the light and dark
+  // ends of the same banner at once (some teams are light-on-top/dark-on-
+  // bottom, or the reverse). A dark outline behind the text works
+  // regardless of what's behind it -- readable on light backgrounds via
+  // the outline, readable on dark backgrounds via the white/gold fill --
+  // and needs zero per-team logic or future maintenance as more teams get
+  // added. Width is set per element at roughly 8-10% of that element's
+  // own font-size, not one fixed value, so small text doesn't go blobby
+  // and large text doesn't go faint.
+  const outline = (px) => ({ stroke: "#000", strokeWidth: px, paintOrder: "stroke" });
   return (
-    // Sized 2026-08-22 to roughly match the NFL trophy's own rendered size
-    // in the bracket (100x150, see NFL_TROPHY's champSlots entry) — down
-    // from the original preview's 200x278, her request ("a little
-    // smaller... the size of the NFL trophy"). viewBox is untouched at
-    // 260x360 so none of the internal x/y coordinates below needed
-    // recalculating; only the outer width/height (the actual rendered
-    // size) changed, and SVG scales everything inside proportionally.
-    <svg width="108" height="150" viewBox="0 0 260 360" role="img" aria-label={`${fullName}, ${year} ${tierLabel} Champion${coachKey ? `, coached by ${coachKey}` : ""}`}>
+    // Extended taller 2026-08-22 to fit the headline's tier name and
+    // "CHAMPIONS" as two separate lines instead of one -- some tier names
+    // ("IVY LEAGUE", "SUN BELT") were wide enough on one line to overflow
+    // past the shape's own edges at this size. viewBox grew from 260x360
+    // to 260x400 (the extra 40 units all added to the main rectangular
+    // body, between the divider and the tail, so nothing above the
+    // divider needed to move); display height grew from 150 to 166 to
+    // hold the same aspect ratio as the new viewBox -- still close to
+    // the NFL-trophy-sized target from her last request, just tall
+    // enough now to fit the extra line without stretching text outside
+    // the shape.
+    <svg width="108" height="166" viewBox="0 0 260 400" role="img" aria-label={`${fullName}, ${year} ${tierLabel} Champion${coachKey ? `, coached by ${coachKey}` : ""}`}>
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={c2} />
@@ -6608,7 +6630,7 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
         </filter>
       </defs>
       <path
-        d="M 20 20 L 240 20 L 240 250 L 130 340 L 20 250 Z"
+        d="M 20 20 L 240 20 L 240 280 L 130 370 L 20 280 Z"
         fill={`url(#${gradId})`}
         stroke={c1}
         strokeWidth="4"
@@ -6617,13 +6639,13 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
       {/* Font changed 2026-08-22 from Barlow Condensed/IBM Plex Mono (the
           site-wide defaults) to Urbanist, her pick among the three she
           named (Urbanist/Comfortaa/Lato) -- see the banner section's own
-          note on why, and that it needs a Google Fonts <link> added
-          wherever Barlow Condensed/IBM Plex Mono already are (index.html,
-          not part of this file), not done here since that file wasn't
-          available this session. This banner is a deliberately separate
-          visual identity from the rest of the site, so using one font for
-          both the headline and the year (no more monospace-for-numbers
-          here) is intentional, not an inconsistency to fix later. */}
+          note on why, and that it needed a Google Fonts <link> added
+          to App.jsx's own font-loading <style> blocks (there are two,
+          kept in sync -- see that section's own note). This banner is a
+          deliberately separate visual identity from the rest of the
+          site, so using one font for both the headline and the year (no
+          more monospace-for-numbers here) is intentional, not an
+          inconsistency to fix later. */}
       {fullName.toUpperCase().split(" ").length > 1 ? (
         (() => {
           const words = fullName.toUpperCase().split(" ");
@@ -6632,16 +6654,16 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
           const line2 = words.slice(mid).join(" ");
           return (
             <>
-              <text x="130" y="56" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5 }}>{line1}</text>
-              <text x="130" y="82" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5 }}>{line2}</text>
+              <text x="130" y="56" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5, ...outline(2) }}>{line1}</text>
+              <text x="130" y="82" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5, ...outline(2) }}>{line2}</text>
             </>
           );
         })()
       ) : (
-        <text x="130" y="70" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5 }}>{fullName.toUpperCase()}</text>
+        <text x="130" y="70" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5, ...outline(2) }}>{fullName.toUpperCase()}</text>
       )}
       {coachKey && (
-        <text x="130" y="104" textAnchor="middle" fill={C.chalk} opacity="0.85" style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: 1 }}>
+        <text x="130" y="104" textAnchor="middle" fill={C.chalk} opacity="0.85" style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: 1, ...outline(1.1) }}>
           COACH {coachKey.toUpperCase()}
         </text>
       )}
@@ -6649,13 +6671,19 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
       {logoSrc ? (
         <image href={logoSrc} x="96" y="126" width="68" height="68" clipPath="circle(34px at 34px 34px)" />
       ) : (
-        <text x="130" y="165" textAnchor="middle" fill={C.slate} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 1 }}>LOGO</text>
+        <text x="130" y="165" textAnchor="middle" fill={C.slate} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 1, ...outline(1.1) }}>LOGO</text>
       )}
       <rect x="70" y="214" width="120" height="3" rx="1.5" fill={c1} />
-      <text x="130" y="242" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: 1 }}>
-        {tierLabel.toUpperCase()} CHAMPIONS
+      {/* Headline split into two lines 2026-08-22 (her request) -- tier
+          name on its own line, "CHAMPIONS" below it, instead of one long
+          line that overflowed the shape's edges for longer tier names. */}
+      <text x="130" y="240" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: 1, ...outline(1.7) }}>
+        {tierLabel.toUpperCase()}
       </text>
-      <text x="130" y="290" textAnchor="middle" fill={C.gold} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 700, fontSize: 34 }}>{year}</text>
+      <text x="130" y="266" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: 1, ...outline(1.7) }}>
+        CHAMPIONS
+      </text>
+      <text x="130" y="320" textAnchor="middle" fill={C.gold} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 700, fontSize: 34, ...outline(2.8) }}>{year}</text>
     </svg>
   );
 }
@@ -6704,7 +6732,7 @@ function ChampionBanners({ tierKey, coachTrophies }) {
           row's total width exceeds the container, which defeats the
           point of a horizontally-scrolling row. Built for "many banners"
           from the start per her note, not just today's 4. */}
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <div className="flex justify-center gap-3 overflow-x-auto pb-2">
         {banners.map((b) => (
           <div key={b.year} className="flex-shrink-0">
             <ChampionBanner
