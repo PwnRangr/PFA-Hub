@@ -6465,7 +6465,14 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
   const logoSrc = TEAM_ART[tierKey] && TEAM_ART[tierKey][normTeamKey(fullName)];
   const gradId = `championBannerFill-${tierKey}-${year}`;
   return (
-    <svg width="200" height="278" viewBox="0 0 260 360" role="img" aria-label={`${fullName}, ${year} ${tierLabel} Champion${coachKey ? `, coached by ${coachKey}` : ""}`}>
+    // Sized 2026-08-22 to roughly match the NFL trophy's own rendered size
+    // in the bracket (100x150, see NFL_TROPHY's champSlots entry) — down
+    // from the original preview's 200x278, her request ("a little
+    // smaller... the size of the NFL trophy"). viewBox is untouched at
+    // 260x360 so none of the internal x/y coordinates below needed
+    // recalculating; only the outer width/height (the actual rendered
+    // size) changed, and SVG scales everything inside proportionally.
+    <svg width="108" height="150" viewBox="0 0 260 360" role="img" aria-label={`${fullName}, ${year} ${tierLabel} Champion${coachKey ? `, coached by ${coachKey}` : ""}`}>
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={c2} />
@@ -6482,6 +6489,16 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
         strokeWidth="4"
         filter={`url(#${gradId}-shadow)`}
       />
+      {/* Font changed 2026-08-22 from Barlow Condensed/IBM Plex Mono (the
+          site-wide defaults) to Urbanist, her pick among the three she
+          named (Urbanist/Comfortaa/Lato) -- see the banner section's own
+          note on why, and that it needs a Google Fonts <link> added
+          wherever Barlow Condensed/IBM Plex Mono already are (index.html,
+          not part of this file), not done here since that file wasn't
+          available this session. This banner is a deliberately separate
+          visual identity from the rest of the site, so using one font for
+          both the headline and the year (no more monospace-for-numbers
+          here) is intentional, not an inconsistency to fix later. */}
       {fullName.toUpperCase().split(" ").length > 1 ? (
         (() => {
           const words = fullName.toUpperCase().split(" ");
@@ -6490,16 +6507,16 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
           const line2 = words.slice(mid).join(" ");
           return (
             <>
-              <text x="130" y="56" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5 }}>{line1}</text>
-              <text x="130" y="82" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5 }}>{line2}</text>
+              <text x="130" y="56" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5 }}>{line1}</text>
+              <text x="130" y="82" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5 }}>{line2}</text>
             </>
           );
         })()
       ) : (
-        <text x="130" y="70" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5 }}>{fullName.toUpperCase()}</text>
+        <text x="130" y="70" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5 }}>{fullName.toUpperCase()}</text>
       )}
       {coachKey && (
-        <text x="130" y="104" textAnchor="middle" fill={C.chalk} opacity="0.85" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: 1 }}>
+        <text x="130" y="104" textAnchor="middle" fill={C.chalk} opacity="0.85" style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: 1 }}>
           COACH {coachKey.toUpperCase()}
         </text>
       )}
@@ -6507,26 +6524,27 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
       {logoSrc ? (
         <image href={logoSrc} x="96" y="126" width="68" height="68" clipPath="circle(34px at 34px 34px)" />
       ) : (
-        <text x="130" y="165" textAnchor="middle" fill={C.slate} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 1 }}>LOGO</text>
+        <text x="130" y="165" textAnchor="middle" fill={C.slate} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 1 }}>LOGO</text>
       )}
       <rect x="70" y="214" width="120" height="3" rx="1.5" fill={c1} />
-      <text x="130" y="242" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: 1 }}>
+      <text x="130" y="242" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: 1 }}>
         {tierLabel.toUpperCase()} CHAMPIONS
       </text>
-      <text x="130" y="290" textAnchor="middle" fill={C.gold} style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, fontSize: 34 }}>{year}</text>
+      <text x="130" y="290" textAnchor="middle" fill={C.gold} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 700, fontSize: 34 }}>{year}</text>
     </svg>
   );
 }
 
-// Row of every confirmed past champion for one tier, oldest first. Skips
-// a year silently (rather than rendering a broken banner) if any
-// prerequisite is missing — no confirmed champion in HISTORICAL_FINAL_
-// ORDER, no TIER_SHORT_TO_FULL entry yet for this tier, or no TEAM_CLR
-// color for that short name. Returns null entirely (renders nothing) for
-// a tier with no TIER_SHORT_TO_FULL table yet, so adding this component
-// to the shared per-tier page is safe for all 13 tiers today even though
-// only NFL has real data — the other 12 simply show nothing until their
-// own mapping is added, same rollout pattern as the live-scored bracket
+// Row of every confirmed past champion for one tier, NEWEST first (her
+// request 2026-08-22 -- was oldest-first at launch). Skips a year
+// silently (rather than rendering a broken banner) if any prerequisite is
+// missing — no confirmed champion in HISTORICAL_FINAL_ORDER, no
+// TIER_SHORT_TO_FULL entry yet for this tier, or no TEAM_CLR color for
+// that short name. Returns null entirely (renders nothing) for a tier
+// with no TIER_SHORT_TO_FULL table yet, so adding this component to the
+// shared per-tier page is safe for all 13 tiers today even though only
+// NFL has real data — the other 12 simply show nothing until their own
+// mapping is added, same rollout pattern as the live-scored bracket
 // automation earlier this session (ship what's confirmed, hold the rest).
 function ChampionBanners({ tierKey, tierLabel, coachTrophies }) {
   const shortToFull = TIER_SHORT_TO_FULL[tierKey];
@@ -6534,7 +6552,7 @@ function ChampionBanners({ tierKey, tierLabel, coachTrophies }) {
   const years = Object.keys(HISTORICAL_FINAL_ORDER)
     .map(Number)
     .filter((y) => HISTORICAL_FINAL_ORDER[y] && HISTORICAL_FINAL_ORDER[y][tierKey])
-    .sort((a, b) => a - b);
+    .sort((a, b) => b - a);
   const banners = years
     .map((year) => {
       const shortName = HISTORICAL_FINAL_ORDER[year][tierKey][0];
@@ -6548,17 +6566,26 @@ function ChampionBanners({ tierKey, tierLabel, coachTrophies }) {
   return (
     <div className="mt-6">
       <div className="text-sm font-semibold mb-3" style={{ color: C.chalk }}>Past Champions</div>
-      <div className="flex gap-4 overflow-x-auto pb-2">
+      {/* flex-nowrap is the browser default for display:flex, so this
+          already doesn't wrap; flex-shrink-0 on each banner (below) is
+          what actually guarantees they hold their real size instead of
+          getting squeezed as more accumulate — without it, flexbox's
+          default shrink:1 would start compressing every banner once the
+          row's total width exceeds the container, which defeats the
+          point of a horizontally-scrolling row. Built for "many banners"
+          from the start per her note, not just today's 4. */}
+      <div className="flex gap-3 overflow-x-auto pb-2">
         {banners.map((b) => (
-          <ChampionBanner
-            key={b.year}
-            tierKey={tierKey}
-            tierLabel={tierLabel}
-            year={b.year}
-            shortName={b.shortName}
-            fullName={b.fullName}
-            coachKey={b.coachKey}
-          />
+          <div key={b.year} className="flex-shrink-0">
+            <ChampionBanner
+              tierKey={tierKey}
+              tierLabel={tierLabel}
+              year={b.year}
+              shortName={b.shortName}
+              fullName={b.fullName}
+              coachKey={b.coachKey}
+            />
+          </div>
         ))}
       </div>
     </div>
@@ -11028,7 +11055,7 @@ function PublicRules() {
   return (
     <div className="min-h-screen w-full" style={{ background: C.ink, color: C.chalk, fontFamily: "'Barlow', sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Urbanist:wght@600;700;800&display=swap');
       `}</style>
       <header className="px-4 sm:px-6 pt-6 pb-4" style={{ borderBottom: `1px solid ${C.line}` }}>
         <div className="max-w-6xl mx-auto flex items-center gap-3">
@@ -13929,7 +13956,7 @@ export default function App() {
   return (
     <div className="min-h-screen w-full" style={{ background: C.ink, color: C.chalk, fontFamily: "'Barlow', sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Urbanist:wght@600;700;800&display=swap');
         ::-webkit-scrollbar { height: 6px; width: 8px; }
         ::-webkit-scrollbar-thumb { background: ${C.line}; border-radius: 3px; }
         input::placeholder, textarea::placeholder { color: ${C.slate}; opacity: 0.7; }
