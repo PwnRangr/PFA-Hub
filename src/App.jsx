@@ -2638,7 +2638,12 @@ const ROSTER_LINKS = {
   "kansas city chiefs": "https://sleeper.com/roster/1316582839847759872/25",
   "denver broncos": "https://sleeper.com/roster/1316582839847759872/23",
 
-  // ---- USFL (1316586636028448768) — 2 slots unfilled in source (skipped) ----
+  // ---- USFL (1316586636028448768) — all 20 present ----
+  // Added 2026-08-22 from her admin sheet cross-check: Memphis Showboats
+  // (roster 15) and Jacksonville Bulls (roster 4) were on the sheet the
+  // whole time but had no ROSTER_LINKS entry yet.
+  "memphis showboats": "https://sleeper.com/roster/1316586636028448768/15",
+  "jacksonville bulls": "https://sleeper.com/roster/1316586636028448768/4",
   "san antonio gunslingers": "https://sleeper.com/roster/1316586636028448768/20",
   "pittsburgh maulers": "https://sleeper.com/roster/1316586636028448768/6",
   "birmingham stallions": "https://sleeper.com/roster/1316586636028448768/14",
@@ -2658,7 +2663,11 @@ const ROSTER_LINKS = {
   "houston gamblers": "https://sleeper.com/roster/1316586636028448768/8",
   "oakland invaders": "https://sleeper.com/roster/1316586636028448768/13",
 
-  // ---- XFL (1316588494914613248) — 2 slots unfilled in source (skipped) ----
+  // ---- XFL (1316588494914613248) — all 20 present ----
+  // Added 2026-08-22: Houston Roughnecks (roster 13) and Las Vegas Outlaws
+  // (roster 10) confirmed against her admin sheet.
+  "houston roughnecks": "https://sleeper.com/roster/1316588494914613248/13",
+  "las vegas outlaws": "https://sleeper.com/roster/1316588494914613248/10",
   "dc defenders": "https://sleeper.com/roster/1316588494914613248/7",
   "birmingham thunderbolts": "https://sleeper.com/roster/1316588494914613248/4",
   "orlando rage": "https://sleeper.com/roster/1316588494914613248/17",
@@ -2737,11 +2746,14 @@ const ROSTER_LINKS = {
   "nc state wolfpack": "https://sleeper.com/roster/1317191636379254784/4",
   "georgiatech yellowjackets": "https://sleeper.com/roster/1317191636379254784/7",
 
-  // ---- BIG TEN (1317530523035242496) — 2 slots still unfilled (Washington
-  // Huskies roster 1, Wisconsin Badgers roster 7) ----
+  // ---- BIG TEN (1317530523035242496) — all 16 present ----
   // Roster 4/16 were swapped (Ohio State's name was sitting on UCLA's
   // roster, and Ohio State's own roster had no entry at all) -- corrected
   // 2026-08-22, confirmed directly: UCLA is roster 4, Ohio State is roster 16.
+  // The 2 previously-unfilled slots (Washington Huskies roster 1, Wisconsin
+  // Badgers roster 7) confirmed and added the same session.
+  "washington huskies": "https://sleeper.com/roster/1317530523035242496/1",
+  "wisconsin badgers": "https://sleeper.com/roster/1317530523035242496/7",
   "ucla bruins": "https://sleeper.com/roster/1317530523035242496/4",
   "northwestern wildcats": "https://sleeper.com/roster/1317530523035242496/13",
   "indiana hoosiers": "https://sleeper.com/roster/1317530523035242496/11",
@@ -2757,7 +2769,9 @@ const ROSTER_LINKS = {
   "usc trojans": "https://sleeper.com/roster/1317530523035242496/5",
   "ohio state buckeyes": "https://sleeper.com/roster/1317530523035242496/16",
 
-  // ---- SUN BELT (1317557888784306176) — corrected ID; 1 slot unfilled ----
+  // ---- SUN BELT (1317557888784306176) — corrected ID; all 16 present ----
+  // Arkansas State Red Wolves (roster 6) added 2026-08-22.
+  "arkansas state red wolves": "https://sleeper.com/roster/1317557888784306176/6",
   "georgia state panthers": "https://sleeper.com/roster/1317557888784306176/7",
   "little rock trojans": "https://sleeper.com/roster/1317557888784306176/8",
   "app state mountaineers": "https://sleeper.com/roster/1317557888784306176/12",
@@ -2774,7 +2788,12 @@ const ROSTER_LINKS = {
   "texas state bobcats": "https://sleeper.com/roster/1317557888784306176/9",
   "carolina chanticleers": "https://sleeper.com/roster/1317557888784306176/1",
 
-  // ---- SOCO (1317559700799131648) — corrected ID; 2 slots unfilled ----
+  // ---- SOCO (1317559700799131648) — corrected ID; all 16 present ----
+  // Added 2026-08-22. Her sheet has "Jax State Gamecocks" (roster 1); renamed
+  // to match TEAM_ART's existing full-name key, "Jacksonville State
+  // Gamecocks" -- same team, sheet just uses the short form. Confirmed.
+  "jacksonville state gamecocks": "https://sleeper.com/roster/1317559700799131648/1",
+  "chattanooga mocs": "https://sleeper.com/roster/1317559700799131648/10",
   "austin peay governors": "https://sleeper.com/roster/1317559700799131648/4",
   "west carolina catamounts": "https://sleeper.com/roster/1317559700799131648/8",
   "belmont bruins": "https://sleeper.com/roster/1317559700799131648/14",
@@ -2790,7 +2809,12 @@ const ROSTER_LINKS = {
   "murray state racers": "https://sleeper.com/roster/1317559700799131648/6",
   "tenn tech eagles": "https://sleeper.com/roster/1317559700799131648/12",
 
-  // ---- IVY (1317562012057735168) — corrected ID; 2 slots unfilled ----
+  // ---- IVY (1317562012057735168) — corrected ID; all 16 present ----
+  // Added 2026-08-22. Her sheet has "Princeton University" (roster 9);
+  // renamed to match TEAM_ART/CAREER_STATS's existing key for this exact
+  // coach/tier, "Princeton Tigers." Confirmed.
+  "princeton tigers": "https://sleeper.com/roster/1317562012057735168/9",
+  "yale bulldogs": "https://sleeper.com/roster/1317562012057735168/5",
   "brown bears": "https://sleeper.com/roster/1317562012057735168/12",
   "colgate raiders": "https://sleeper.com/roster/1317562012057735168/11",
   "lehigh mountain hawks": "https://sleeper.com/roster/1317562012057735168/15",
@@ -2806,7 +2830,7 @@ const ROSTER_LINKS = {
   "lafayette leopards": "https://sleeper.com/roster/1317562012057735168/4",
   "fordham rams": "https://sleeper.com/roster/1317562012057735168/1",
 
-  // ---- SWAC (1317574770207789056) — corrected ID; 6 slots unfilled ----
+  // ---- SWAC (1317574770207789056) — corrected ID; all 16 present ----
   // Roster 16's key was "pfa vp" -- that's DirtyByrd30's title (PFA VP), not
   // a team name; the real team name had been typed "Jackston State" (typo)
   // on her sheet. Renamed 2026-08-22, confirmed directly, typo corrected to
@@ -2821,8 +2845,17 @@ const ROSTER_LINKS = {
   "alcorn state braves": "https://sleeper.com/roster/1317574770207789056/9",
   "pine bluff golden lions": "https://sleeper.com/roster/1317574770207789056/11",
   "alabama state hornets": "https://sleeper.com/roster/1317574770207789056/3",
+  // Remaining 6 added 2026-08-22 from her admin sheet cross-check. "North
+  // Carolina Central" on her sheet renamed to match TEAM_ART's existing key,
+  // "NC Central Eagles" -- confirmed.
+  "morgan state bears": "https://sleeper.com/roster/1317574770207789056/1",
+  "pvamu panthers": "https://sleeper.com/roster/1317574770207789056/13",
+  "florida a&m rattlers": "https://sleeper.com/roster/1317574770207789056/4",
+  "texas southern tigers": "https://sleeper.com/roster/1317574770207789056/15",
+  "norfolk state spartans": "https://sleeper.com/roster/1317574770207789056/6",
+  "nc central eagles": "https://sleeper.com/roster/1317574770207789056/14",
 
-  // ---- GLIAC (1317895570131546112) — corrected ID; 5 slots unfilled ----
+  // ---- GLIAC (1317895570131546112) — corrected ID; all 16 present ----
   "davenport panthers": "https://sleeper.com/roster/1317895570131546112/3",
   "wayne state warriors": "https://sleeper.com/roster/1317895570131546112/13",
   "n michigan wildcats": "https://sleeper.com/roster/1317895570131546112/9",
@@ -2834,6 +2867,14 @@ const ROSTER_LINKS = {
   "wilmington quakers": "https://sleeper.com/roster/1317895570131546112/10",
   "lake superior lakers": "https://sleeper.com/roster/1317895570131546112/1",
   "purdue nw pride": "https://sleeper.com/roster/1317895570131546112/14",
+  // Remaining 5 added 2026-08-22 from her admin sheet cross-check.
+  // "HeidelBurg StudentPrinces" on her sheet renamed to match the confirmed
+  // real spelling used elsewhere in this file, "Heidelberg StudentPrinces."
+  "wi parkside rangers": "https://sleeper.com/roster/1317895570131546112/15",
+  "heidelberg studentprinces": "https://sleeper.com/roster/1317895570131546112/6",
+  "muskingum fighting muskies": "https://sleeper.com/roster/1317895570131546112/11",
+  "capital comets": "https://sleeper.com/roster/1317895570131546112/7",
+  "ohio northern polar bears": "https://sleeper.com/roster/1317895570131546112/2",
 
   // ---- FLHS (1317921468134232064) — actually complete now, 16/16 -----------
   // The previous "now complete" comment here was itself stale -- only 7 of
@@ -2860,6 +2901,311 @@ const ROSTER_LINKS = {
   "coral gables cavaliers": "https://sleeper.com/roster/1317921468134232064/14",
   "coral springs colts": "https://sleeper.com/roster/1317921468134232064/16",
 };
+
+// ROSTER_IDENTITY -- canonical display name for every 2026 roster, keyed
+// by leagueId then rosterId (both from LEAGUE_HISTORY[2026]/ROSTER_LINKS).
+// Added 2026-08-22 as the real fix for a recurring failure class: every
+// prior miss (Oakland->Las Vegas Raiders rename, "pfa vp" mislabel, swapped
+// roster IDs, the 4 renames from the ROSTER_LINKS completion pass earlier
+// today) was fundamentally a coach-entered team name drifting from this
+// file's own canonical spelling. This table is the single source of truth
+// for DISPLAY going forward -- wired into buildStandings() below, which is
+// the one function every live team-name consumer on the site reads from
+// (Standings, Coaches, Open Teams, Weekly Awards, Tournament ranking, and
+// TeamMark's logo lookup, since that also matches on the team-name string).
+// Built by cross-referencing all 232 ROSTER_LINKS entries against TEAM_ART's
+// own hand-confirmed spelling; 214 matched directly, 18 needed a real
+// decision (6 already correct, just missing TEAM_ART logo art; 12 were
+// genuine fixes -- typos, expanded abbreviations, 2 wrong/incomplete
+// mascots -- confirmed with her before writing). Falls back to today's
+// existing live-name/sheet-name behavior for any roster not yet in here,
+// so a brand-new or not-yet-catalogued roster never goes blank.
+// Historical seasons use their own, different league IDs (see
+// LEAGUE_HISTORY[year] for years other than 2026) so this table simply
+// never matches for a past season -- zero risk of affecting historical data.
+const ROSTER_IDENTITY = {
+  // ---- NFL (1316582839847759872) ----
+  "1316582839847759872": {
+    "1": "Washington Commanders",
+    "2": "Las Vegas Raiders",
+    "3": "New England Patriots",
+    "4": "Jacksonville Jaguars",
+    "5": "Chicago Bears",
+    "6": "Green Bay Packers",
+    "7": "Cincinnati Bengals",
+    "8": "Tampa Bay Buccaneers",
+    "9": "Dallas Cowboys",
+    "10": "Pittsburgh Steelers",
+    "11": "Seattle Seahawks",
+    "12": "Baltimore Ravens",
+    "13": "Houston Texans",
+    "14": "San Francisco 49ers",
+    "15": "Arizona Cardinals",
+    "16": "Miami Dolphins",
+    "17": "New Orleans Saints",
+    "18": "Los Angeles Chargers",
+    "19": "Cleveland Browns",
+    "20": "Indianapolis Colts",
+    "21": "Carolina Panthers",
+    "22": "New York Giants",
+    "23": "Denver Broncos",
+    "24": "Buffalo Bills",
+    "25": "Kansas City Chiefs",
+    "26": "New York Jets",
+    "27": "Detroit Lions",
+    "28": "Tennessee Titans",
+    "29": "Philadelphia Eagles",
+    "30": "Atlanta Falcons",
+    "31": "Minnesota Vikings",
+    "32": "Los Angeles Rams",
+  },
+  // ---- USFL (1316586636028448768) ----
+  "1316586636028448768": {
+    "1": "Boston Breakers",
+    "2": "Tampa Bay Bandits",
+    "3": "Los Angeles Express",
+    "4": "Jacksonville Bulls",
+    "5": "Orlando Renegades",
+    "6": "Pittsburgh Maulers",
+    "7": "Oklahoma Outlaws",
+    "8": "Houston Gamblers",
+    "9": "Detroit Drive",
+    "10": "Washington Federals",
+    "11": "Arizona Wranglers",
+    "12": "Michigan Panthers",
+    "13": "Oakland Invaders",
+    "14": "Birmingham Stallions",
+    "15": "Memphis Showboats",
+    "16": "Philadelphia Stars",
+    "17": "Denver Gold",
+    "18": "Chicago Blitz",
+    "19": "New Jersey Generals",
+    "20": "San Antonio Gunslingers",
+  },
+  // ---- XFL (1316588494914613248) ----
+  "1316588494914613248": {
+    "1": "San Francisco Demons",
+    "2": "Dallas Renegades",
+    "3": "New York Guardians",
+    "4": "Birmingham Thunderbolts",
+    "5": "Memphis Maniax",
+    "6": "Boston Brawlers",
+    "7": "DC Defenders",
+    "8": "Los Angeles Xtreme",
+    "9": "Tampa Bay Vipers",
+    "10": "Las Vegas Outlaws",
+    "11": "Chicago Enforcers",
+    "12": "Brooklyn Bolts",
+    "13": "Houston Roughnecks",
+    "14": "St Louis Battlehawks",
+    "15": "Seattle Dragons",
+    "16": "New Jersey Hitmen",
+    "17": "Orlando Rage",
+    "18": "Los Angeles Wildcats",
+    "19": "Atlanta Legends",
+    "20": "Omaha Mammoths",
+  },
+  // ---- SEC (1316594738958192640) ----
+  "1316594738958192640": {
+    "1": "Texas Longhorns",
+    "2": "Miss State Bulldogs",
+    "3": "Arkansas Razorbacks",
+    "4": "Tennessee Volunteers",
+    "5": "Auburn Tigers",
+    "6": "Texas A&M Aggies",
+    "7": "Ole Miss Rebels",
+    "8": "South Carolina Gamecocks",
+    "9": "LSU Tigers",
+    "10": "Florida Gators",
+    "11": "Kentucky Wildcats",
+    "12": "Oklahoma Sooners",
+    "13": "Missouri Tigers",
+    "14": "Vanderbilt Commodores",
+    "15": "Alabama Crimson Tide",
+    "16": "Georgia Bulldogs",
+  },
+  // ---- BIG XII (1317152669235703808) ----
+  "1317152669235703808": {
+    "1": "Oklahoma State Cowboys",
+    "2": "Kansas Jayhawks",
+    "3": "Cincinnati Bearcats",
+    "4": "Baylor Bears",
+    "5": "Kansas State Wildcats",
+    "6": "Houston Cougars",
+    "7": "Texas Tech Red Raiders",
+    "8": "Arizona Wildcats",
+    "9": "TCU Horned Frogs",
+    "10": "UCF Knights",
+    "11": "Northern Colorado Bears",
+    "12": "BYU Cougars",
+    "13": "Denver Pioneers",
+    "14": "West Virginia Mountaineers",
+    "15": "Iowa State Cyclones",
+    "16": "South Dakota State Jackrabbits",
+  },
+  // ---- ACC (1317191636379254784) ----
+  "1317191636379254784": {
+    "1": "Pittsburgh Panthers",
+    "2": "Virginia Tech Hokies",
+    "3": "Boston College Eagles",
+    "4": "NC State Wolfpack",
+    "5": "Louisville Cardinals",
+    "6": "Virginia Cavaliers",
+    "7": "Georgia Tech Yellowjackets",
+    "8": "Clemson Tigers",
+    "9": "Wake Forest Demon Deacons",
+    "10": "Notre Dame Fighting Irish",
+    "11": "North Carolina Tarheels",
+    "12": "Miami Hurricanes",
+    "13": "Florida State Seminoles",
+    "14": "SMU Mustangs",
+    "15": "Syracuse Orange",
+    "16": "Duke Blue Devils",
+  },
+  // ---- BIG TEN (tierKey TEN) (1317530523035242496) ----
+  "1317530523035242496": {
+    "1": "Washington Huskies",
+    "2": "Michigan Wolverines",
+    "3": "Utah Utes",
+    "4": "UCLA Bruins",
+    "5": "USC Trojans",
+    "6": "Cal Golden Bears",
+    "7": "Wisconsin Badgers",
+    "8": "Oregon Ducks",
+    "9": "Illinois Fighting Illini",
+    "10": "Maryland Terrapins",
+    "11": "Indiana Hoosiers",
+    "12": "Purdue Boilermakers",
+    "13": "Northwestern Wildcats",
+    "14": "Rutgers Scarlet Knights",
+    "15": "Penn State Nittany Lions",
+    "16": "Ohio State Buckeyes",
+  },
+  // ---- SUN BELT (1317557888784306176) ----
+  "1317557888784306176": {
+    "1": "Carolina Chanticleers",
+    "2": "Troy Trojans",
+    "3": "USM Golden Eagles",
+    "4": "Old Dominion Monarchs",
+    "5": "Marshall Thundering Herd",
+    "6": "Arkansas State Red Wolves",
+    "7": "Georgia State Panthers",
+    "8": "Little Rock Trojans",
+    "9": "Texas State Bobcats",
+    "10": "South Alabama Jaguars",
+    "11": "Arlington Mavericks",
+    "12": "App State Mountaineers",
+    "13": "Georgia Southern Eagles",
+    "14": "Louisiana Ragin Cajuns",
+    "15": "ULM Warhawks",
+    "16": "James Madison Dukes",
+  },
+  // ---- SOCO (1317559700799131648) ----
+  "1317559700799131648": {
+    "1": "Jacksonville State Gamecocks",
+    "2": "Nicholls State Colonels",
+    "3": "Mercer Bears",
+    "4": "Austin Peay Governors",
+    "5": "E Tenn Buccaneers",
+    "6": "Murray State Racers",
+    "7": "Tennessee State Tigers",
+    "8": "West Carolina Catamounts",
+    "9": "Tennessee Martin Skyhawks",
+    "10": "Chattanooga Mocs",
+    "11": "Elon Phoenix",
+    "12": "Tenn Tech Eagles",
+    "13": "Samford Bulldogs",
+    "14": "Belmont Bruins",
+    "15": "VMI Keydets",
+    "16": "The Citadel Bulldogs",
+  },
+  // ---- IVY (1317562012057735168) ----
+  "1317562012057735168": {
+    "1": "Fordham Rams",
+    "2": "Harvard Crimson",
+    "3": "Dartmouth Big Green",
+    "4": "Lafayette Leopards",
+    "5": "Yale Bulldogs",
+    "6": "Cornell Big Red",
+    "7": "Georgetown Hoyas",
+    "8": "Penn Quakers",
+    "9": "Princeton Tigers",
+    "10": "MIT Engineers",
+    "11": "Colgate Raiders",
+    "12": "Brown Bears",
+    "13": "Holy Cross Crusaders",
+    "14": "Columbia Lions",
+    "15": "Lehigh Mountain Hawks",
+    "16": "Bucknell Bison",
+  },
+  // ---- SWAC (1317574770207789056) ----
+  "1317574770207789056": {
+    "1": "Morgan State Bears",
+    "2": "Southern U Jaguars",
+    "3": "Alabama State Hornets",
+    "4": "Florida A&M Rattlers",
+    "5": "Grambling State Tigers",
+    "6": "Norfolk State Spartans",
+    "7": "Alabama A&M Bulldogs",
+    "8": "South Carolina State Bulldogs",
+    "9": "Alcorn State Braves",
+    "10": "Bethune-Cookman Wildcats",
+    "11": "Pine Bluff Golden Lions",
+    "12": "Mississippi Valley Delta Devils",
+    "13": "PVAMU Panthers",
+    "14": "NC Central Eagles",
+    "15": "Texas Southern Tigers",
+    "16": "Jackson State Tigers",
+  },
+  // ---- GLIAC (1317895570131546112) ----
+  "1317895570131546112": {
+    "1": "Lake Superior Lakers",
+    "2": "Ohio Northern Polar Bears",
+    "3": "Davenport Panthers",
+    "4": "Baldwin Yellow Jackets",
+    "5": "Northwood Timberwolves",
+    "6": "Heidelberg StudentPrinces",
+    "7": "Capital Comets",
+    "8": "JCU Blue Streaks",
+    "9": "N Michigan Wildcats",
+    "10": "Wilmington Quakers",
+    "11": "Muskingum Fighting Muskies",
+    "12": "Ferris State Bulldogs",
+    "13": "Wayne State Warriors",
+    "14": "Purdue NW Pride",
+    "15": "WI Parkside Rangers",
+    "16": "Mount Union Raiders",
+  },
+  // ---- FLHS (1317921468134232064) ----
+  "1317921468134232064": {
+    "1": "Palmetto Panthers",
+    "2": "West Boca Raton Bulls",
+    "3": "Boca Raton Wolverines",
+    "4": "Taravella Trojans",
+    "5": "Stoneman Douglas Eagles",
+    "6": "West Broward Bobcats",
+    "7": "Western Wildcats",
+    "8": "Miami Senior Stingrays",
+    "9": "Coral Glades Jaguars",
+    "10": "Deerfield Beach Bucks",
+    "11": "Miami Dade Buccaneers",
+    "12": "Cypress Bay Lightning",
+    "13": "Miami Beach Hi Tides",
+    "14": "Coral Gables Cavaliers",
+    "15": "Dr. Krop Lightning",
+    "16": "Coral Springs Colts",
+  },
+};
+
+// Resolver for the table above. TDZ-safe the same way TeamMark's
+// TEAM_ART/TEAM_CLR lookups are (see that comment, ~line 2330): a function
+// body only runs when called, well after the whole module has loaded, so
+// referencing ROSTER_IDENTITY here is safe regardless of declaration order.
+function canonicalTeamName(leagueId, rosterId, fallback) {
+  const byLeague = ROSTER_IDENTITY[leagueId];
+  const name = byLeague && byLeague[String(rosterId)];
+  return name || fallback;
+}
 
 function TeamProfileModal({ team, onClose, draftPicks, draftPicksLoading, sheetRosterLinks }) {
   if (!team) return null;
@@ -10837,11 +11183,27 @@ export default function App() {
         // reason: an unowned CURRENT roster can fall back to the sheet's
         // team name, but a past season's unowned roster has no such thing
         // to fall back to (the sheet doesn't know about past seasons).
-        team:
-          (u.metadata && u.metadata.team_name) ||
-          u.display_name ||
-          (isCurrentSeason && sheetKey && sheetTeamNamesRef.current[sheetKey]) ||
-          "—",
+        //
+        // canonicalTeamName (added 2026-08-22) overrides all of that with
+        // ROSTER_IDENTITY's confirmed spelling whenever this leagueId+
+        // rosterId is in the table — the real fix for coach-entered team
+        // names drifting from this file's own naming (franchise renames,
+        // title-typo'd into the name field, plain misspellings). Gated on
+        // isCurrentSeason on purpose even though ROSTER_IDENTITY only has
+        // 2026 entries anyway (so a historical leagueId could never match
+        // it) — explicit here so intent doesn't depend on that coincidence.
+        // Falls through to the exact same chain as before for anything not
+        // yet in ROSTER_IDENTITY, so an unrecognized roster never goes blank.
+        team: isCurrentSeason
+          ? canonicalTeamName(
+              leagueId,
+              r.roster_id,
+              (u.metadata && u.metadata.team_name) ||
+                u.display_name ||
+                (sheetKey && sheetTeamNamesRef.current[sheetKey]) ||
+                "—"
+            )
+          : (u.metadata && u.metadata.team_name) || u.display_name || "—",
         w: s.wins || 0,
         l: s.losses || 0,
         pts: (s.fpts || 0) + (s.fpts_decimal || 0) / 100,
