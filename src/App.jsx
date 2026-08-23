@@ -11446,7 +11446,7 @@ export default function App() {
   };
 
   // ── X Points: streak bonus sweep (shared by the live 2026 effect below
-  // AND the one-time 2024/2025 backfill button) ──
+  // AND the one-time 2023/2024/2025 backfill button) ──
   // Walks weeks 1..throughWeek for one tier/year, reconstructing every
   // roster's win/loss/tie sequence via getWeeklyResultCached (cache-first,
   // so already-fetched weeks are free), runs computeStreakBonuses per
@@ -11541,19 +11541,27 @@ export default function App() {
     };
   }, [mode, nflState, leagueMap, sweepStreakBonuses]);
 
-  // ── Streak Bonuses: one-time 2024/2025 backfill ──
+  // ── Streak Bonuses: one-time 2023/2024/2025 backfill ──
   // Manual trigger only (see the temporary Admin button below) — not
   // wired to run automatically, since it's a one-off. Loops every tier for
-  // both completed seasons, weeks 1-17 each (confirmed: streaks run through
-  // playoff/placement weeks too, so no early cutoff before 17). Reuses the
-  // exact same sweepStreakBonuses core as the live 2026 path above.
+  // all three completed seasons, weeks 1-17 each (confirmed: streaks run
+  // through playoff/placement weeks too, so no early cutoff before 17).
+  // Reuses the exact same sweepStreakBonuses core as the live 2026 path
+  // above. 2023 added 2026-08-22 alongside the Season CP lock below —
+  // sweepStreakBonuses takes tierKey/leagueId/year/throughWeek as plain
+  // params with nothing year-specific hardcoded, so this needed no changes
+  // beyond the year list itself; LEAGUE_HISTORY[2023] already has all 13
+  // real league IDs. Run BEFORE (re-)running the Season CP lock for 2023,
+  // same as the existing 2024/2025 ordering — otherwise the lock would
+  // silently write 0 for X Points instead of flagging it as incomplete
+  // the way League Strength/FAAB already do.
   const [backfillRunning, setBackfillRunning] = useState(false);
   const [cpLockRunning, setCpLockRunning] = useState(false);
   const [strengthBackfillRunning, setStrengthBackfillRunning] = useState(false);
   const runStreakBonusBackfill = useCallback(async () => {
     setBackfillRunning(true);
     try {
-      for (const year of [2024, 2025]) {
+      for (const year of [2023, 2024, 2025]) {
         for (const [tierKey, leagueId] of Object.entries(LEAGUE_HISTORY[year] || {})) {
           try {
             await sweepStreakBonuses(tierKey, leagueId, year, 17);
@@ -11644,10 +11652,22 @@ export default function App() {
   // (tierKey_year_rosterId) means this just overwrites with a fresh
   // (hopefully more complete) record, same principle as the streak
   // backfill above and everything else in storage.js.
+  //
+  // 2023 added 2026-08-22, alongside the streak-bonus backfill above.
+  // Every prerequisite checked directly before adding it, not assumed:
+  // LEAGUE_HISTORY[2023] has all 13 real league IDs; HISTORICAL_FINAL_
+  // ORDER[2023] has confirmed placement for all 13 tiers (completed
+  // 2026-08-17); FAAB_STARTING_BUDGET[2023] is $225, already present.
+  // League Strength for 2023 depends on the backfill button above having
+  // been run at least once — if it hasn't yet, this still locks with
+  // leagueStrengthCP: null and "leagueStrength" in `pending`, same
+  // graceful-degradation behavior 2024/2025 already had before their own
+  // strength data existed; re-running this after the strength backfill
+  // picks it up with no separate fix needed.
   const runSeasonCPFinalLock = useCallback(async () => {
     setCpLockRunning(true);
     try {
-      for (const year of [2024, 2025]) {
+      for (const year of [2023, 2024, 2025]) {
         for (const [tierKey, leagueId] of Object.entries(LEAGUE_HISTORY[year] || {})) {
           const order = HISTORICAL_FINAL_ORDER[year] && HISTORICAL_FINAL_ORDER[year][tierKey];
           if (!order) continue; // no confirmed final placement yet — can't compute Place, skip rather than lock an incomplete record
@@ -15600,10 +15620,13 @@ export default function App() {
               )}
             </section>
             )}
-            {/* Backfill 2024/2025 Streak Bonuses and Lock Final Season CP live
-                here together — moved into their own sub-tab 2026-08-19
+            {/* Backfill 2023/2024/2025 Streak Bonuses and Lock Final Season CP
+                live here together — moved into their own sub-tab 2026-08-19
                 (previously rendered unconditionally under Applications).
-                Neither is truly one-time: the lock needs re-running once
+                2023 added to both buttons 2026-08-22, once its bracket
+                backfill (HISTORICAL_FINAL_ORDER[2023], confirmed complete
+                2026-08-17) unblocked the lock's Place component. None of
+                the three is truly one-time: the lock needs re-running once
                 2026 finishes and again once historical League Strength
                 exists; the streak backfill is safe to re-click any time a
                 past season's underlying data changes. */}
@@ -15619,7 +15642,7 @@ export default function App() {
                 </p>
                 <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
                   <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
-                    Reconstruct win/loss streak X Points for the completed 2024 and 2025 seasons, all 13 tiers.
+                    Reconstruct win/loss streak X Points for the completed 2023, 2024, and 2025 seasons, all 13 tiers.
                     Safe to click more than once (deterministic doc IDs just overwrite).
                   </div>
                   <button
@@ -15635,7 +15658,7 @@ export default function App() {
                       cursor: backfillRunning ? "default" : "pointer",
                     }}
                   >
-                    {backfillRunning ? "Running…" : "Backfill 2024/2025 Streak Bonuses"}
+                    {backfillRunning ? "Running…" : "Backfill 2023/2024/2025 Streak Bonuses"}
                   </button>
                 </div>
                 <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
@@ -15663,9 +15686,10 @@ export default function App() {
                 <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
                   <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
                     Lock the final Season CP breakdown (Wins, Points, FAAB, X Points, Penalties/Bonuses, Place,
-                    League Strength) for every tier with a confirmed final order — currently 2024 and 2025, all 13
-                    tiers. League Strength only fills in if the button above has already been run for that year;
-                    otherwise it's left blank, same as before. Safe to re-run any time to pick up a fresher value.
+                    League Strength) for every tier with a confirmed final order — currently 2023, 2024, and 2025,
+                    all 13 tiers. League Strength only fills in if the button above has already been run for that
+                    year; otherwise it's left blank, same as before. Safe to re-run any time to pick up a fresher
+                    value.
                   </div>
                   <button
                     onClick={runSeasonCPFinalLock}
@@ -15680,7 +15704,7 @@ export default function App() {
                       cursor: cpLockRunning ? "default" : "pointer",
                     }}
                   >
-                    {cpLockRunning ? "Running…" : "Lock Final Season CP (2024/2025)"}
+                    {cpLockRunning ? "Running…" : "Lock Final Season CP (2023/2024/2025)"}
                   </button>
                 </div>
               </section>
