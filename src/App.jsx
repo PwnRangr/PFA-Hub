@@ -6404,13 +6404,37 @@ const TEAM_ART = {
 // separate banner-specific data entry required.
 //
 // TIER_SHORT_TO_FULL translates a tier's bracket-short name (e.g.
-// "Tennessee", the TEAM_CLR key) to its real full name (e.g. "Tennessee
+// "Tennessee", the color-map key) to its real full name (e.g. "Tennessee
 // Titans") for display and for the TEAM_ART logo lookup, which is keyed
-// by full name. NFL only for now, all 32 real franchise names — she said
-// more tiers and past champions are coming, so this object is where each
-// new tier's own mapping gets added when that happens. "Las Vegas
-// Raiders" here matches the TEAM_ART rename above and ROSTER_IDENTITY's
-// existing entry — all three now agree on this team's real name.
+// by full name. Full rosters for NFL/USFL/TEN/IVY (every team in those
+// tiers already had a clean TEAM_ART match, so there was no reason not
+// to include all of them); every other tier lists only the teams that
+// have actually WON a championship in a confirmed year — the only ones a
+// banner will ever need — rather than resolving every roster spot up
+// front. Extending any tier later (a new team wins for the first time)
+// is just adding one more line here.
+//
+// A few needed real research, not a mechanical name lookup, confirmed
+// against this file's own trophy sheet transcription or plain
+// real-world knowledge rather than guessed: "OSU"->"Oklahoma State
+// Cowboys" and "GA Tech"->"Georgia Tech Yellowjackets" are real
+// abbreviations a simple prefix-match can't expand; ACC's bare
+// "Virginia" key is genuinely ambiguous against "Virginia Tech" (a
+// SEPARATE key in the same tier) and was disambiguated to Virginia
+// Cavaliers, the non-Tech school; "Jax State"->"Jacksonville State
+// Gamecocks" reuses the exact rename confirmed earlier this session
+// during the ROSTER_LINKS work; "Martin"->"Tennessee Martin Skyhawks"
+// and "Washington State"->"Washington State Cougars" both come straight
+// from her admin trophy sheet transcription.
+//
+// TEN's "Washington State" is a real find, not a typo: that 2022
+// champion played during the tier's PAC-12 era (see PAC12_CLR/TEN's own
+// rebrand comments elsewhere in this file) and was never part of the
+// CURRENT Big Ten roster TEN_CLR now tracks — Washington State Cougars
+// has no TEAM_ART entry at all yet (confirmed by direct search, not
+// assumed), so that one banner will show the LOGO placeholder until art
+// gets processed for it, same graceful fallback every other missing logo
+// already gets.
 const TIER_SHORT_TO_FULL = {
   NFL: {
     "San Francisco": "San Francisco 49ers", Arizona: "Arizona Cardinals",
@@ -6430,6 +6454,106 @@ const TIER_SHORT_TO_FULL = {
     Indianapolis: "Indianapolis Colts", "Kansas City": "Kansas City Chiefs",
     Buffalo: "Buffalo Bills", Cleveland: "Cleveland Browns",
   },
+  USFL: {
+    Arizona: "Arizona Wranglers", Birmingham: "Birmingham Stallions",
+    Boston: "Boston Breakers", Chicago: "Chicago Blitz",
+    Denver: "Denver Gold", Detroit: "Detroit Drive",
+    Houston: "Houston Gamblers", Jacksonville: "Jacksonville Bulls",
+    "Los Angeles": "Los Angeles Express", Memphis: "Memphis Showboats",
+    Michigan: "Michigan Panthers", "New Jersey": "New Jersey Generals",
+    Oakland: "Oakland Invaders", Oklahoma: "Oklahoma Outlaws",
+    Orlando: "Orlando Renegades", Philadelphia: "Philadelphia Stars",
+    Pittsburgh: "Pittsburgh Maulers", "San Antonio": "San Antonio Gunslingers",
+    "Tampa Bay": "Tampa Bay Bandits", Washington: "Washington Federals",
+  },
+  XFL: {
+    Birmingham: "Birmingham Thunderbolts", DC: "DC Defenders",
+    Houston: "Houston Roughnecks",
+  },
+  SEC: {
+    Oklahoma: "Oklahoma Sooners", "Ole Miss": "Ole Miss Rebels",
+    "South Carolina": "South Carolina Gamecocks",
+  },
+  "BIG XII": {
+    Baylor: "Baylor Bears", OSU: "Oklahoma State Cowboys",
+    TCU: "TCU Horned Frogs",
+  },
+  ACC: {
+    "GA Tech": "Georgia Tech Yellowjackets", Virginia: "Virginia Cavaliers",
+    "Virginia Tech": "Virginia Tech Hokies",
+  },
+  TEN: {
+    Cal: "California Golden Bears", Illinois: "Illinois Illini",
+    Indiana: "Indiana Hoosiers", Maryland: "Maryland Terrapins",
+    Michigan: "Michigan Wolverines", Northwestern: "Northwestern Wildcats",
+    "Ohio State": "Ohio State Buckeyes", Oregon: "Oregon Ducks",
+    "Penn State": "Penn State Nittany Lions", Purdue: "Purdue Boilermakers",
+    Rutgers: "Rutgers Scarlet Knights", UCLA: "UCLA Bruins",
+    USC: "USC Trojans", Utah: "Utah Utes",
+    Washington: "Washington Huskies", Wisconsin: "Wisconsin Badgers",
+    "Washington State": "Washington State Cougars",
+  },
+  SUN: {
+    "AK State": "Arkansas State Red Wolves", Carolina: "Carolina Chanticleers",
+    "GA State": "Georgia State Panthers",
+  },
+  SOCO: {
+    Belmont: "Belmont Bruins", "Jax State": "Jacksonville State Gamecocks",
+    Martin: "Tennessee Martin Skyhawks", VMI: "VMI Keydets",
+  },
+  IVY: {
+    Brown: "Brown Bears", Bucknell: "Bucknell Bison",
+    Colgate: "Colgate Raiders", Columbia: "Columbia Lions",
+    Cornell: "Cornell Big Red", Dartmouth: "Dartmouth Big Green",
+    Fordham: "Fordham Rams", Georgetown: "Georgetown Hoyas",
+    Harvard: "Harvard Crimson", "Holy Cross": "Holy Cross Crusaders",
+    Lafayette: "Lafayette Leopards", Lehigh: "Lehigh Mountain Hawks",
+    MIT: "MIT Engineers", Penn: "Penn Quakers",
+    Princeton: "Princeton Tigers", Yale: "Yale Bulldogs",
+  },
+  SWAC: {
+    "Alabama St": "Alabama State Hornets", Grambling: "Grambling State Tigers",
+    "Morgan St": "Morgan State Bears", PVAM: "PVAMU Panthers",
+  },
+  GLIAC: {
+    Capital: "Capital Comets", Davenport: "Davenport Panthers",
+    JCU: "JCU Blue Streaks",
+  },
+  FLHS: {
+    "Coral Springs": "Coral Springs Colts", "Miami Beach": "Miami Beach Hi Tides",
+    "Miami Senior": "Miami Senior Stingrays", Western: "Western Wildcats",
+  },
+};
+
+// Which color-map constant each tier's champion short name (above) should
+// be looked up against. TEN is the one special case: 2022's champion
+// (Washington State) played during the tier's PAC-12 era and only exists
+// in PAC12_CLR, not the current TEN_CLR — merged with TEN_CLR taking
+// priority for any key both maps happen to share (e.g. both have their
+// own "Washington", for two different real schools; TEN_CLR's Big Ten
+// Washington Huskies correctly wins since that's the tier's current
+// identity, and only "Washington State" -- a TEN_CLR key that doesn't
+// exist at all -- ever actually falls through to PAC12_CLR).
+const TIER_COLOR_MAP = {
+  NFL: TEAM_CLR, USFL: USFL_CLR, XFL: XFL_CLR, SEC: SEC_CLR,
+  "BIG XII": XII_CLR, ACC: ACC_CLR, TEN: { ...PAC12_CLR, ...TEN_CLR },
+  SUN: SUN_CLR, SOCO: SOCO_CLR, IVY: IVY_CLR, SWAC: SWAC_CLR,
+  GLIAC: GLIAC_CLR, FLHS: FLHS_CLR,
+};
+
+// The exact string coachTrophiesHistorical stores in each trophy's
+// `league` field -- confirmed by reading the real data, not assumed from
+// tierKey. Only 5 of 13 tiers actually need an alias here; the rest
+// store the same string as their tierKey. Found the hard way: even
+// "BIG XII" needed one, since the trophy sheet stores the league as
+// "Big XII" (title case) while tierKey is "BIG XII" (all caps) -- an
+// exact-string coach lookup would silently find nothing for that tier
+// without this.
+const TIER_TROPHY_LEAGUE = {
+  NFL: "NFL", USFL: "USFL", XFL: "XFL", SEC: "SEC",
+  "BIG XII": "Big XII", ACC: "ACC", TEN: "Big Ten", SUN: "Sun Belt",
+  SOCO: "SoCon", IVY: "Ivy League", SWAC: "SWAC", GLIAC: "GLIAC",
+  FLHS: "FLHS",
 };
 
 // coachTrophiesHistorical doesn't store a team name on each trophy entry
@@ -6461,7 +6585,8 @@ function findChampionCoach(trophies, tierLeagueName, year) {
 // ("Tennessee"); fullName is for display and the TEAM_ART lookup
 // ("Tennessee Titans").
 function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKey }) {
-  const [c1, c2] = TEAM_CLR[shortName] || ["#2A3550", C.chalk];
+  const colorMap = TIER_COLOR_MAP[tierKey] || {};
+  const [c1, c2] = colorMap[shortName] || ["#2A3550", C.chalk];
   const logoSrc = TEAM_ART[tierKey] && TEAM_ART[tierKey][normTeamKey(fullName)];
   const gradId = `championBannerFill-${tierKey}-${year}`;
   return (
@@ -6539,16 +6664,20 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
 // request 2026-08-22 -- was oldest-first at launch). Skips a year
 // silently (rather than rendering a broken banner) if any prerequisite is
 // missing — no confirmed champion in HISTORICAL_FINAL_ORDER, no
-// TIER_SHORT_TO_FULL entry yet for this tier, or no TEAM_CLR color for
+// TIER_SHORT_TO_FULL entry yet for this tier, or no color-map entry for
 // that short name. Returns null entirely (renders nothing) for a tier
-// with no TIER_SHORT_TO_FULL table yet, so adding this component to the
-// shared per-tier page is safe for all 13 tiers today even though only
-// NFL has real data — the other 12 simply show nothing until their own
-// mapping is added, same rollout pattern as the live-scored bracket
-// automation earlier this session (ship what's confirmed, hold the rest).
-function ChampionBanners({ tierKey, tierLabel, coachTrophies }) {
+// with no TIER_SHORT_TO_FULL table yet. tierLabel is derived here, not
+// passed in — TIER_TROPHY_LEAGUE handles the handful of tiers whose
+// trophy `league` string doesn't match their tierKey (Big Ten, Sun Belt,
+// SoCon, Ivy League, and even Big XII, which differs from "BIG XII" only
+// in case), so a call site only ever needs to pass tierKey and can't
+// repeat the tier.name/tierKey near-miss from this feature's first
+// version.
+function ChampionBanners({ tierKey, coachTrophies }) {
   const shortToFull = TIER_SHORT_TO_FULL[tierKey];
   if (!shortToFull) return null;
+  const tierLabel = TIER_TROPHY_LEAGUE[tierKey] || tierKey;
+  const colorMap = TIER_COLOR_MAP[tierKey] || {};
   const years = Object.keys(HISTORICAL_FINAL_ORDER)
     .map(Number)
     .filter((y) => HISTORICAL_FINAL_ORDER[y] && HISTORICAL_FINAL_ORDER[y][tierKey])
@@ -6557,7 +6686,7 @@ function ChampionBanners({ tierKey, tierLabel, coachTrophies }) {
     .map((year) => {
       const shortName = HISTORICAL_FINAL_ORDER[year][tierKey][0];
       const fullName = shortToFull[shortName];
-      if (!fullName || !TEAM_CLR[shortName]) return null;
+      if (!fullName || !colorMap[shortName]) return null;
       const coachKey = findChampionCoach(coachTrophies, tierLabel, year);
       return { year, shortName, fullName, coachKey };
     })
@@ -6565,7 +6694,8 @@ function ChampionBanners({ tierKey, tierLabel, coachTrophies }) {
   if (!banners.length) return null;
   return (
     <div className="mt-6">
-      <div className="text-sm font-semibold mb-3" style={{ color: C.chalk }}>Past Champions</div>
+      {/* "Past Champions" header removed 2026-08-22 at her request -- the
+          banners read as their own section without one. */}
       {/* flex-nowrap is the browser default for display:flex, so this
           already doesn't wrap; flex-shrink-0 on each banner (below) is
           what actually guarantees they hold their real size instead of
@@ -14512,18 +14642,13 @@ export default function App() {
                   above (it's a career hall-of-fame, not a per-year view,
                   unlike the bracket section below it). Renders nothing for
                   a tier with no TIER_SHORT_TO_FULL entry yet -- see that
-                  component's own comment. Added 2026-08-22, NFL first.
-                  tierKey ("NFL"), not tier.name ("National Football
-                  League"), on purpose -- tierKey is what coachTrophies'
-                  own `league` field actually stores and what the banner
-                  headline should read ("NFL CHAMPIONS", not the full
-                  name). Tiers with a real trophy-league alias (Big Ten's
-                  tierKey is "TEN" but its trophies say "Big Ten", same for
-                  SUN/"Sun Belt", IVY/"Ivy League", SOCO/"SoCon") will need
-                  their own mapping when they're added here -- passing
-                  tierKey directly only happens to work for NFL because
-                  its tierKey and trophy league name are identical. */}
-              <ChampionBanners tierKey={tierKey} tierLabel={tierKey} coachTrophies={coachTrophiesHistorical} />
+                  component's own comment. Added 2026-08-22 for NFL only,
+                  extended to all 13 tiers the same day. Only tierKey is
+                  passed -- ChampionBanners derives the correct trophy-
+                  lookup league name itself via TIER_TROPHY_LEAGUE, so this
+                  call site can't repeat the tier.name/tierKey near-miss
+                  from the feature's first version. */}
+              <ChampionBanners tierKey={tierKey} coachTrophies={coachTrophiesHistorical} />
 
               {/* Week-X live matchups list removed 2026-08-20 at her request
                   -- redundant with Sleeper's own live view. matchupsCache/
