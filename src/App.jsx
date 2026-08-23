@@ -6534,6 +6534,19 @@ const TIER_SHORT_TO_FULL = {
 // Washington Huskies correctly wins since that's the tier's current
 // identity, and only "Washington State" -- a TEN_CLR key that doesn't
 // exist at all -- ever actually falls through to PAC12_CLR).
+// Standard perceived-brightness formula (the same weighting behind most
+// "pick readable text color" utilities) — used by ChampionBanner to
+// decide which of a team's two colors is actually darker, rather than
+// assuming the first-listed color always is (it isn't for every team;
+// see that component's own comment).
+function perceivedBrightness(hex) {
+  const h = (hex || "#000000").replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16) || 0;
+  const g = parseInt(h.substring(2, 4), 16) || 0;
+  const b = parseInt(h.substring(4, 6), 16) || 0;
+  return (r * 299 + g * 587 + b * 114) / 1000;
+}
+
 const TIER_COLOR_MAP = {
   NFL: TEAM_CLR, USFL: USFL_CLR, XFL: XFL_CLR, SEC: SEC_CLR,
   "BIG XII": XII_CLR, ACC: ACC_CLR, TEN: { ...PAC12_CLR, ...TEN_CLR },
@@ -6586,7 +6599,23 @@ function findChampionCoach(trophies, tierLeagueName, year) {
 // ("Tennessee Titans").
 function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKey }) {
   const colorMap = TIER_COLOR_MAP[tierKey] || {};
-  const [c1, c2] = colorMap[shortName] || ["#2A3550", C.chalk];
+  const [colorA, colorB] = colorMap[shortName] || ["#2A3550", C.chalk];
+  // Gradient reversed 2026-08-22 to go dark (top) -> light (bottom), her
+  // request. A plain "swap the two stops" would have been wrong for any
+  // team whose SECOND color happens to be the darker one -- Bucknell is
+  // exactly that case, ["#E87722" (orange), "#000000" (black)] -- so
+  // this orders by actual computed brightness instead of assuming
+  // colorA is always the darker "primary" one. Guarantees dark-top/
+  // light-bottom for every team, not just the ones where that happened
+  // to already be true, with nothing to special-case as more teams get
+  // added. darkColor also now drives the border stroke and divider
+  // (previously always colorA specifically) -- a deliberate simplification,
+  // not an accident: both are solid accent marks with no text over them,
+  // so using "whichever color is darker" instead of "whichever color
+  // happened to be listed first" reads the same or better and needed no
+  // separate variable.
+  const darkColor = perceivedBrightness(colorA) <= perceivedBrightness(colorB) ? colorA : colorB;
+  const lightColor = darkColor === colorA ? colorB : colorA;
   const logoSrc = TEAM_ART[tierKey] && TEAM_ART[tierKey][normTeamKey(fullName)];
   const gradId = `championBannerFill-${tierKey}-${year}`;
   // Text outline, added 2026-08-22 (her contrast report): several teams'
@@ -6622,8 +6651,8 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
     <svg width="108" height="166" viewBox="0 0 260 400" role="img" aria-label={`${fullName}, ${year} ${tierLabel} Champion${coachKey ? `, coached by ${coachKey}` : ""}`}>
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={c2} />
-          <stop offset="100%" stopColor={c1} />
+          <stop offset="0%" stopColor={darkColor} />
+          <stop offset="100%" stopColor={lightColor} />
         </linearGradient>
         <filter id={`${gradId}-shadow`} x="-30%" y="-30%" width="160%" height="160%">
           <feDropShadow dx="0" dy="6" stdDeviation="10" floodColor="#000" floodOpacity="0.45" />
@@ -6632,7 +6661,7 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
       <path
         d="M 20 20 L 240 20 L 240 280 L 130 370 L 20 280 Z"
         fill={`url(#${gradId})`}
-        stroke={c1}
+        stroke={darkColor}
         strokeWidth="4"
         filter={`url(#${gradId}-shadow)`}
       />
@@ -6673,7 +6702,7 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
       ) : (
         <text x="130" y="165" textAnchor="middle" fill={C.slate} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 1, ...outline(1.1) }}>LOGO</text>
       )}
-      <rect x="70" y="214" width="120" height="3" rx="1.5" fill={c1} />
+      <rect x="70" y="214" width="120" height="3" rx="1.5" fill={darkColor} />
       {/* Headline split into two lines 2026-08-22 (her request) -- tier
           name on its own line, "CHAMPIONS" below it, instead of one long
           line that overflowed the shape's edges for longer tier names. */}
