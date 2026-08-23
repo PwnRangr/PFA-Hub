@@ -2411,6 +2411,18 @@ function TeamMark({ team, tierKey, size = 38 }) {
 // future correction would need a fresh one-off fix directly against
 // coachTrophiesHistorical, same as CAREER_STATS/club300Historical/
 // club4000Historical corrections already work.
+//
+// SPOT-CHECKED 2026-08-22 against her real admin sheet (all 63 rows,
+// award + team for every coach) — independent of the migration-integrity
+// check above, this confirms the underlying DATA is actually correct, not
+// just that it moved cleanly. Result: all 50 trophies matched exactly,
+// zero corrections needed. Her sheet has 13 additional rows for award
+// types this file deliberately doesn't track (Team of the Year, various
+// bowl/tournament novelty trophies — excluded per her, see comment
+// above), all correctly absent here. One duplicate row on her sheet
+// itself (bradlevo's 2023 SoCon title listed twice under two spellings
+// of the same team, "Jacksonville State"/"Jax State") is correctly
+// recorded only once here — a sheet-side note for her, not a site issue.
 /*
 const COACH_TROPHIES = {
   josssock: [{ award: "League Champion", league: "NFL", year: 2023 }],
