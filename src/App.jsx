@@ -6351,7 +6351,23 @@ const TEAM_ART = {
     [normTeamKey("Jacksonville Jaguars")]: teamArtPath("NFL", "nfl-team-jacksonville-jaguars.png"),
     [normTeamKey("Buffalo Bills")]: teamArtPath("NFL", "nfl-team-buffalo-bills.png"),
     [normTeamKey("Chicago Bears")]: teamArtPath("NFL", "nfl-team-chicago-bears.png"),
-    [normTeamKey("Oakland Raiders")]: teamArtPath("NFL", "nfl-team-oakland-raiders.png"),
+    // "Oakland Raiders" (2026-08-22 correction): this key was deliberately
+    // kept matching the LIVE Sleeper team name at the time this comment was
+    // written, since that name was still "Oakland Raiders" and TEAM_ART was
+    // built to follow the live full name, not the current city. That
+    // reasoning broke today, same session: ROSTER_IDENTITY (built earlier
+    // today, see its own comment above ROSTER_LINKS) now permanently
+    // overrides this exact roster's live `team` field to always read "Las
+    // Vegas Raiders" going forward, in every season, regardless of what a
+    // coach types into Sleeper. That left this key orphaned — a real name
+    // no lookup would ever produce again — while "Las Vegas Raiders" (the
+    // name that WILL actually be looked up now) had no entry at all.
+    // Caught while building the Champion Banners feature, which needed a
+    // reliable NFL logo lookup and turned up the mismatch. Renamed to match
+    // ROSTER_IDENTITY and TEAM_CLR (which already uses "Las Vegas", not
+    // "Oakland", as its own key) — everything now agrees. The underlying
+    // PNG filename is untouched; only the lookup key changed.
+    [normTeamKey("Las Vegas Raiders")]: teamArtPath("NFL", "nfl-team-oakland-raiders.png"),
     [normTeamKey("New Orleans Saints")]: teamArtPath("NFL", "nfl-team-new-orleans-saints.png"),
     [normTeamKey("New York Giants")]: teamArtPath("NFL", "nfl-team-new-york-giants.png"),
     [normTeamKey("Los Angeles Chargers")]: teamArtPath("NFL", "nfl-team-los-angeles-chargers.png"),
@@ -6370,6 +6386,184 @@ const TEAM_ART = {
     [normTeamKey("Washington Commanders")]: teamArtPath("NFL", "nfl-team-washington-commanders.png"),
   },
 };
+
+// ── Champion Banners ────────────────────────────────────────────────────
+// Shield-shaped banner per past champion, shown on a tier's page below
+// Standings and above the bracket — approved design 2026-08-22 (shape,
+// colors, type all matched to the reference image she liked; "NFL" tag
+// at top removed and coach credit moved under the team name per her
+// feedback on the preview). One banner per confirmed year in
+// HISTORICAL_FINAL_ORDER[year][tierKey] — NOT a new hand-maintained list.
+// Deliberately derived from data this file already confirms elsewhere
+// (HISTORICAL_FINAL_ORDER for the champion, coachTrophiesHistorical for
+// the coach) rather than a fourth parallel table that could drift from
+// those, the same reasoning ROSTER_IDENTITY was built on earlier today.
+// Real, practical effect: a new year's banner appears automatically once
+// that year's bracket backfill + trophy entry are done — both already
+// mandatory steps in the existing end-of-season process — with no
+// separate banner-specific data entry required.
+//
+// TIER_SHORT_TO_FULL translates a tier's bracket-short name (e.g.
+// "Tennessee", the TEAM_CLR key) to its real full name (e.g. "Tennessee
+// Titans") for display and for the TEAM_ART logo lookup, which is keyed
+// by full name. NFL only for now, all 32 real franchise names — she said
+// more tiers and past champions are coming, so this object is where each
+// new tier's own mapping gets added when that happens. "Las Vegas
+// Raiders" here matches the TEAM_ART rename above and ROSTER_IDENTITY's
+// existing entry — all three now agree on this team's real name.
+const TIER_SHORT_TO_FULL = {
+  NFL: {
+    "San Francisco": "San Francisco 49ers", Arizona: "Arizona Cardinals",
+    Philadelphia: "Philadelphia Eagles", "LA Rams": "Los Angeles Rams",
+    "Green Bay": "Green Bay Packers", Seattle: "Seattle Seahawks",
+    "New Orleans": "New Orleans Saints", Detroit: "Detroit Lions",
+    "New England": "New England Patriots", Tennessee: "Tennessee Titans",
+    "LA Chargers": "Los Angeles Chargers", Miami: "Miami Dolphins",
+    Baltimore: "Baltimore Ravens", "NY Jets": "New York Jets",
+    Jacksonville: "Jacksonville Jaguars", Pittsburgh: "Pittsburgh Steelers",
+    Dallas: "Dallas Cowboys", Atlanta: "Atlanta Falcons",
+    Chicago: "Chicago Bears", Washington: "Washington Commanders",
+    Minnesota: "Minnesota Vikings", "Tampa Bay": "Tampa Bay Buccaneers",
+    "NY Giants": "New York Giants", Carolina: "Carolina Panthers",
+    Cincinnati: "Cincinnati Bengals", Denver: "Denver Broncos",
+    "Las Vegas": "Las Vegas Raiders", Houston: "Houston Texans",
+    Indianapolis: "Indianapolis Colts", "Kansas City": "Kansas City Chiefs",
+    Buffalo: "Buffalo Bills", Cleveland: "Cleveland Browns",
+  },
+};
+
+// coachTrophiesHistorical doesn't store a team name on each trophy entry
+// (see its own ARCHIVE comment — coach is the object key, not a field), so
+// the only way to find "who won tierKey in year Y" is to search every
+// coach's array for a matching League Champion entry. Returns the coach
+// KEY (already lowercase; the banner uppercases it for display same as
+// everything else in the design) or null if no trophy is on record —
+// which does happen (NFL 2022 has a confirmed bracket winner but no
+// trophy entry, likely predating when trophy tracking started; the
+// banner just omits the coach line rather than guessing or blocking the
+// whole banner on it).
+function findChampionCoach(trophies, tierLeagueName, year) {
+  if (!trophies) return null;
+  for (const [coachKey, entries] of Object.entries(trophies)) {
+    if ((entries || []).some((e) => e.award === "League Champion" && e.league === tierLeagueName && e.year === year)) {
+      return coachKey;
+    }
+  }
+  return null;
+}
+
+// One shield banner. All text uppercase per the approved design (not a
+// site-wide convention — specific to this component). Colors come
+// straight from TEAM_CLR (already confirmed real per-team colors, same
+// source TeamMark/brackets use); logo comes straight from TEAM_ART (same
+// asset every other logo on the site uses, so a future logo swap there
+// updates the banner for free). shortName is the TEAM_CLR/bracket key
+// ("Tennessee"); fullName is for display and the TEAM_ART lookup
+// ("Tennessee Titans").
+function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKey }) {
+  const [c1, c2] = TEAM_CLR[shortName] || ["#2A3550", C.chalk];
+  const logoSrc = TEAM_ART[tierKey] && TEAM_ART[tierKey][normTeamKey(fullName)];
+  const gradId = `championBannerFill-${tierKey}-${year}`;
+  return (
+    <svg width="200" height="278" viewBox="0 0 260 360" role="img" aria-label={`${fullName}, ${year} ${tierLabel} Champion${coachKey ? `, coached by ${coachKey}` : ""}`}>
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={c2} />
+          <stop offset="100%" stopColor={c1} />
+        </linearGradient>
+        <filter id={`${gradId}-shadow`} x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="6" stdDeviation="10" floodColor="#000" floodOpacity="0.45" />
+        </filter>
+      </defs>
+      <path
+        d="M 20 20 L 240 20 L 240 250 L 130 340 L 20 250 Z"
+        fill={`url(#${gradId})`}
+        stroke={c1}
+        strokeWidth="4"
+        filter={`url(#${gradId}-shadow)`}
+      />
+      {fullName.toUpperCase().split(" ").length > 1 ? (
+        (() => {
+          const words = fullName.toUpperCase().split(" ");
+          const mid = Math.ceil(words.length / 2);
+          const line1 = words.slice(0, mid).join(" ");
+          const line2 = words.slice(mid).join(" ");
+          return (
+            <>
+              <text x="130" y="56" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5 }}>{line1}</text>
+              <text x="130" y="82" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5 }}>{line2}</text>
+            </>
+          );
+        })()
+      ) : (
+        <text x="130" y="70" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 24, letterSpacing: 0.5 }}>{fullName.toUpperCase()}</text>
+      )}
+      {coachKey && (
+        <text x="130" y="104" textAnchor="middle" fill={C.chalk} opacity="0.85" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: 1 }}>
+          COACH {coachKey.toUpperCase()}
+        </text>
+      )}
+      <circle cx="130" cy="160" r="38" fill={C.ink} stroke={C.chalk} strokeWidth="2.5" />
+      {logoSrc ? (
+        <image href={logoSrc} x="96" y="126" width="68" height="68" clipPath="circle(34px at 34px 34px)" />
+      ) : (
+        <text x="130" y="165" textAnchor="middle" fill={C.slate} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 1 }}>LOGO</text>
+      )}
+      <rect x="70" y="214" width="120" height="3" rx="1.5" fill={c1} />
+      <text x="130" y="242" textAnchor="middle" fill={C.chalk} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 20, letterSpacing: 1 }}>
+        {tierLabel.toUpperCase()} CHAMPIONS
+      </text>
+      <text x="130" y="290" textAnchor="middle" fill={C.gold} style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, fontSize: 34 }}>{year}</text>
+    </svg>
+  );
+}
+
+// Row of every confirmed past champion for one tier, oldest first. Skips
+// a year silently (rather than rendering a broken banner) if any
+// prerequisite is missing — no confirmed champion in HISTORICAL_FINAL_
+// ORDER, no TIER_SHORT_TO_FULL entry yet for this tier, or no TEAM_CLR
+// color for that short name. Returns null entirely (renders nothing) for
+// a tier with no TIER_SHORT_TO_FULL table yet, so adding this component
+// to the shared per-tier page is safe for all 13 tiers today even though
+// only NFL has real data — the other 12 simply show nothing until their
+// own mapping is added, same rollout pattern as the live-scored bracket
+// automation earlier this session (ship what's confirmed, hold the rest).
+function ChampionBanners({ tierKey, tierLabel, coachTrophies }) {
+  const shortToFull = TIER_SHORT_TO_FULL[tierKey];
+  if (!shortToFull) return null;
+  const years = Object.keys(HISTORICAL_FINAL_ORDER)
+    .map(Number)
+    .filter((y) => HISTORICAL_FINAL_ORDER[y] && HISTORICAL_FINAL_ORDER[y][tierKey])
+    .sort((a, b) => a - b);
+  const banners = years
+    .map((year) => {
+      const shortName = HISTORICAL_FINAL_ORDER[year][tierKey][0];
+      const fullName = shortToFull[shortName];
+      if (!fullName || !TEAM_CLR[shortName]) return null;
+      const coachKey = findChampionCoach(coachTrophies, tierLabel, year);
+      return { year, shortName, fullName, coachKey };
+    })
+    .filter(Boolean);
+  if (!banners.length) return null;
+  return (
+    <div className="mt-6">
+      <div className="text-sm font-semibold mb-3" style={{ color: C.chalk }}>Past Champions</div>
+      <div className="flex gap-4 overflow-x-auto pb-2">
+        {banners.map((b) => (
+          <ChampionBanner
+            key={b.year}
+            tierKey={tierKey}
+            tierLabel={tierLabel}
+            year={b.year}
+            shortName={b.shortName}
+            fullName={b.fullName}
+            coachKey={b.coachKey}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // No championship-game name and no week-18 bowls on the FLHS sheets.
 const FLHS_2025_PLAYOFFS = r3ChampHalf({
@@ -14285,6 +14479,24 @@ export default function App() {
                   </div>
                 </div>
               )}
+
+              {/* Champion Banners -- past league champions for this tier,
+                  shown regardless of which standingsSeason is selected
+                  above (it's a career hall-of-fame, not a per-year view,
+                  unlike the bracket section below it). Renders nothing for
+                  a tier with no TIER_SHORT_TO_FULL entry yet -- see that
+                  component's own comment. Added 2026-08-22, NFL first.
+                  tierKey ("NFL"), not tier.name ("National Football
+                  League"), on purpose -- tierKey is what coachTrophies'
+                  own `league` field actually stores and what the banner
+                  headline should read ("NFL CHAMPIONS", not the full
+                  name). Tiers with a real trophy-league alias (Big Ten's
+                  tierKey is "TEN" but its trophies say "Big Ten", same for
+                  SUN/"Sun Belt", IVY/"Ivy League", SOCO/"SoCon") will need
+                  their own mapping when they're added here -- passing
+                  tierKey directly only happens to work for NFL because
+                  its tierKey and trophy league name are identical. */}
+              <ChampionBanners tierKey={tierKey} tierLabel={tierKey} coachTrophies={coachTrophiesHistorical} />
 
               {/* Week-X live matchups list removed 2026-08-20 at her request
                   -- redundant with Sleeper's own live view. matchupsCache/
