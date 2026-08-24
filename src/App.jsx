@@ -678,15 +678,18 @@ function parseCSVRows(text) {
 //    300 Club's historical high-score list, which only ever has a team
 //    name) — and even then it beats a hardcoded table, since her sheet gets
 //    republished with the new season's links same as everything else here.
-//  - liveStatsByName: lowercased tagged coach name -> { promotionScore,
-//    currentCP }, columns 9 and 21 (`PromotionScore` / `coaching Pts` in her
-//    header row — CURRENT SEASON, distinct from CAREER_STATS's static
-//    "Career CP"). Keyed by the exact tagged name (e.g. "pwnrangr int1"),
-//    same format as CAREER_STATS's own keys, so allCoachesTable's existing
-//    lowerName lookup matches directly with no extra resolution needed.
+//  - liveStatsByName: lowercased tagged coach name -> { promotionScore },
+//    column 9 (`PromotionScore` in her header row — CURRENT SEASON).
+//    Keyed by the exact tagged name (e.g. "pwnrangr int1"), same format as
+//    CAREER_STATS's own keys, so allCoachesTable's existing lowerName
+//    lookup matches directly with no extra resolution needed.
 //    `#DIV/0!`/`#N/A`/blank (unplayed season, every coach preseason) parse
 //    to null via parseFloat — the same defensive-parse pattern used
-//    throughout this file for her live sheet feeds.
+//    throughout this file for her live sheet feeds. (Column 21, "coaching
+//    Pts" — the sheet's own current-season CP — used to be parsed here too,
+//    but Season CP has been computed in-site since 2026-08-19; the sheet
+//    column was never removed from this parse even after nothing read it
+//    anymore. Dropped 2026-08-24 — see the Mistakes log.)
 //  - teamNameByRosterKey: `${tierKey}:${rosterId}` -> team name, populated
 //    for EVERY row with a team name, including unowned rosters (status
 //    "available"/"retired"/etc, no coach). Sleeper itself has no team name
@@ -734,10 +737,8 @@ function parseSheetLookups(csvText) {
     }
     if (coach) {
       const promotionScore = parseFloat(row[9]);
-      const currentCP = parseFloat(row[21]);
       liveStatsByName[coach.toLowerCase()] = {
         promotionScore: Number.isFinite(promotionScore) ? promotionScore : null,
-        currentCP: Number.isFinite(currentCP) ? currentCP : null,
       };
     }
   }
