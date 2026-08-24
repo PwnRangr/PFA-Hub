@@ -4866,7 +4866,7 @@ const SEC_BANNERS = [[112, 324, "South Eastern Conference", "#12467F"], [560, 32
 const SEC_CONSO_BANNERS = [[112, 324, "South Eastern Conference", "#12467F"], [560, 324, "Consolation", "#12467F"]];
 
 const SEC_CLR = {
-  "South Carolina": ["#73000A", "#FFFFFF"], "Miss State": ["#5D1725", "#FFFFFF"],
+  "South Carolina": ["#73000A", "#000000"], "Miss State": ["#5D1725", "#FFFFFF"],
   "Arkansas": ["#9D2235", "#FFFFFF"], "Oklahoma": ["#841617", "#FDF4E3"],
   "Kentucky": ["#0033A0", "#FFFFFF"], "Missouri": ["#F1B82D", "#231F20"],
   "Ole Miss": ["#14213D", "#CE1126"], "Texas A&M": ["#FFFFFF", "#500000"],
@@ -5754,7 +5754,7 @@ const SUN_CLR = {
   "GA State": ["#0039A6", "#FFFFFF"], "JMU": ["#450084", "#CBB677"],
   "App State": ["#0A0A0A", "#FFCC00"], "Arlington": ["#F58025", "#0064B1"],
   "Little Rock": ["#7C2529", "#CBB677"], "S Miss": ["#0A0A0A", "#FFAB00"],
-  "S Alabama": ["#FFFFFF", "#00205B"], "AK State": ["#CC092F", "#FFFFFF"],
+  "S Alabama": ["#FFFFFF", "#00205B"], "AK State": ["#CC092F", "#000000"],
   "GA Southern": ["#041E42", "#FFFFFF"], "Carolina": ["#006F71", "#B3A369"],
   "Old Dominion": ["#003057", "#FFFFFF"], "Marshall": ["#00B140", "#FFFFFF"],
   "Troy": ["#8A2432", "#FFFFFF"], "Texas State": ["#501214", "#AC9155"],
@@ -5827,7 +5827,7 @@ const IVY_CONSO_BANNERS = [
 // keeps Fordham distinguishable from Lafayette, whose maroon is nearly
 // identical and which it plays head-to-head in the 13th-place sub-bracket.
 const IVY_CLR = {
-  "Brown": ["#4E3629", "#FFFFFF"], "Cornell": ["#B31B1B", "#FFFFFF"],
+  "Brown": ["#4E3629", "#7C2529"], "Cornell": ["#B31B1B", "#FFFFFF"],
   "Dartmouth": ["#00693E", "#FFFFFF"], "Penn": ["#011F5B", "#FFFFFF"],
   "Princeton": ["#E77500", "#000000"], "Yale": ["#00356B", "#FFFFFF"],
   "Harvard": ["#A51C30", "#FFFFFF"], "Columbia": ["#9BCBEB", "#012169"],
