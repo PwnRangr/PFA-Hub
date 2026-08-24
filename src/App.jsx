@@ -5255,7 +5255,7 @@ const TEN_CLR = {
   "Northwestern": ["#4E2A84", "#FFFFFF"], "Oregon": ["#154733", "#FEE123"],
   "Cal": ["#041E42", "#FDB515"], "Washington": ["#4B2E83", "#E8E3D3"],
   "Indiana": ["#990000", "#EEEDEB"], "Ohio State": ["#BB0000", "#FFFFFF"],
-  "UCLA": ["#2D68C4", "#FFFFFF"], "Penn State": ["#041E42", "#FFFFFF"],
+  "UCLA": ["#2D68C4", "#F2A900"], "Penn State": ["#041E42", "#FFFFFF"],
   "Purdue": ["#0A0A0A", "#CEB888"], "Wisconsin": ["#C5050C", "#FFFFFF"],
   "Utah": ["#CC0000", "#FFFFFF"], "Rutgers": ["#CC0033", "#FFFFFF"],
   "Michigan": ["#00274C", "#FFCB05"], "Maryland": ["#E03A3E", "#FFD520"],
@@ -5277,7 +5277,7 @@ const PAC12_CONSO_BANNERS = [[112, 324, "PAC-12 Conference", "#00274D"], [560, 3
 // same brand colors, just also relevant to this tier's earlier identity.
 // The other 11 are new entries, confirmed with her 2026-08-19.
 const PAC12_CLR = {
-  "Washington": ["#4B2E83", "#E8E3D3"], "UCLA": ["#2D68C4", "#FFFFFF"],
+  "Washington": ["#4B2E83", "#E8E3D3"], "UCLA": ["#2D68C4", "#F2A900"],
   "Oregon": ["#154733", "#FEE123"], "Cal": ["#041E42", "#FDB515"],
   "Utah": ["#CC0000", "#FFFFFF"],
   "Arizona": ["#AB0520", "#0C234B"], "Arizona State": ["#8C1D40", "#FFC627"],
@@ -5396,7 +5396,7 @@ const SWAC_CLR = {
   "Jackson St": ["#123B63", "#FFFFFF"], "Florida A&M": ["#F58220", "#154734"],
   "Miss Valley": ["#1B4D2E", "#D2262C"], "Bethune": ["#7B2132", "#F0B323"],
   "Morgan St": ["#12395B", "#F0A526"], "Alcorn": ["#4B2E83", "#F0B323"],
-  "PVAM": ["#6B3FA0", "#FFFFFF"], "Southern U": ["#6BAAE8", "#C8A620"],
+  "PVAM": ["#6B3FA0", "#FFCC33"], "Southern U": ["#6BAAE8", "#C8A620"],
   "Alabama A&M": ["#6E1E2B", "#FFFFFF"], "Alabama St": ["#0A0A0A", "#C9A200"],
   "SC St": ["#7B2635", "#6F9BD1"], "Norfolk St": ["#046A38", "#F0B323"],
   "Grambling": ["#E3B23C", "#231F20"], "Pine Bluff": ["#C9A227", "#231F20"],
@@ -5676,10 +5676,10 @@ const SOCO_CONSO_BANNERS = [
 
 const SOCO_CLR = {
   "Tenn State": ["#00539B", "#FFFFFF"], "Mercer": ["#F76800", "#0A0A0A"],
-  "Jax State": ["#CC0000", "#FFFFFF"], "Elon": ["#73000A", "#B59A57"],
+  "Jax State": ["#CC0000", "#000000"], "Elon": ["#73000A", "#B59A57"],
   "Austin Peay": ["#C8102E", "#FFFFFF"], "Belmont": ["#CE1141", "#041E42"],
   "Carolina": ["#492C88", "#FFC72C"], "Citadel": ["#003087", "#FFFFFF"],
-  "E Tenn": ["#041E42", "#FFC72C"], "VMI": ["#C69214", "#FFFFFF"],
+  "E Tenn": ["#041E42", "#FFC72C"], "VMI": ["#C69214", "#A71F23"],
   "Martin": ["#002D62", "#FF6E00"], "Samford": ["#002469", "#FFFFFF"],
   "Chattanooga": ["#C99700", "#041E42"], "Murray State": ["#002144", "#FDCA1F"],
   "Nicholls": ["#C8102E", "#FFFFFF"], "Tenn Tech": ["#4E2A84", "#FFC423"],
@@ -5911,7 +5911,7 @@ const GLIAC_CLR = {
   "Muskingum": ["#000000", "#E0218A"], "Baldwin": ["#FDB913", "#4F2C1D"],
   "Wilmington": ["#006747", "#FFFFFF"], "Ohio N": ["#F47920", "#000000"],
   "Capital": ["#3D1152", "#FFFFFF"], "Mount Union": ["#6E2B8B", "#FFFFFF"],
-  "Davenport": ["#C8102E", "#FFFFFF"], "Parkside": ["#00573F", "#FFFFFF"],
+  "Davenport": ["#C8102E", "#000000"], "Parkside": ["#00573F", "#FFFFFF"],
   "Wayne State": ["#0C5449", "#FFCB05"], "N Michigan": ["#285C4D", "#B4975A"],
   "Ferris State": ["#C8102E", "#FFC72C"], "Purdue NW": ["#000000", "#B1946C"],
   "Northwood": ["#7EA6D8", "#0A2240"], "Lake Superior": ["#FDB913", "#003F87"],
@@ -6680,6 +6680,25 @@ const BANNER_TEXT_MAX_WIDTH = 190;
 // updates the banner for free). shortName is the TEAM_CLR/bracket key
 // ("Tennessee"); fullName is for display and the TEAM_ART lookup
 // ("Tennessee Titans").
+// One-off visual tweaks for SPECIFIC banners, requested individually
+// rather than as a general rule for every banner (e.g. "make OSU 2025's
+// divider and border team orange" — not "make every banner's divider its
+// team's accent color"). Keyed by "tierKey-year" since that already
+// uniquely identifies one banner. accentColor, when present, replaces
+// darkColor for the divider bar AND the banner's own outer border on
+// that one banner — everything else (gradient, logo ring, text) stays
+// governed by the normal rules. Deliberately a flat lookup table rather
+// than new props threaded through from the call site, since these are
+// asks about ONE specific banner each, not new general capabilities.
+const BANNER_OVERRIDES = {
+  // OSU 2025 (2026-08-22, her request): team-orange divider, and an
+  // outline around the WHOLE banner matching how the other BIG XII
+  // banners already look -- corrected same day after an initial guess
+  // (outlining just the logo ring) turned out wrong. #FF7300 is OSU's
+  // own real accent color (XII_CLR's "OSU" entry), not a generic orange.
+  "BIG XII-2025": { accentColor: "#FF7300" },
+};
+
 function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKey }) {
   const colorMap = TIER_COLOR_MAP[tierKey] || {};
   const [colorA, colorB] = colorMap[shortName] || ["#2A3550", C.chalk];
@@ -6699,6 +6718,16 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
   // separate variable.
   const darkColor = perceivedBrightness(colorA) <= perceivedBrightness(colorB) ? colorA : colorB;
   const lightColor = darkColor === colorA ? colorB : colorA;
+  const override = BANNER_OVERRIDES[`${tierKey}-${year}`] || {};
+  // Corrected 2026-08-22 right after shipping: "outline around it" meant
+  // the whole banner's own border (matching what she'd already seen on
+  // the other BIG XII banners), not the logo ring -- that first guess is
+  // reverted below (logoRingColor is always C.chalk again, same as every
+  // banner without an override). borderColor now carries the override
+  // instead, applied to the shape's own outer stroke.
+  const dividerColor = override.accentColor || darkColor;
+  const logoRingColor = C.chalk;
+  const borderColor = override.accentColor || darkColor;
   const logoSrc = TEAM_ART[tierKey] && TEAM_ART[tierKey][normTeamKey(fullName)];
   const gradId = `championBannerFill-${tierKey}-${year}`;
   // Text outline, added 2026-08-22 (her contrast report): several teams'
@@ -6744,7 +6773,7 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
       <path
         d="M 20 20 L 240 20 L 240 280 L 130 370 L 20 280 Z"
         fill={`url(#${gradId})`}
-        stroke={darkColor}
+        stroke={borderColor}
         strokeWidth="4"
         filter={`url(#${gradId}-shadow)`}
       />
@@ -6776,13 +6805,19 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
           COACH {coachKey.toUpperCase()}
         </text>
       )}
-      <circle cx="130" cy="160" r="38" fill={C.ink} stroke={C.chalk} strokeWidth="2.5" />
+      <circle cx="130" cy="160" r="38" fill={C.ink} stroke={logoRingColor} strokeWidth="2.5" />
       {logoSrc ? (
         <image href={logoSrc} x="96" y="126" width="68" height="68" clipPath="circle(34px at 34px 34px)" />
       ) : (
         <text x="130" y="165" textAnchor="middle" fill={C.slate} style={{ fontFamily: "'Urbanist', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 1, ...outline(1.1) }}>LOGO</text>
       )}
-      <rect x="70" y="214" width="120" height="3" rx="1.5" fill={darkColor} />
+      {/* Divider outline (stroke, not just fill) added 2026-08-22 for
+          banners with an accentColor override -- a solid bar alone
+          didn't read as a distinct "outlined" element the way she
+          wanted; the stroke gives it a visible edge without changing the
+          color. No visual change for banners without an override: stroke
+          width is 0 there, same as before. */}
+      <rect x="70" y="214" width="120" height="3" rx="1.5" fill={dividerColor} stroke={dividerColor} strokeWidth={override.accentColor ? 1.5 : 0} />
       {/* Headline split into two lines 2026-08-22 (her request) -- tier
           name on its own line, "CHAMPIONS" below it, instead of one long
           line that overflowed the shape's edges for longer tier names.
