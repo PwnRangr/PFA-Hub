@@ -15,6 +15,8 @@ import {
   submitApplication,
   hireApplicant,
   unhireApplicant,
+  ignoreApplication,
+  unignoreApplication,
   watchHireTimers,
   setHireTimer,
   cancelHireTimer,
@@ -1129,9 +1131,8 @@ const PLAYOFF_FORMAT = {
 };
 
 // Standard fixed single-elimination bracket pairings.
-// 8-seed: round 1 = (1v8, 4v5, 3v6, 2v7). 4-seed: round 1 = (1v4, 2v3).
+// 8-seed: round 1 = (1v8, 4v5, 3v6, 2v7).
 const BRACKET_PAIRS_R1 = [[1, 8], [4, 5], [3, 6], [2, 7]];
-const BRACKET_PAIRS_R1_4 = [[1, 4], [2, 3]];
 
 // Final-standing rank -> draft pick number, confirmed directly from the
 // playoff PDFs for each league size (worst record picks first, but the
@@ -4065,7 +4066,7 @@ const BR_W15_FEEDERS = [
 // a genuine tie all fall through `>` as false and silently flag the SECOND
 // team as the winner — which would have shown a green winning score in every
 // empty pairing and named a blank team champion.
-// MUST be declared here, before brWinner/brLoser/brSplit below — those are
+// MUST be declared here, before brWinner/brSplit below — those are
 // called by brChampHalf, which NFL_2025_PLAYOFFS invokes immediately at
 // module load (not deferred to render), so a later declaration throws
 // "Cannot access before initialization" the instant the module evaluates,
@@ -4077,7 +4078,6 @@ const r3Won = (sa, sb) => r3Played(sa, sb) && r3Num(sa) > r3Num(sb);
 
 const brBlank = ["", "", "", ""];
 const brWinner = (g) => (r3Played(g[1], g[3]) ? (r3Won(g[1], g[3]) ? g[0] : g[2]) : "");
-const brLoser  = (g) => (r3Played(g[1], g[3]) ? (r3Won(g[1], g[3]) ? g[2] : g[0]) : "");
 function brSplit(x1, y1, x2, y2, g) {
   const [a, sa, b, sb] = g;
   const played = r3Played(sa, sb);
@@ -4911,7 +4911,6 @@ const R3_PLACE_PATHS = [
 // ===========================================================================
 
 const r3Winner = (g) => (r3Played(g[1], g[3]) ? (r3Won(g[1], g[3]) ? g[0] : g[2]) : "");
-const r3Loser = (g) => (r3Played(g[1], g[3]) ? (r3Won(g[1], g[3]) ? g[2] : g[0]) : "");
 
 // one game as two boxes at arbitrary positions
 function r3Split(x1, y1, x2, y2, g) {
@@ -8734,7 +8733,8 @@ const R3_LIVE = {
 // Two things she confirmed 2026-08-20 that this whole approach rests on:
 // (1) Sleeper's own playoff mode is OFF in every league and its native
 //     winners_bracket/losers_bracket can't represent our full-cascade
-//     format anyway -- see loadBracketResults' own comment. Not used here.
+//     format anyway. Not used here (the dead fetch that once pulled it
+//     into a cache nothing read was removed 2026-08-24).
 // (2) She manually sets each week's real Sleeper matchups to mirror the
 //     bracket. That means a roster's own weekly score (from the SAME
 //     getWeeklyResultCached fetch Weekly Awards/streak bonuses/Tournament
@@ -10650,54 +10650,6 @@ function CompletedBracketFlow({ round1, finalOrder, startRank, rows, fired }) {
   );
 }
 
-// Simple left-to-right single-elimination tree: Round 1 -> (Semifinal) ->
-// Final. Used for top8/conference-division sub-brackets and division-only.
-function TreeBracket({ seeds, finalLabel = "Championship" }) {
-  const size = seeds.length <= 4 ? 4 : 8;
-  const pairs = size === 4 ? BRACKET_PAIRS_R1_4 : BRACKET_PAIRS_R1;
-  const colGap = 70;
-  const rowGap = 26;
-  const r1X = 0;
-  const r2X = r1X + BOX_W + colGap;
-  const r3X = r2X + BOX_W + colGap;
-  const r1Ys = pairs.map((_, i) => i * (BOX_H * 2 + rowGap * 2));
-  const r2Ys = [];
-  for (let i = 0; i < r1Ys.length; i += 2) {
-    r2Ys.push((r1Ys[i] + r1Ys[i + 1]) / 2);
-  }
-  const r3Y = r2Ys.length > 1 ? (r2Ys[0] + r2Ys[r2Ys.length - 1]) / 2 : r2Ys[0];
-  const width = size === 4 ? r2X + BOX_W : r3X + BOX_W;
-  const height = r1Ys[r1Ys.length - 1] + BOX_H;
-
-  const lines = [];
-  pairs.forEach(([a, b], i) => {
-    const y = r1Ys[i];
-    lines.push(<Connector key={`r1-${i}`} d={elbowPath(r1X + BOX_W, y + BOX_H / 2, r2X, r2Ys[Math.floor(i / 2)] + BOX_H / 2)} />);
-    // both matches in a pair feed the same r2 slot — draw both halves
-  });
-  if (size === 8) {
-    r2Ys.forEach((y, i) => {
-      lines.push(<Connector key={`r2-${i}`} d={elbowPath(r2X + BOX_W, y + BOX_H / 2, r3X, r3Y + BOX_H / 2)} />);
-    });
-  }
-
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ minWidth: `${width * 0.75}px`, height: "auto" }}>
-      {lines}
-      {pairs.map(([a, b], i) => (
-        <g key={i}>
-          <BracketBox x={r1X} y={r1Ys[i]} seed={a} entry={seeds[a - 1]} />
-          <BracketBox x={r1X} y={r1Ys[i] + BOX_H + rowGap} seed={b} entry={seeds[b - 1]} />
-        </g>
-      ))}
-      {r2Ys.map((y, i) => (
-        <BracketBox key={i} x={r2X} y={y} entry={size === 4 ? (r2Ys.length === 1 ? finalLabel : "Winner, Match " + (i * 2 + 1)) : `Winner, Match ${i + 1}`} />
-      ))}
-      {size === 8 && <BracketBox x={r3X} y={r3Y} entry={finalLabel} />}
-    </svg>
-  );
-}
-
 // Mirrored two-conference "everybody plays for placement" bracket (Sun
 // Belt, SoCo, Ivy, SWAC, GLIAC): East reads left-to-right, West reads
 // right-to-left. Each conference plays 2 Round-1 games (1v4, 2v3) —
@@ -11454,10 +11406,6 @@ export default function App() {
   const [standingsSeason, setStandingsSeason] = useState(CURRENT_SEASON);
   const [standingsCache, setStandingsCache] = useState({});
   const [matchupsCache, setMatchupsCache] = useState({});
-  // Sleeper's own bracket data (real round-by-round winner/loser), keyed by
-  // league ID — separate from standingsCache because it comes from a
-  // different pair of endpoints and isn't always present (see loadBracketResults).
-  const [bracketResultsCache, setBracketResultsCache] = useState({});
   const [tierLoading, setTierLoading] = useState(false);
 
   // Weekly Awards — one weeklyResultsCache entry per {tierKey, year, week}
@@ -12307,28 +12255,6 @@ export default function App() {
     }
   }, [streakBonusesLive, manualPenalties, conferenceStrengthHistorical]);
 
-  // Sleeper's own playoff bracket — this is the actual round-by-round
-  // winner/loser data (roster IDs, not just seeding), separate from the
-  // standings fetch above. Whether this lines up cleanly with our custom
-  // full-cascade-to-last-place format is untested against real data as of
-  // this write — see the note where this is consumed in computeBracket.
-  const loadBracketResults = useCallback(async (leagueId) => {
-    try {
-      const [winners, losers] = await Promise.all([
-        j(`${SLEEPER}/league/${leagueId}/winners_bracket`),
-        j(`${SLEEPER}/league/${leagueId}/losers_bracket`),
-      ]);
-      setBracketResultsCache((c) => ({ ...c, [leagueId]: { winners: winners || [], losers: losers || [] } }));
-      // TEMPORARY — remove once we've confirmed this data looks right. Open
-      // the browser console on the Standings page to check what Sleeper
-      // actually has for a given league before the real-results rendering
-      // gets wired in.
-      console.log(`[bracket check] league ${leagueId}:`, { winners, losers });
-    } catch (e) {
-      setBracketResultsCache((c) => ({ ...c, [leagueId]: { winners: [], losers: [] } }));
-    }
-  }, []);
-
   // initial: live Sleeper + discovery of the other 12 leagues via the commissioner
   useEffect(() => {
     let cancelled = false;
@@ -13057,6 +12983,31 @@ export default function App() {
     }
   };
 
+  // Excludes an application from the auto-hire timer's candidate pool
+  // without removing it from the list — same idea as applicantEligibility
+  // already applies for the promotion/relegation rule, just admin-set
+  // instead of computed. Doesn't block a manual Hire; only the timer
+  // (processDue below) checks this flag.
+  const doIgnoreApplication = async (a) => {
+    try {
+      const local = await ignoreApplication(a.id);
+      if (local) setApplications(local);
+    } catch (e) {
+      console.error("ignoreApplication failed", e);
+      setAdminHireError("Couldn't ignore that applicant — see the browser console for details.");
+    }
+  };
+
+  const doUnignoreApplication = async (a) => {
+    try {
+      const local = await unignoreApplication(a.id);
+      if (local) setApplications(local);
+    } catch (e) {
+      console.error("unignoreApplication failed", e);
+      setAdminHireError("Couldn't undo that — see the browser console for details.");
+    }
+  };
+
   // ── Hire timers ──
   const timerKeyFor = (tKey, team) => `${tKey}__${team}`;
   const hireTimerFor = (tKey, team) => hireTimers.find((t) => t.tierKey === tKey && t.team === team);
@@ -13104,7 +13055,7 @@ export default function App() {
         const claimed = await claimHireTimer(t.tierKey, t.team);
         if (cancelled || !claimed) continue; // another admin tab already won this one
         const candidates = applicantsForTeam(t.tierKey, t.team).filter(
-          (a) => applicantEligibility(a.coachName) !== false && !isHiredElsewhere(a)
+          (a) => applicantEligibility(a.coachName) !== false && !isHiredElsewhere(a) && !a.ignored
         );
         const best = candidates[0]; // applicantsForTeam already sorts by Promotion Score, nulls last
         if (best) {
@@ -13175,16 +13126,6 @@ export default function App() {
       : historicalDraftOrder
       ? { rows: draftOrderRowsByTeam(historicalDraftOrder), title: `Draft Order — ${standingsSeason + 1}` }
       : { rows: draftOrderRows(tier.size), title: `Draft Order — ${CURRENT_SEASON + 1}` };
-
-  // Fetch Sleeper's real bracket results for whichever tier/season is on
-  // screen, so computeBracket can fill in actual winners instead of only
-  // seeding (see the "top8-cascade" / "division-only" branches above).
-  useEffect(() => {
-    if (mode !== "live" || !leagueId) return;
-    if (!PLAYOFF_FORMAT[tierKey]) return;
-    if (bracketResultsCache[leagueId]) return;
-    loadBracketResults(leagueId);
-  }, [mode, tierKey, leagueId, bracketResultsCache, loadBracketResults]);
 
   // Groups the current tier's standings to match its real Sleeper
   // conference/division structure — NFL gets conference > division nesting,
@@ -15121,6 +15062,14 @@ export default function App() {
                                                 Ineligible
                                               </span>
                                             )}
+                                            {a.ignored && (
+                                              <span
+                                                className="px-1.5 py-0.5 text-xs uppercase tracking-wider rounded-sm"
+                                                style={{ background: "rgba(148,163,184,0.15)", color: C.slate }}
+                                              >
+                                                Ignored
+                                              </span>
+                                            )}
                                             <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold }}>
                                               {pts === null ? "—" : fmt(pts)} PS
                                             </span>
@@ -16142,9 +16091,35 @@ export default function App() {
                                                 Ineligible
                                               </span>
                                             )}
+                                            {a.ignored && (
+                                              <span
+                                                className="px-1.5 py-0.5 text-xs uppercase tracking-wider rounded-sm"
+                                                style={{ background: "rgba(148,163,184,0.15)", color: C.slate }}
+                                              >
+                                                Ignored
+                                              </span>
+                                            )}
                                             <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold }}>
                                               {pts === null ? "—" : fmt(pts)} PS
                                             </span>
+                                            {!isThisHire &&
+                                              (a.ignored ? (
+                                                <button
+                                                  onClick={() => doUnignoreApplication(a)}
+                                                  className="px-2 py-0.5 text-xs uppercase tracking-wider rounded-sm"
+                                                  style={{ color: C.slate, border: `1px solid ${C.slate}` }}
+                                                >
+                                                  Unignore
+                                                </button>
+                                              ) : (
+                                                <button
+                                                  onClick={() => doIgnoreApplication(a)}
+                                                  className="px-2 py-0.5 text-xs uppercase tracking-wider rounded-sm"
+                                                  style={{ color: C.slate, border: `1px solid ${C.line}` }}
+                                                >
+                                                  Ignore
+                                                </button>
+                                              ))}
                                             {isThisHire ? (
                                               <button
                                                 onClick={() => doUnhireApplication(a)}

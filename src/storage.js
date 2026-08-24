@@ -201,14 +201,38 @@ export async function submitApplication(app) {
   return null;
 }
 
-export async function removeApplication(id) {
+// Marks an application as excluded from the auto-hire timer's candidate
+// pool, WITHOUT removing it from the list — the application stays fully
+// visible (an admin still sees the coach applied), it just can never be
+// the one a timer auto-picks. Doesn't touch `hired` at all: an admin can
+// still manually hire an ignored applicant if they choose to override —
+// this only takes them out of the automatic pick, same as
+// applicantEligibility already does for the promotion/relegation rule.
+// Same Firestore rule as hireApplicant/unhireApplicant (applications'
+// `allow update: if isAdmin();`) — no rules change needed.
+export async function ignoreApplication(id) {
+  const updates = { ignored: true, ignoredAt: Date.now() };
   if (!firebaseReady) {
-    const a = (localGet("pfa-applications") || []).filter((x) => x.id !== id);
+    const a = (localGet("pfa-applications") || []).map((x) => (x.id === id ? { ...x, ...updates } : x));
     localSet("pfa-applications", a);
     return a;
   }
   await ensureDb();
-  await fs.deleteDoc(fs.doc(db, "applications", id));
+  await fs.updateDoc(fs.doc(db, "applications", id), updates);
+  return null;
+}
+
+// Reverses ignoreApplication — the application becomes a normal
+// auto-hire candidate again.
+export async function unignoreApplication(id) {
+  const updates = { ignored: false, ignoredAt: null };
+  if (!firebaseReady) {
+    const a = (localGet("pfa-applications") || []).map((x) => (x.id === id ? { ...x, ...updates } : x));
+    localSet("pfa-applications", a);
+    return a;
+  }
+  await ensureDb();
+  await fs.updateDoc(fs.doc(db, "applications", id), updates);
   return null;
 }
 
