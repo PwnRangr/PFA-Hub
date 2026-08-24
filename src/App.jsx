@@ -13395,6 +13395,81 @@ export default function App() {
     return map;
   }, [manualPenalties]);
 
+  // Season CP for one coach's CURRENT roster entry. Extracted 2026-08-24
+  // from what used to be inline in allCoachesTable below, so the exact same
+  // formula can be reused by promotionScoreComputedFor further down —
+  // allCoachesTable only ever covers coaches with a CAREER_STATS row, but
+  // Promotion Score needs to work for every current coach, including one
+  // hired this week with no career history yet. Every component here was
+  // confirmed directly with Troy 2026-08-19; see the comments preserved
+  // below from the original inline version.
+  const seasonCPFor = (dirEntry) => {
+    if (!dirEntry) {
+      return { currentCP: -Infinity, subtotal: 0, ptsMaxRatio: 1, winPoints: 0, pointsComponent: 0, avgPPG: 0, faabComponent: 0, faabRemaining: null };
+    }
+    const rosterKey = `${dirEntry.tierKey}_${CURRENT_SEASON}_${dirEntry.rosterId}`;
+    const winPoints = (WIN_POINTS_BY_TIER[dirEntry.tierKey] || 0) * (dirEntry.w || 0);
+    // Average Points Per Game / 4 (confirmed 2026-08-19). "Per game" means
+    // games actually played so far (w+l) — before Week 1 that's 0, so this
+    // is 0 rather than NaN/Infinity, same "starts at 0, not undefined"
+    // rule as everything else in this running total.
+    const gamesPlayed = (dirEntry.w || 0) + (dirEntry.l || 0);
+    const avgPPG = gamesPlayed > 0 ? dirEntry.pts / gamesPlayed : 0;
+    const pointsComponent = avgPPG / 4;
+    // (starting FAAB budget − used) / 50, confirmed 2026-08-19. If
+    // FAAB_STARTING_BUDGET has no entry for CURRENT_SEASON (missed
+    // updating it — see the reminder comment there), contribute 0 rather
+    // than NaN; the Admin tab warning banner is the actual reminder, not
+    // a silently wrong CP number.
+    const faabBudget = FAAB_STARTING_BUDGET[CURRENT_SEASON];
+    const faabRemaining = faabBudget != null ? faabBudget - (dirEntry.faabUsed || 0) : null;
+    const faabComponent = faabRemaining != null ? faabRemaining / 50 : 0;
+    const subtotal =
+      winPoints + pointsComponent + faabComponent + (streakTotalsByRosterKey[rosterKey]?.net || 0) + (modifiersByRosterKey[rosterKey]?.net || 0);
+    // Pts/Max multiplier, confirmed 2026-08-19: dirEntry.pts / dirEntry.maxPts,
+    // both already sourced from Sleeper's settings.fpts/fpts_decimal and
+    // settings.ppts/ppts_decimal (the same fields the Points component and
+    // TeamProfileModal's "Max Total Points" already use). Pre-season,
+    // maxPts is 0 (no games played) — 0/0 is undefined, so this defaults
+    // to a NEUTRAL 1× rather than NaN or 0×, so a real component that's
+    // already meaningful pre-season (FAAB) isn't zeroed out by a ratio
+    // that genuinely doesn't exist yet. ASSUMPTION, not confirmed with
+    // her — flagging in case she wants pre-season CP to show as 0 or "—"
+    // instead until maxPts is real.
+    const ptsMaxRatio = dirEntry.maxPts > 0 ? dirEntry.pts / dirEntry.maxPts : 1;
+    const currentCP = subtotal * ptsMaxRatio;
+    return { currentCP, subtotal, ptsMaxRatio, winPoints, pointsComponent, avgPPG, faabComponent, faabRemaining };
+  };
+
+  // Promotion Score, computed in-site — confirmed directly with Troy,
+  // 2026-08-24: Current CP (seasonCPFor above) + Career Bonus, where
+  // Career Bonus = (Career Avg CP / 10) + (Career CP / 100). A coach with
+  // no CAREER_STATS row yet (just hired, hasn't logged a season) gets
+  // Career Bonus = 0 — his own explicit rule, not an assumption: full
+  // weight on live current-season CP alone until next season, when their
+  // first CAREER_STATS row exists.
+  //
+  // STAGE 1 of 3 (build -> compare -> replace, his call 2026-08-24): this
+  // is purely a comparison value against the sheet's live promotionScore
+  // for now. Nothing consequential — applicant ranking, auto-hire,
+  // the "PS" figure shown on an application — reads this yet;
+  // promotionPointsFor still sources from liveCoachStats untouched. Don't
+  // wire this in anywhere that affects a real decision until the Engine
+  // Room comparison table below has been reviewed.
+  const promotionScoreComputedFor = (dirEntry) => {
+    if (!dirEntry) return null;
+    const { currentCP } = seasonCPFor(dirEntry);
+    const entries = CAREER_STATS[dirEntry.name.toLowerCase()];
+    const match = entries ? entries.find((e) => e.tierKey === dirEntry.tierKey) : null;
+    const chosen = match || (entries ? entries[0] : null);
+    const careerCPRaw = chosen ? parseFloat(chosen.stats["Career CP"]) : 0;
+    const careerAvgCPRaw = chosen ? parseFloat(chosen.stats["Career Avg CP"]) : 0;
+    const careerCP = Number.isFinite(careerCPRaw) ? careerCPRaw : 0;
+    const careerAvgCP = Number.isFinite(careerAvgCPRaw) ? careerAvgCPRaw : 0;
+    const careerBonus = careerAvgCP / 10 + careerCP / 100;
+    return currentCP + careerBonus;
+  };
+
   // Every coach with career data on file, resolved to whichever team they
   // currently hold (same rule as the profile popup) — never a mix-and-match
   // of a different league's numbers.
@@ -13418,37 +13493,7 @@ export default function App() {
       // it'll only grow to match the full Rules-page formula as those land.
       // Career CP (`cp` below) is untouched — that one keeps the sheet's
       // history as its baseline, per her call on 2026-08-19.
-      const rosterKey = dirEntry ? `${dirEntry.tierKey}_${CURRENT_SEASON}_${dirEntry.rosterId}` : null;
-      const winPoints = dirEntry ? (WIN_POINTS_BY_TIER[dirEntry.tierKey] || 0) * (dirEntry.w || 0) : 0;
-      // Average Points Per Game / 4 (confirmed 2026-08-19). "Per game" means
-      // games actually played so far (w+l) — before Week 1 that's 0, so this
-      // is 0 rather than NaN/Infinity, same "starts at 0, not undefined"
-      // rule as everything else in this running total.
-      const gamesPlayed = dirEntry ? (dirEntry.w || 0) + (dirEntry.l || 0) : 0;
-      const avgPPG = dirEntry && gamesPlayed > 0 ? dirEntry.pts / gamesPlayed : 0;
-      const pointsComponent = avgPPG / 4;
-      // (starting FAAB budget − used) / 50, confirmed 2026-08-19. If
-      // FAAB_STARTING_BUDGET has no entry for CURRENT_SEASON (missed
-      // updating it — see the reminder comment there), contribute 0 rather
-      // than NaN; the Admin tab warning banner is the actual reminder, not
-      // a silently wrong CP number.
-      const faabBudget = FAAB_STARTING_BUDGET[CURRENT_SEASON];
-      const faabRemaining = dirEntry && faabBudget != null ? faabBudget - (dirEntry.faabUsed || 0) : null;
-      const faabComponent = faabRemaining != null ? faabRemaining / 50 : 0;
-      const subtotal =
-        winPoints + pointsComponent + faabComponent + (streakTotalsByRosterKey[rosterKey]?.net || 0) + (modifiersByRosterKey[rosterKey]?.net || 0);
-      // Pts/Max multiplier, confirmed 2026-08-19: dirEntry.pts / dirEntry.maxPts,
-      // both already sourced from Sleeper's settings.fpts/fpts_decimal and
-      // settings.ppts/ppts_decimal (the same fields the Points component and
-      // TeamProfileModal's "Max Total Points" already use). Pre-season,
-      // maxPts is 0 (no games played) — 0/0 is undefined, so this defaults
-      // to a NEUTRAL 1× rather than NaN or 0×, so a real component that's
-      // already meaningful pre-season (FAAB) isn't zeroed out by a ratio
-      // that genuinely doesn't exist yet. ASSUMPTION, not confirmed with
-      // her — flagging in case she wants pre-season CP to show as 0 or "—"
-      // instead until maxPts is real.
-      const ptsMaxRatio = dirEntry && dirEntry.maxPts > 0 ? dirEntry.pts / dirEntry.maxPts : 1;
-      const currentCP = dirEntry ? subtotal * ptsMaxRatio : -Infinity;
+      const { currentCP, subtotal, ptsMaxRatio, winPoints, pointsComponent, avgPPG, faabComponent, faabRemaining } = seasonCPFor(dirEntry);
       return {
         name: dirEntry ? dirEntry.name : lowerName,
         team: chosen.team,
@@ -13484,6 +13529,38 @@ export default function App() {
       };
     });
   }, [coachDirectory, liveCoachStats, streakTotalsByRosterKey, modifiersByRosterKey]);
+
+  // Promotion Score comparison — Stage 2 (build -> COMPARE -> replace).
+  // Every current coach (coachDirectory, not just CAREER_STATS's subset),
+  // live sheet Promotion Score next to the new in-site computed one, sorted
+  // by biggest disagreement first so a real discrepancy is easy to spot
+  // before Stage 3 switches anything live over to it. Read-only — no
+  // writes, doesn't touch applicant ranking or auto-hire.
+  const promotionScoreComparison = useMemo(() => {
+    return coachDirectory
+      .map((dirEntry) => {
+        const lowerName = dirEntry.name.toLowerCase();
+        const live = liveCoachStats[lowerName];
+        const sheetScore = live && live.promotionScore !== null ? live.promotionScore : null;
+        const computedScore = promotionScoreComputedFor(dirEntry);
+        const hasCareerRow = Boolean(CAREER_STATS[lowerName]);
+        const delta = sheetScore !== null && computedScore !== null ? computedScore - sheetScore : null;
+        return {
+          name: dirEntry.name,
+          team: dirEntry.team,
+          tierKey: dirEntry.tierKey,
+          sheetScore,
+          computedScore,
+          delta,
+          hasCareerRow,
+        };
+      })
+      .sort((a, b) => {
+        const ad = a.delta === null ? -1 : Math.abs(a.delta);
+        const bd = b.delta === null ? -1 : Math.abs(b.delta);
+        return bd - ad;
+      });
+  }, [coachDirectory, liveCoachStats]);
 
   const sortedCoachesTable = useMemo(() => {
     const arr = [...allCoachesTable];
@@ -16254,6 +16331,64 @@ export default function App() {
                   >
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2023/2024/2025)"}
                   </button>
+                </div>
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.gold}`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                    <strong style={{ color: C.chalk }}>Promotion Score, in-site vs. sheet (Stage 2 of 3 — build, compare, replace).</strong>{" "}
+                    Current CP + Career Bonus, where Career Bonus = (Career Avg CP ÷ 10) + (Career CP ÷ 100) — confirmed
+                    directly, 2026-08-24. A coach with no career row yet gets Career Bonus = 0. Read-only: nothing here
+                    writes anywhere, and applicant ranking / auto-hire still run on the sheet's own Promotion Score
+                    until this has been checked over and Stage 3 (replace) gets the go-ahead. Sorted by biggest
+                    disagreement first — a real gap here means either the formula needs a second look or the sheet
+                    itself has drifted.
+                  </div>
+                  <div style={{ maxHeight: 420, overflowY: "auto", border: `1px solid ${C.line}`, borderRadius: 4 }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ position: "sticky", top: 0, background: C.panel, zIndex: 1 }}>
+                          <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: `1px solid ${C.line}` }}>Coach</th>
+                          <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: `1px solid ${C.line}` }}>Team</th>
+                          <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: `1px solid ${C.line}` }}>Tier</th>
+                          <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${C.line}`, fontFamily: "'IBM Plex Mono', monospace" }}>
+                            Sheet PS
+                          </th>
+                          <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${C.line}`, fontFamily: "'IBM Plex Mono', monospace" }}>
+                            Computed PS
+                          </th>
+                          <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${C.line}`, fontFamily: "'IBM Plex Mono', monospace" }}>
+                            Δ
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {promotionScoreComparison.map((r) => {
+                          const deltaColor =
+                            r.delta === null ? C.slate : Math.abs(r.delta) < 1 ? C.turf : Math.abs(r.delta) < 10 ? C.gold : C.ember;
+                          return (
+                            <tr key={`${r.tierKey}-${r.name}`} style={{ borderBottom: `1px solid ${C.line}` }}>
+                              <td style={{ padding: "6px 8px" }}>
+                                {r.name}
+                                {!r.hasCareerRow && (
+                                  <span style={{ color: C.slate, fontStyle: "italic" }}> (new)</span>
+                                )}
+                              </td>
+                              <td style={{ padding: "6px 8px", color: C.slate }}>{r.team}</td>
+                              <td style={{ padding: "6px 8px", color: C.slate }}>{r.tierKey}</td>
+                              <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
+                                {r.sheetScore === null ? "—" : fmt(r.sheetScore)}
+                              </td>
+                              <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
+                                {r.computedScore === null ? "—" : fmt(r.computedScore)}
+                              </td>
+                              <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: deltaColor, fontWeight: 600 }}>
+                                {r.delta === null ? "—" : `${r.delta >= 0 ? "+" : ""}${fmt(r.delta)}`}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </section>
             )}
