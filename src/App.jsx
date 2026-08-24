@@ -6686,10 +6686,12 @@ const BANNER_TEXT_MAX_WIDTH = 190;
 // team's accent color"). Keyed by "tierKey-year" since that already
 // uniquely identifies one banner. accentColor, when present, replaces
 // darkColor for the divider bar AND the banner's own outer border on
-// that one banner — everything else (gradient, logo ring, text) stays
-// governed by the normal rules. Deliberately a flat lookup table rather
-// than new props threaded through from the call site, since these are
-// asks about ONE specific banner each, not new general capabilities.
+// that one banner. noFade, when present, replaces the whole background
+// gradient with a single flat fill (darkColor) instead of a two-color
+// fade. Everything not explicitly overridden stays governed by the
+// normal rules. Deliberately a flat lookup table rather than new props
+// threaded through from the call site, since these are asks about
+// specific banners each, not new general capabilities.
 const BANNER_OVERRIDES = {
   // OSU 2025 (2026-08-22, her request): team-orange divider, and an
   // outline around the WHOLE banner matching how the other BIG XII
@@ -6697,6 +6699,20 @@ const BANNER_OVERRIDES = {
   // (outlining just the logo ring) turned out wrong. #FF7300 is OSU's
   // own real accent color (XII_CLR's "OSU" entry), not a generic orange.
   "BIG XII-2025": { accentColor: "#FF7300" },
+  // Western Wildcats, Coral Springs Colts, Miami Beach Hi-Tides -- all
+  // three (2026-08-22, her request): "remove the fade, use a single team
+  // color" instead of the usual two-color gradient. Confirmed which
+  // Miami she meant before touching anything, since FLHS has two (Miami
+  // Beach 2023 and Miami Senior 2022 both appear in the same
+  // screenshot) -- Miami Senior is untouched, stays a normal two-color
+  // fade. All three teams' FLHS_CLR entries already have white as one of
+  // their two stored colors (a placeholder, same pattern as several of
+  // the color corrections earlier today), so darkColor already resolves
+  // to each team's one real color on its own -- no new color values
+  // needed here, just skipping the gradient.
+  "FLHS-2025": { noFade: true }, // Western Wildcats
+  "FLHS-2024": { noFade: true }, // Coral Springs Colts
+  "FLHS-2023": { noFade: true }, // Miami Beach Hi-Tides
 };
 
 function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKey }) {
@@ -6772,7 +6788,7 @@ function ChampionBanner({ tierKey, tierLabel, year, shortName, fullName, coachKe
       </defs>
       <path
         d="M 20 20 L 240 20 L 240 280 L 130 370 L 20 280 Z"
-        fill={`url(#${gradId})`}
+        fill={override.noFade ? darkColor : `url(#${gradId})`}
         stroke={borderColor}
         strokeWidth="4"
         filter={`url(#${gradId}-shadow)`}
