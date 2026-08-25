@@ -12755,17 +12755,31 @@ export default function App() {
   };
 
   // ── Apply-to-Team ──
-  // Ranks applicants by live Promotion Score (the same stat now shown on
-  // the Coaches tab), not Career CP — matches what the Rules page actually
-  // says ("Jobs go to the coach with the highest Promotion Score"). No
-  // fallback to Career CP: the transfer period runs weeks 19-20-ish, after
-  // week 18 ends the fantasy season, by which point every coach has real
-  // season stats — nulls here mean a genuinely unlisted name, not "too
-  // early in the season," so they sort last rather than substituting a
-  // different stat.
+  // Ranks applicants by Promotion Score (the same stat now shown on the
+  // Coaches tab), not Career CP — matches what the Rules page actually
+  // says ("Jobs go to the coach with the highest Promotion Score").
+  //
+  // STAGE 3 of 3 (build -> compare -> replace) — SWITCHED 2026-08-24. This
+  // used to read the sheet's own Promotion Score column directly
+  // (`liveCoachStats[name].promotionScore`); after Stage 2's comparison
+  // table came back close enough to trust (his call, having reviewed real
+  // numbers side by side), this now calls promotionScoreComputedFor
+  // instead — Current CP + Career Bonus, computed in-site. The sheet
+  // column itself is untouched and still fetched: promotionScoreComparison
+  // below still reads it, kept on as an ongoing audit view in case the two
+  // ever drift apart, not deleted just because the switch happened.
+  //
+  // Null-handling changed with the switch, worth noting: previously "null"
+  // meant the sheet's cell for this coach was blank/errored even though
+  // they were a real rostered coach; now promotionScoreComputedFor only
+  // returns null when the name doesn't resolve to any current
+  // coachDirectory entry at all (a genuinely unlisted name) — a rostered
+  // coach always gets a real computed number, even preseason (starts at
+  // whatever their Career Bonus alone comes to). An unresolvable name
+  // still sorts last rather than substituting a different stat.
   const promotionPointsFor = (name) => {
-    const live = liveCoachStats[(name || "").toLowerCase()];
-    return live && live.promotionScore !== null ? live.promotionScore : null;
+    const dirEntry = coachDirectory.find((c) => c.name.toLowerCase() === (name || "").toLowerCase());
+    return promotionScoreComputedFor(dirEntry);
   };
 
   // Eligibility per the Rules page: the last 5/16, 7/20, or 11/32-placed
@@ -13449,13 +13463,15 @@ export default function App() {
   // weight on live current-season CP alone until next season, when their
   // first CAREER_STATS row exists.
   //
-  // STAGE 1 of 3 (build -> compare -> replace, his call 2026-08-24): this
-  // is purely a comparison value against the sheet's live promotionScore
-  // for now. Nothing consequential — applicant ranking, auto-hire,
-  // the "PS" figure shown on an application — reads this yet;
-  // promotionPointsFor still sources from liveCoachStats untouched. Don't
-  // wire this in anywhere that affects a real decision until the Engine
-  // Room comparison table below has been reviewed.
+  // Rolled out in 3 stages the same day (build -> compare -> replace, his
+  // call): built here first as a standalone comparison value against the
+  // sheet's live promotionScore, surfaced in the Engine Room's comparison
+  // table below with nothing live reading it yet. He reviewed that table
+  // — deltas came back close enough to trust — and gave the go-ahead the
+  // same session. promotionPointsFor and allCoachesTable's own
+  // promotionScore field both call this now; the sheet's Promotion Score
+  // column itself is untouched and still fetched, feeding only the
+  // comparison table's audit view from here on.
   const promotionScoreComputedFor = (dirEntry) => {
     if (!dirEntry) return null;
     const { currentCP } = seasonCPFor(dirEntry);
@@ -13484,7 +13500,6 @@ export default function App() {
         return Number.isFinite(n) ? n : -Infinity;
       };
       const [wStr, lStr] = (s["Record"] || "").split("-");
-      const live = liveCoachStats[lowerName];
       // Season CP is now computed in-site, not read from the sheet — a
       // genuine running total starting at 0 for 2026, built from whatever
       // components are actually wired up so far (streak bonuses + manual
@@ -13494,12 +13509,17 @@ export default function App() {
       // Career CP (`cp` below) is untouched — that one keeps the sheet's
       // history as its baseline, per her call on 2026-08-19.
       const { currentCP, subtotal, ptsMaxRatio, winPoints, pointsComponent, avgPPG, faabComponent, faabRemaining } = seasonCPFor(dirEntry);
+      // Promotion Score — Stage 3, switched 2026-08-24 alongside
+      // promotionPointsFor above, same reasoning: computed in-site now
+      // (promotionScoreComputedFor), not read off the sheet, so this
+      // column matches what applicant ranking actually uses.
+      const computedPromotionScore = promotionScoreComputedFor(dirEntry);
       return {
         name: dirEntry ? dirEntry.name : lowerName,
         team: chosen.team,
         tierKey: chosen.tierKey,
         cp: parseNum(s["Career CP"]),
-        promotionScore: live && live.promotionScore !== null ? live.promotionScore : -Infinity,
+        promotionScore: computedPromotionScore !== null ? computedPromotionScore : -Infinity,
         currentCP,
         subtotal,
         ptsMaxRatio,
@@ -13528,7 +13548,7 @@ export default function App() {
         currentTierKey: dirEntry ? dirEntry.tierKey : undefined,
       };
     });
-  }, [coachDirectory, liveCoachStats, streakTotalsByRosterKey, modifiersByRosterKey]);
+  }, [coachDirectory, streakTotalsByRosterKey, modifiersByRosterKey]);
 
   // Promotion Score comparison — Stage 2 (build -> COMPARE -> replace).
   // Every current coach (coachDirectory, not just CAREER_STATS's subset),
@@ -16332,15 +16352,16 @@ export default function App() {
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2023/2024/2025)"}
                   </button>
                 </div>
-                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.gold}`, borderRadius: 6 }}>
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.turf}`, borderRadius: 6 }}>
                   <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
-                    <strong style={{ color: C.chalk }}>Promotion Score, in-site vs. sheet (Stage 2 of 3 — build, compare, replace).</strong>{" "}
+                    <strong style={{ color: C.chalk }}>Promotion Score, in-site vs. sheet.</strong>{" "}
                     Current CP + Career Bonus, where Career Bonus = (Career Avg CP ÷ 10) + (Career CP ÷ 100) — confirmed
-                    directly, 2026-08-24. A coach with no career row yet gets Career Bonus = 0. Read-only: nothing here
-                    writes anywhere, and applicant ranking / auto-hire still run on the sheet's own Promotion Score
-                    until this has been checked over and Stage 3 (replace) gets the go-ahead. Sorted by biggest
-                    disagreement first — a real gap here means either the formula needs a second look or the sheet
-                    itself has drifted.
+                    directly, 2026-08-24. A coach with no career row yet gets Career Bonus = 0. Stage 3 shipped the
+                    same day: applicant ranking, auto-hire, and this Coaches tab's own Promotion Score column all run
+                    on the computed value now, not the sheet's — Troy reviewed this exact table first and the deltas
+                    came back close enough to trust. Kept on as an ongoing audit view rather than removed, since it
+                    costs nothing to leave running and still catches it immediately if the two ever drift apart later.
+                    Sorted by biggest disagreement first.
                   </div>
                   <div style={{ maxHeight: 420, overflowY: "auto", border: `1px solid ${C.line}`, borderRadius: 4 }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
