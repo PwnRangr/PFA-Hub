@@ -471,8 +471,25 @@ export function watchClub300Live(cb) {
 // ever needed again, this is the machinery a future one-off fix would
 // reuse (build a small fresh entries array, call replaceClub300Historical
 // directly) rather than writing it from scratch.
-function club300HistoricalKey(tierKey, week, year, pts) {
-  return `${tierKey}_${week}_${year}_${pts.toFixed(2)}`;
+//
+// team is REQUIRED, not optional — added 2026-08-26 after a real collision
+// surfaced building a fresh historical migration: two different real games
+// (different coach, different team) landed on the exact same
+// tierKey+week+year+points combination (SEC, week 9, 2024, both 304.80
+// pts). Without team in the key, the second write would have silently
+// overwritten the first in Firestore — no error, no warning, one entry
+// just gone. Throws rather than silently falling back to the old
+// collision-prone 4-part key, since a caller that forgets to pass team
+// would otherwise look like it worked right up until the next coincidental
+// points tie deletes a real entry.
+function club300HistoricalKey(tierKey, week, year, pts, team) {
+  if (!team) {
+    throw new Error(
+      "club300HistoricalKey requires a team name — omitting it reintroduces the exact tier+week+year+points collision this parameter exists to prevent."
+    );
+  }
+  const teamSlug = team.replace(/[^a-zA-Z0-9]+/g, "_");
+  return `${tierKey}_${week}_${year}_${pts.toFixed(2)}_${teamSlug}`;
 }
 
 // Bulk, SELF-HEALING replace — not a per-entry overwrite. The naive
@@ -488,7 +505,8 @@ function club300HistoricalKey(tierKey, week, year, pts) {
 // in the freshly-computed key set, then writes the fresh set — safe to
 // re-click after ANY future alias/data change, not just today's.
 //
-// freshEntries: array of [key, entry] pairs, keyed via club300HistoricalKey.
+// freshEntries: array of [key, entry] pairs, keyed via
+// club300HistoricalKey(tierKey, week, year, pts, team).
 export { club300HistoricalKey };
 
 export async function replaceClub300Historical(freshEntries) {
