@@ -13975,17 +13975,23 @@ export default function App() {
   // via the toggle for whenever there's real live data worth re-checking.
   const [seasonCPComparisonYear, setSeasonCPComparisonYear] = useState(2025);
 
-  // ── League Strength diagnostic (2026-08-27) ──
-  // Investigating Troy's report: the 16-team Alliance tiers range +16 to
-  // -38 instead of the intended ±10, while USFL/XFL (the 2-tier Pro pool)
-  // look fine. Sandbox can't reach api.sleeper.app directly, so this has
-  // to run in Troy's own browser — click it, and it re-fetches whichever
-  // year the toggle above is set to (via computeHistoricalConferenceStrength,
-  // same fetch the backfill button uses) and shows every ALLIANCE_POOL/
-  // PRO_POOL tier's SIX raw bonus terms side by side with the final score,
-  // so we can see which specific term is actually driving an outlier tier
-  // instead of guessing. Temporary — remove once the report's resolved,
-  // same as every other investigative tool in this project.
+  // ── League Strength term breakdown (2026-08-27) ──
+  // Built to investigate Troy's report that the 16-team Alliance tiers
+  // ranged +16 to -38 instead of the intended ±10 for 2023 (while USFL/XFL,
+  // the 2-tier Pro pool, looked fine) — that investigation led to the
+  // 2023-only historicalTermDampening in scoreConferencePool above. Troy
+  // then asked to KEEP this tool permanently in Engine Room, not retire it
+  // the usual "build → confirm → remove" way every other one-off
+  // investigative tool in this project follows — he wants to watch the
+  // score's six underlying terms move as the 2026 season's real games get
+  // played, not just re-check a past incident. Sandbox can't reach
+  // api.sleeper.app directly, so it still has to run in Troy's own
+  // browser — click it, and it re-fetches whichever year the toggle above
+  // is set to (via computeHistoricalConferenceStrength, same fetch the
+  // backfill button uses) and shows every ALLIANCE_POOL/PRO_POOL tier's
+  // SIX raw bonus terms side by side with the final score. A legend
+  // explaining each term (below the button, next to the table) is
+  // rendered permanently alongside it for the same reason.
   const [leagueStrengthDebug, setLeagueStrengthDebug] = useState(null);
   const [leagueStrengthDebugRunning, setLeagueStrengthDebugRunning] = useState(false);
   // Which tier's individual roster list (coach/team/pts/maxPts) is expanded
@@ -16634,17 +16640,56 @@ export default function App() {
                     </table>
                   </div>
                 </div>
-                {/* League Strength diagnostic (2026-08-27) — investigating
-                    Troy's "16-team tiers ±38 instead of ±10" report. Runs a
-                    real Sleeper fetch for whichever year is toggled above,
-                    so it has to happen in his browser, not this sandbox. */}
-                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.ember}`, borderRadius: 6 }}>
+                {/* League Strength term breakdown — built 2026-08-27 to investigate
+                    Troy's "16-team tiers ±38 instead of ±10" report (which led to
+                    the 2023-only historicalTermDampening in scoreConferencePool),
+                    kept permanently at his request afterward so he can watch the
+                    six terms move as the season plays out, not just re-check a
+                    past incident. Styled like the other permanent Engine Room
+                    tools above (dashed C.line, gold button) rather than the
+                    ember "temporary" treatment it launched with. Still has to run
+                    in Troy's own browser — this sandbox can't reach
+                    api.sleeper.app directly. */}
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
                   <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
-                    DIAGNOSTIC (2026-08-27): breaks each tier's League Strength score into its six underlying
-                    bonus terms for {seasonCPComparisonYear}, plus the two raw factors medMaxPM is a product
-                    of (median Max Points, median Pts/Max ratio) — added specifically to see which factor is
-                    behind 2023's high medMaxPM instead of only seeing the already-multiplied term. Runs a
-                    real fetch against Sleeper — click to run.
+                    Breaks each tier's League Strength score into its six underlying bonus terms for{" "}
+                    {seasonCPComparisonYear}, plus the two raw factors medMaxPM is itself a product of (median Max
+                    Points, median Pts/Max ratio). Click a tier's row to see every one of its rosters' own pts/maxPts
+                    individually. Runs a real fetch against Sleeper — click to run.
+                  </div>
+                  <div style={{ fontSize: 11, color: C.slate, marginBottom: 10, lineHeight: 1.6 }}>
+                    <div style={{ marginBottom: 4, fontWeight: 600, color: C.chalk }}>
+                      All six terms, for reference:
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18 }}>
+                      <li>
+                        <code style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold }}>d</code> — spread
+                        (that tier's own max minus min) vs. pool median spread, <code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>/-10/10</code>
+                      </li>
+                      <li>
+                        <code style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold }}>avgMaxPM</code> —
+                        avg(MaxPts)×avg(Pts/Max) vs. pool average of that product, <code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>/100</code>
+                      </li>
+                      <li>
+                        <code style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold }}>medMaxPM</code> —
+                        median(MaxPts)×median(Pts/Max) vs. pool median of that product,{" "}
+                        <code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>/20</code> (now <code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>×0.1</code> for 2023)
+                      </li>
+                      <li>
+                        <code style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold }}>teamMax</code> —
+                        tier's own top score vs. pool median of top scores, <code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>/100</code> (now{" "}
+                        <code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>×0.1</code> for 2023)
+                      </li>
+                      <li>
+                        <code style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold }}>leagueMedian</code>{" "}
+                        — tier's own median total points vs. pool average of medians, <code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>/20</code>{" "}
+                        (now <code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>×0.1</code> for 2023)
+                      </li>
+                      <li>
+                        <code style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold }}>teamMin</code> —
+                        tier's own lowest score vs. pool median of lowest scores, <code style={{ fontFamily: "'IBM Plex Mono', monospace" }}>/100</code>
+                      </li>
+                    </ul>
                   </div>
                   <button
                     onClick={runLeagueStrengthDebug}
@@ -16652,8 +16697,8 @@ export default function App() {
                     style={{
                       padding: "8px 14px",
                       borderRadius: 4,
-                      border: `1px solid ${C.ember}`,
-                      background: leagueStrengthDebugRunning ? "transparent" : C.ember,
+                      border: `1px solid ${C.gold}`,
+                      background: leagueStrengthDebugRunning ? "transparent" : C.gold,
                       color: leagueStrengthDebugRunning ? C.slate : C.ink,
                       fontWeight: 600,
                       cursor: leagueStrengthDebugRunning ? "default" : "pointer",
