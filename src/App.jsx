@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import {
   firebaseReady,
   watchChat,
@@ -12204,9 +12204,15 @@ export default function App() {
   // used elsewhere for past seasons, then scores them with the exact same
   // scoreConferencePool() the live badge uses — see that function's comment
   // for why every tier in the pool is needed, not just one. Returns
-  // { tierKey: { score, poolSize, terms, raw, poolRef } } — the last three
-  // are diagnostic-only fields scoreConferencePool added 2026-08-27;
-  // nothing here changed to produce them.
+  // { scores: { tierKey: { score, poolSize, terms, raw, poolRef } },
+  // rowsByTier: { tierKey: [ {coach, team, pts, maxPts, ...}, ... ] } } —
+  // rowsByTier added 2026-08-27, investigating Troy's report that SWAC
+  // (a real high-scoring tier) came back with a Med MaxPts far below tiers
+  // like SEC/ACC for 2023 — the aggregated median alone can't show WHICH
+  // roster(s) are dragging it down, only that something is. Callers that
+  // only need the scores (runConferenceStrengthBackfill) destructure
+  // `.scores`; the debug tool below also keeps `.rowsByTier` so it can
+  // show every individual roster's own pts/maxPts on demand.
   const computeHistoricalConferenceStrength = useCallback(async (year) => {
     const rowsByTier = {};
     for (const tKey of [...ALLIANCE_POOL, ...PRO_POOL]) {
@@ -12223,8 +12229,11 @@ export default function App() {
       }
     }
     return {
-      ...scoreConferencePool(rowsByTier, ALLIANCE_POOL),
-      ...scoreConferencePool(rowsByTier, PRO_POOL),
+      scores: {
+        ...scoreConferencePool(rowsByTier, ALLIANCE_POOL),
+        ...scoreConferencePool(rowsByTier, PRO_POOL),
+      },
+      rowsByTier,
     };
   }, []);
 
@@ -12240,7 +12249,7 @@ export default function App() {
     try {
       for (const year of [2023, 2024, 2025]) {
         try {
-          const scores = await computeHistoricalConferenceStrength(year);
+          const { scores } = await computeHistoricalConferenceStrength(year);
           for (const [tierKey, { score, poolSize }] of Object.entries(scores)) {
             await writeConferenceStrengthHistoricalEntry(tierKey, year, { tierKey, year, score, poolSize }).then((local) => {
               if (local) setConferenceStrengthHistorical(local);
@@ -13954,11 +13963,19 @@ export default function App() {
   // same as every other investigative tool in this project.
   const [leagueStrengthDebug, setLeagueStrengthDebug] = useState(null);
   const [leagueStrengthDebugRunning, setLeagueStrengthDebugRunning] = useState(false);
+  // Which tier's individual roster list (coach/team/pts/maxPts) is expanded
+  // below the summary row — added same day as the roster drill-down, after
+  // Troy flagged that SWAC (a real high-scoring tier) came back with a low
+  // Med MaxPts for 2023, which the aggregated six-term view alone can't
+  // explain. Reset on every new fetch so an expanded tier from a stale
+  // year's data can't linger once the toggle/refetch changes what's loaded.
+  const [leagueStrengthDebugExpanded, setLeagueStrengthDebugExpanded] = useState(null);
   const runLeagueStrengthDebug = useCallback(async () => {
     setLeagueStrengthDebugRunning(true);
+    setLeagueStrengthDebugExpanded(null);
     try {
-      const result = await computeHistoricalConferenceStrength(seasonCPComparisonYear);
-      setLeagueStrengthDebug({ year: seasonCPComparisonYear, result });
+      const { scores, rowsByTier } = await computeHistoricalConferenceStrength(seasonCPComparisonYear);
+      setLeagueStrengthDebug({ year: seasonCPComparisonYear, result: scores, rowsByTier });
     } finally {
       setLeagueStrengthDebugRunning(false);
     }
@@ -16646,25 +16663,75 @@ export default function App() {
                           {Object.entries(leagueStrengthDebug.result)
                             .sort(([, a], [, b]) => a.score - b.score)
                             .map(([tierKey, r]) => (
-                              <tr key={tierKey} style={{ borderTop: `1px solid ${C.line}` }}>
-                                <td className="px-2 py-1 uppercase" style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>{tierKey}</td>
-                                <td className="px-2 py-1 text-right" style={{ color: C.slate }}>{r.poolSize}</td>
-                                <td className="px-2 py-1 text-right" style={{ color: r.score >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
-                                  {r.score >= 0 ? "+" : ""}{fmt(r.score)}
-                                </td>
-                                {["d", "avgMaxPM", "medMaxPM"].map((t) => (
-                                  <td key={t} className="px-2 py-1 text-right" style={{ color: C.slate }}>
-                                    {r.terms[t] >= 0 ? "+" : ""}{fmt(r.terms[t])}
+                              <Fragment key={tierKey}>
+                                <tr
+                                  style={{ borderTop: `1px solid ${C.line}`, cursor: "pointer" }}
+                                  onClick={() => setLeagueStrengthDebugExpanded(leagueStrengthDebugExpanded === tierKey ? null : tierKey)}
+                                  title="Click to see every roster's own pts/maxPts for this tier"
+                                >
+                                  <td
+                                    className="px-2 py-1 uppercase"
+                                    style={{
+                                      fontFamily: "'Barlow', sans-serif",
+                                      fontWeight: 600,
+                                      textDecoration: leagueStrengthDebugExpanded === tierKey ? "underline" : "none",
+                                    }}
+                                  >
+                                    {tierKey}
                                   </td>
-                                ))}
-                                <td className="px-2 py-1 text-right" style={{ color: C.gold }}>{fmt(r.raw.medOfMaxPts)}</td>
-                                <td className="px-2 py-1 text-right" style={{ color: C.gold }}>{fmt(r.raw.medOfPtsPerMax, 3)}</td>
-                                {["teamMax", "leagueMedian", "teamMin"].map((t) => (
-                                  <td key={t} className="px-2 py-1 text-right" style={{ color: C.slate }}>
-                                    {r.terms[t] >= 0 ? "+" : ""}{fmt(r.terms[t])}
+                                  <td className="px-2 py-1 text-right" style={{ color: C.slate }}>{r.poolSize}</td>
+                                  <td className="px-2 py-1 text-right" style={{ color: r.score >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
+                                    {r.score >= 0 ? "+" : ""}{fmt(r.score)}
                                   </td>
-                                ))}
-                              </tr>
+                                  {["d", "avgMaxPM", "medMaxPM"].map((t) => (
+                                    <td key={t} className="px-2 py-1 text-right" style={{ color: C.slate }}>
+                                      {r.terms[t] >= 0 ? "+" : ""}{fmt(r.terms[t])}
+                                    </td>
+                                  ))}
+                                  <td className="px-2 py-1 text-right" style={{ color: C.gold }}>{fmt(r.raw.medOfMaxPts)}</td>
+                                  <td className="px-2 py-1 text-right" style={{ color: C.gold }}>{fmt(r.raw.medOfPtsPerMax, 3)}</td>
+                                  {["teamMax", "leagueMedian", "teamMin"].map((t) => (
+                                    <td key={t} className="px-2 py-1 text-right" style={{ color: C.slate }}>
+                                      {r.terms[t] >= 0 ? "+" : ""}{fmt(r.terms[t])}
+                                    </td>
+                                  ))}
+                                </tr>
+                                {/* Per-roster drill-down, added 2026-08-27 alongside rowsByTier —
+                                    the aggregated Med MaxPts/Med Pts/Max columns above can only show
+                                    THAT one tier is off, not WHICH roster(s) are dragging it there.
+                                    Sorted ascending by maxPts so an outlier roster (e.g. an abandoned
+                                    or late-joined team) sits at the top, easiest to spot. */}
+                                {leagueStrengthDebugExpanded === tierKey && leagueStrengthDebug.rowsByTier && leagueStrengthDebug.rowsByTier[tierKey] && (
+                                  <tr style={{ background: C.ink }}>
+                                    <td colSpan={11} className="px-2 py-2">
+                                      <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
+                                        <thead>
+                                          <tr style={{ color: C.slate }}>
+                                            <th className="px-2 py-1 text-left">Coach</th>
+                                            <th className="px-2 py-1 text-left">Team</th>
+                                            <th className="px-2 py-1 text-right">Pts</th>
+                                            <th className="px-2 py-1 text-right">MaxPts</th>
+                                            <th className="px-2 py-1 text-right">Pts/Max</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {[...leagueStrengthDebug.rowsByTier[tierKey]]
+                                            .sort((a, b) => a.maxPts - b.maxPts)
+                                            .map((row) => (
+                                              <tr key={row.rosterId} style={{ borderTop: `1px solid ${C.line}` }}>
+                                                <td className="px-2 py-1">{row.coach}</td>
+                                                <td className="px-2 py-1">{row.team}</td>
+                                                <td className="px-2 py-1 text-right">{fmt(row.pts)}</td>
+                                                <td className="px-2 py-1 text-right">{fmt(row.maxPts)}</td>
+                                                <td className="px-2 py-1 text-right">{row.maxPts ? fmt(row.pts / row.maxPts, 3) : "—"}</td>
+                                              </tr>
+                                            ))}
+                                        </tbody>
+                                      </table>
+                                    </td>
+                                  </tr>
+                                )}
+                              </Fragment>
                             ))}
                         </tbody>
                       </table>
