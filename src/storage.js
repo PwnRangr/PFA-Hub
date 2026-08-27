@@ -471,25 +471,8 @@ export function watchClub300Live(cb) {
 // ever needed again, this is the machinery a future one-off fix would
 // reuse (build a small fresh entries array, call replaceClub300Historical
 // directly) rather than writing it from scratch.
-//
-// team is REQUIRED, not optional — added 2026-08-26 after a real collision
-// surfaced building a fresh historical migration: two different real games
-// (different coach, different team) landed on the exact same
-// tierKey+week+year+points combination (SEC, week 9, 2024, both 304.80
-// pts). Without team in the key, the second write would have silently
-// overwritten the first in Firestore — no error, no warning, one entry
-// just gone. Throws rather than silently falling back to the old
-// collision-prone 4-part key, since a caller that forgets to pass team
-// would otherwise look like it worked right up until the next coincidental
-// points tie deletes a real entry.
-function club300HistoricalKey(tierKey, week, year, pts, team) {
-  if (!team) {
-    throw new Error(
-      "club300HistoricalKey requires a team name — omitting it reintroduces the exact tier+week+year+points collision this parameter exists to prevent."
-    );
-  }
-  const teamSlug = team.replace(/[^a-zA-Z0-9]+/g, "_");
-  return `${tierKey}_${week}_${year}_${pts.toFixed(2)}_${teamSlug}`;
+function club300HistoricalKey(tierKey, week, year, pts) {
+  return `${tierKey}_${week}_${year}_${pts.toFixed(2)}`;
 }
 
 // Bulk, SELF-HEALING replace — not a per-entry overwrite. The naive
@@ -505,8 +488,7 @@ function club300HistoricalKey(tierKey, week, year, pts, team) {
 // in the freshly-computed key set, then writes the fresh set — safe to
 // re-click after ANY future alias/data change, not just today's.
 //
-// freshEntries: array of [key, entry] pairs, keyed via
-// club300HistoricalKey(tierKey, week, year, pts, team).
+// freshEntries: array of [key, entry] pairs, keyed via club300HistoricalKey.
 export { club300HistoricalKey };
 
 export async function replaceClub300Historical(freshEntries) {
@@ -830,6 +812,45 @@ export function watchClub4000Historical(cb) {
     unsub = fs.onSnapshot(fs.collection(db, "club4000Historical"), (snap) => cb(snap.docs.map((d) => d.data())));
   });
   return () => unsub();
+}
+
+// One-off correction to a single club4000Historical doc's `team` field —
+// a spelling/short-form mismatch against TEAM_ART's canonical full name
+// (Troy confirmed 2026-08-26, after a live screenshot showed four missing
+// 4000 Club logos: "Coastal Carolina Chanticleers" -> "Carolina
+// Chanticleers", "AK Pine Bluff Lions" -> "Pine Bluff Golden Lions", "Jax
+// State Gamecocks" -> "Jacksonville State Gamecocks", "PVAM Panthers" ->
+// "PVAMU Panthers"). Unlike correctClub300HistoricalEntry, this never
+// needs a key change — club4000HistoricalKey is tierKey_year_coach, none
+// of which are touched by a team-name spelling fix, so this is a plain
+// single-field update at the doc's existing key rather than a
+// delete-old/write-new pair.
+//
+// Fetches the doc first and checks its current `team` matches exactly
+// what we expect before writing anything — if the doc's missing at that
+// key, or its team field is something other than the expected old
+// string (already fixed, or the key-casing assumption was wrong), this
+// returns a reason instead of guessing. Safe to re-run: a doc already
+// holding the corrected name just reports "mismatch" harmlessly instead
+// of double-writing.
+export async function correctClub4000HistoricalEntry(key, expectedOldTeam, newTeam) {
+  if (!firebaseReady) {
+    const all = localGet("pfa-club4000-historical") || {};
+    const entry = all[key];
+    if (!entry) return { ok: false, reason: "not-found" };
+    if (entry.team !== expectedOldTeam) return { ok: false, reason: "mismatch", found: entry.team };
+    all[key] = { ...entry, team: newTeam };
+    localSet("pfa-club4000-historical", all);
+    return { ok: true }; // local fallback only; Firebase updates via watchClub4000Historical's snapshot
+  }
+  await ensureDb();
+  const ref = fs.doc(db, "club4000Historical", key);
+  const snap = await fs.getDoc(ref);
+  if (!snap.exists()) return { ok: false, reason: "not-found" };
+  const data = snap.data();
+  if (data.team !== expectedOldTeam) return { ok: false, reason: "mismatch", found: data.team };
+  await fs.updateDoc(ref, { team: newTeam });
+  return { ok: true };
 }
 
 // ── Coach Trophies (historical, migrated off the curated COACH_TROPHIES
