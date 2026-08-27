@@ -2222,6 +2222,17 @@ function baseConferenceStats(tRows) {
   const teamMin = Math.min(...scores);
   const maxPts = tRows.map((r) => r.maxPts || 0);
   const ptsPerMax = tRows.map((r, i) => (maxPts[i] ? scores[i] / maxPts[i] : 0));
+  // Diagnostic sub-factors, added 2026-08-27 investigating Troy's "2023's
+  // medMaxPM is very high" report. avgMaxPM/medMaxPM below are each a
+  // PRODUCT of two separate stats (her sheet's Admin!Q120*Admin!R120:
+  // average-or-median of Max Points times average-or-median of Pts/Max
+  // ratio) — exposing the two factors separately lets us see which one is
+  // actually the outlier instead of only ever seeing their already-
+  // multiplied product. avgMaxPM/medMaxPM's own values are unchanged.
+  const avgOfMaxPts = average(maxPts);
+  const avgOfPtsPerMax = average(ptsPerMax);
+  const medOfMaxPts = median(maxPts);
+  const medOfPtsPerMax = median(ptsPerMax);
   return {
     teamMax,
     teamMin,
@@ -2232,8 +2243,15 @@ function baseConferenceStats(tRows) {
     // of each team's Pts/Max ratio, computed within this tier only.
     // Multiplied together as a single per-tier stat, same as her
     // Admin!Q120*Admin!R120 cell.
-    avgMaxPM: average(maxPts) * average(ptsPerMax),
-    medMaxPM: median(maxPts) * median(ptsPerMax),
+    avgMaxPM: avgOfMaxPts * avgOfPtsPerMax,
+    medMaxPM: medOfMaxPts * medOfPtsPerMax,
+    // Diagnostic only — not read by score/poolSize, or by avgMaxPM/medMaxPM
+    // above (those still come straight from avgOfMaxPts*avgOfPtsPerMax and
+    // medOfMaxPts*medOfPtsPerMax exactly as before this change).
+    avgOfMaxPts,
+    avgOfPtsPerMax,
+    medOfMaxPts,
+    medOfPtsPerMax,
   };
 }
 
@@ -16581,8 +16599,10 @@ export default function App() {
                 <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.ember}`, borderRadius: 6 }}>
                   <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
                     DIAGNOSTIC (2026-08-27): breaks each tier's League Strength score into its six underlying
-                    bonus terms for {seasonCPComparisonYear}, so we can see which one is actually driving an
-                    outlier instead of guessing. Runs a real fetch against Sleeper — click to run.
+                    bonus terms for {seasonCPComparisonYear}, plus the two raw factors medMaxPM is a product
+                    of (median Max Points, median Pts/Max ratio) — added specifically to see which factor is
+                    behind 2023's high medMaxPM instead of only seeing the already-multiplied term. Runs a
+                    real fetch against Sleeper — click to run.
                   </div>
                   <button
                     onClick={runLeagueStrengthDebug}
@@ -16615,6 +16635,8 @@ export default function App() {
                             <th className="px-2 py-1.5 text-right">d</th>
                             <th className="px-2 py-1.5 text-right">avgMaxPM</th>
                             <th className="px-2 py-1.5 text-right">medMaxPM</th>
+                            <th className="px-2 py-1.5 text-right" style={{ color: C.gold }}>Med MaxPts</th>
+                            <th className="px-2 py-1.5 text-right" style={{ color: C.gold }}>Med Pts/Max</th>
                             <th className="px-2 py-1.5 text-right">teamMax</th>
                             <th className="px-2 py-1.5 text-right">leagueMedian</th>
                             <th className="px-2 py-1.5 text-right">teamMin</th>
@@ -16630,7 +16652,14 @@ export default function App() {
                                 <td className="px-2 py-1 text-right" style={{ color: r.score >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
                                   {r.score >= 0 ? "+" : ""}{fmt(r.score)}
                                 </td>
-                                {["d", "avgMaxPM", "medMaxPM", "teamMax", "leagueMedian", "teamMin"].map((t) => (
+                                {["d", "avgMaxPM", "medMaxPM"].map((t) => (
+                                  <td key={t} className="px-2 py-1 text-right" style={{ color: C.slate }}>
+                                    {r.terms[t] >= 0 ? "+" : ""}{fmt(r.terms[t])}
+                                  </td>
+                                ))}
+                                <td className="px-2 py-1 text-right" style={{ color: C.gold }}>{fmt(r.raw.medOfMaxPts)}</td>
+                                <td className="px-2 py-1 text-right" style={{ color: C.gold }}>{fmt(r.raw.medOfPtsPerMax, 3)}</td>
+                                {["teamMax", "leagueMedian", "teamMin"].map((t) => (
                                   <td key={t} className="px-2 py-1 text-right" style={{ color: C.slate }}>
                                     {r.terms[t] >= 0 ? "+" : ""}{fmt(r.terms[t])}
                                   </td>
