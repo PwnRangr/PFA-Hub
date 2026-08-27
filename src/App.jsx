@@ -1317,6 +1317,32 @@ const cpForPlace = (tKey, place) =>
     ? CHAMPION_CP_16[tKey] - CP_OFFSETS_1_10[place - 1]
     : CP_TAIL_16[place - 11];
 
+// Looks up a coach's CONFIRMED final placement for a season/tier from
+// HISTORICAL_FINAL_ORDER — the same manually-confirmed 1st-through-last
+// array the season-end lock (runSeasonCPFinalLock) already reads. This is
+// deliberately NOT the same number as buildStandings()'s own `place`
+// field: that's a live sort by regular-season win/loss, which is only
+// PRE-PLAYOFF SEEDING. HISTORICAL_FINAL_ORDER is the actual placement-
+// cascade bracket's confirmed result (weeks 15-17 — every team plays to a
+// real 1st-through-last rank, winners facing winners and losers facing
+// losers all the way down; see that array's own comment for why this
+// isn't derivable from Sleeper data at all, let alone from a live W-L
+// sort). For the CURRENT season this has no entry until Troy/Lainey do
+// the same manual end-of-season confirmation they do for every past
+// year — Troy's call 2026-08-27: no live "if it ended today" approximation,
+// Place just stays 0 until then. Same normalized name-matching as
+// findRowByName, just resolving name -> index instead of index -> row.
+const confirmedPlaceFor = (year, tierKey, teamName) => {
+  const order = HISTORICAL_FINAL_ORDER[year] && HISTORICAL_FINAL_ORDER[year][tierKey];
+  if (!order || !teamName) return null;
+  const target = normTeamKey(teamName);
+  const idx = order.findIndex((n) => {
+    const norm = normTeamKey(n);
+    return norm === target || norm.startsWith(target) || target.startsWith(norm);
+  });
+  return idx === -1 ? null : idx + 1;
+};
+
 // ── X Points: win/loss streak bonuses ──
 // Per-game tiers confirmed with Lainey 2026-08-18:
 //   Wins:   4-7 -> +1/gm | 8-11 -> +2/gm | 12-15 -> +3/gm | 16+ -> +5/gm
@@ -13477,12 +13503,20 @@ export default function App() {
       };
       const [wStr, lStr] = (s["Record"] || "").split("-");
       const live = liveCoachStats[lowerName];
-      // Season CP is now computed in-site, not read from the sheet — a
-      // genuine running total starting at 0 for 2026, built from whatever
-      // components are actually wired up so far (streak bonuses + manual
-      // penalties/bonuses + wins + points + FAAB). Place and League
-      // Difficulty aren't built yet, so this total is real but partial —
-      // it'll only grow to match the full Rules-page formula as those land.
+      // Season CP is computed in-site, not read from the sheet — a genuine
+      // running total starting at 0 for 2026, built from whatever
+      // components are actually wired up. Wins/Points/FAAB/X Points/
+      // Penalties have been live since 2026-08-19. Place and League
+      // Strength both landed 2026-08-27, but differently: Place is real
+      // code but defaults to 0 all season by design (Troy's call — see
+      // confirmedPlaceFor's comment; no live "if it ended today"
+      // approximation, it only becomes nonzero once the season's real
+      // placement-cascade bracket is confirmed). League Strength has a
+      // real live number available (leagueStrengthPreview, computed at
+      // render time below from the same conferenceStrength score already
+      // shown elsewhere) but is deliberately NOT folded in here yet —
+      // pending Troy's review of the comparison table before it's wired
+      // in for real, same staged rollout Promotion Score went through.
       // Career CP (`cp` below) is untouched — that one keeps the sheet's
       // history as its baseline, per her call on 2026-08-19.
       const rosterKey = dirEntry ? `${dirEntry.tierKey}_${CURRENT_SEASON}_${dirEntry.rosterId}` : null;
@@ -13502,8 +13536,23 @@ export default function App() {
       const faabBudget = FAAB_STARTING_BUDGET[CURRENT_SEASON];
       const faabRemaining = dirEntry && faabBudget != null ? faabBudget - (dirEntry.faabUsed || 0) : null;
       const faabComponent = faabRemaining != null ? faabRemaining / 50 : 0;
+      // Place, 2026-08-27: 0 by default, every season, all the way through
+      // Week 17 — see confirmedPlaceFor's comment for why this can't be a
+      // live "current standings" approximation (regular-season W-L order
+      // isn't the same thing as the placement-cascade bracket's actual
+      // final rank). The moment Troy/Lainey add CURRENT_SEASON's confirmed
+      // order to HISTORICAL_FINAL_ORDER (the same end-of-season step they
+      // already do for every past year), this picks up the real number
+      // automatically — no code change needed at that point.
+      const confirmedPlace = dirEntry ? confirmedPlaceFor(CURRENT_SEASON, dirEntry.tierKey, dirEntry.team) : null;
+      const placeComponent = confirmedPlace != null ? cpForPlace(dirEntry.tierKey, confirmedPlace) : 0;
       const subtotal =
-        winPoints + pointsComponent + faabComponent + (streakTotalsByRosterKey[rosterKey]?.net || 0) + (modifiersByRosterKey[rosterKey]?.net || 0);
+        winPoints +
+        pointsComponent +
+        faabComponent +
+        placeComponent +
+        (streakTotalsByRosterKey[rosterKey]?.net || 0) +
+        (modifiersByRosterKey[rosterKey]?.net || 0);
       // Pts/Max multiplier, confirmed 2026-08-19: dirEntry.pts / dirEntry.maxPts,
       // both already sourced from Sleeper's settings.fpts/fpts_decimal and
       // settings.ppts/ppts_decimal (the same fields the Points component and
@@ -13531,6 +13580,8 @@ export default function App() {
         avgPPG,
         faabComponent,
         faabRemaining,
+        placeComponent,
+        confirmedPlace,
         wins: parseNum(wStr),
         losses: parseNum(lStr),
         winPct: parseNum(s["Win %"]),
@@ -13815,6 +13866,36 @@ export default function App() {
       ...scoreConferencePool(rowsByTier, PRO_POOL),
     };
   }, [mode, leagueMap, standingsCache]);
+
+  // ── League Strength comparison — Stage 2 of the same build → compare →
+  // replace sequence Promotion Score went through (2026-08-27). Stage 1 is
+  // basically already done: leagueStrengthPreview above already computes a
+  // real, live number per coach, reusing the exact conferenceStrength score
+  // already shown on the tier nav pills. This stage lays it next to every
+  // coach's ACTUAL currently-displayed Season CP so Troy can review the
+  // swing before anything changes for real. Not wired into allCoachesTable's
+  // own subtotal/currentCP yet — that's Stage 3, pending his review here.
+  // (Place isn't in this comparison: it's already live-wired as of this
+  // same session, but defaults to 0 for virtually every coach all season by
+  // design, so there's nothing meaningful to compare yet — see
+  // confirmedPlaceFor's comment.)
+  const seasonCPLeagueStrengthComparison = useMemo(() => {
+    return allCoachesTable
+      .filter((r) => r.currentCP !== -Infinity)
+      .map((r) => {
+        const leagueStrengthComponent = conferenceStrength[r.currentTierKey || r.tierKey]?.score ?? 0;
+        const newCurrentCP = (r.subtotal + leagueStrengthComponent) * r.ptsMaxRatio;
+        return {
+          name: r.name,
+          tierKey: r.currentTierKey || r.tierKey,
+          leagueStrengthComponent,
+          oldCurrentCP: r.currentCP,
+          newCurrentCP,
+          delta: newCurrentCP - r.currentCP,
+        };
+      })
+      .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+  }, [allCoachesTable, conferenceStrength]);
 
   // The 7 Weekly Awards categories, crowned across ALL 13 tiers combined
   // ("Alliance" High/Low, not per-tier) from weeklyAwardsPairs. Bench Points
@@ -15247,7 +15328,13 @@ export default function App() {
                           // pool (NFL) so it renders "—", not NaN.
                           const leagueStrengthPreview = conferenceStrength[r.currentTierKey || r.tierKey]?.score ?? null;
                           const combined = [
-                            { id: "place", points: null, label: "Place" },
+                            // Real component now (2026-08-27), not a preview —
+                            // it's just 0 for basically the whole season by
+                            // design (see confirmedPlaceFor's comment) until
+                            // Troy/Lainey confirm that year's actual placement-
+                            // cascade result. Already folded into currentCP
+                            // below, unlike League Strength just underneath.
+                            { id: "place", points: r.currentCP === -Infinity ? null : r.placeComponent, label: "Place" },
                             { id: "wins", points: r.winPoints, label: "Wins" },
                             { id: "avpts", points: r.pointsComponent, label: "Av Pts" },
                             { id: "faab", points: r.faabComponent, label: "FAAB" },
@@ -16321,6 +16408,55 @@ export default function App() {
                   >
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2023/2024/2025)"}
                   </button>
+                </div>
+                {/* League Strength comparison — Stage 2 of the build → compare
+                    → replace sequence (2026-08-27), same pattern Promotion
+                    Score went through. Read-only, recomputes live from
+                    already-loaded data — no button, nothing to click. Once
+                    Troy's reviewed the Δ column and it looks right, Stage 3
+                    is a one-line change (fold leagueStrengthComponent into
+                    allCoachesTable's own subtotal) and this block comes out,
+                    same as every other staging tool in this project. */}
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.gold}`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                    Season CP formula expansion, Stage 2 (2026-08-27): League Strength is fully live already
+                    (same score shown on the tier nav pills) but not yet counted in Season CP below — this
+                    shows what every current coach's Season CP would become if it were, sorted by biggest
+                    swing, so you can review before it's wired in for real. Place landed the same session but
+                    isn't in this table: it's already live-wired and folded in, just 0 for virtually everyone
+                    all season by design (see the Coaches tab hover — it'll show real numbers once that
+                    year's placement-cascade result is confirmed).
+                  </div>
+                  <div style={{ maxHeight: "26rem", overflowY: "auto", border: `1px solid ${C.line}`, borderRadius: 4 }}>
+                    <table className="w-full text-xs" style={{ borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', monospace" }}>
+                      <thead>
+                        <tr style={{ background: C.panel, color: C.slate, position: "sticky", top: 0 }}>
+                          <th className="px-2 py-1.5 text-left">Coach</th>
+                          <th className="px-2 py-1.5 text-left">Tier</th>
+                          <th className="px-2 py-1.5 text-right">League Strength</th>
+                          <th className="px-2 py-1.5 text-right">Old Season CP</th>
+                          <th className="px-2 py-1.5 text-right">New Season CP</th>
+                          <th className="px-2 py-1.5 text-right">Δ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {seasonCPLeagueStrengthComparison.map((r) => (
+                          <tr key={r.name} style={{ borderTop: `1px solid ${C.line}` }}>
+                            <td className="px-2 py-1" style={{ fontFamily: "'Barlow', sans-serif" }}>{r.name}</td>
+                            <td className="px-2 py-1 uppercase" style={{ color: C.slate }}>{r.tierKey}</td>
+                            <td className="px-2 py-1 text-right" style={{ color: r.leagueStrengthComponent >= 0 ? C.turf : C.ember }}>
+                              {r.leagueStrengthComponent >= 0 ? "+" : ""}{fmt(r.leagueStrengthComponent)}
+                            </td>
+                            <td className="px-2 py-1 text-right" style={{ color: C.slate }}>{fmt(r.oldCurrentCP)}</td>
+                            <td className="px-2 py-1 text-right" style={{ color: C.gold, fontWeight: 600 }}>{fmt(r.newCurrentCP)}</td>
+                            <td className="px-2 py-1 text-right" style={{ color: r.delta >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
+                              {r.delta >= 0 ? "+" : ""}{fmt(r.delta)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </section>
             )}
