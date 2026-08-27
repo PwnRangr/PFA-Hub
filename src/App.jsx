@@ -6174,6 +6174,26 @@ const TEAM_ART = {
     [normTeamKey("USC Trojans")]: teamArtPath("TEN", "ten-team-usc-trojans.png"),
     [normTeamKey("Rutgers Scarlet Knights")]: teamArtPath("TEN", "ten-team-rutgers-scarlet-knights.png"),
     [normTeamKey("Utah Utes")]: teamArtPath("TEN", "ten-team-utah-utes.png"),
+    // Added 2026-08-26, same known gap as Washington State Cougars above:
+    // Arizona Wildcats is a real 2022 team from this tier's PAC-12 era
+    // (conf "PAC 12" in club300Historical, confirmed CONF_TO_TIER_KEY
+    // alias to "TEN"), found with no art after a live screenshot showed
+    // a bare "A" initial in the 300 Club. NOT the same asset as BIG
+    // XII's "Arizona Wildcats" entry (xii-team-arizona-wildcats.png) —
+    // same real school, but a separate 2024+ Big 12 realignment-era
+    // roster slot with its own file in its own tier folder, same
+    // folder-per-league convention as everything else in this object.
+    // Cutout done in-session from a stock logo PNG with the checkerboard
+    // baked in as opaque pixels rather than real alpha — same technique
+    // used for ACC's Duke / BIG XII's Cincinnati. Checked both the outer
+    // canvas AND the interior counter of the "A" (a real hole in the
+    // letterform) actually alternate between the two checker colors
+    // before making them transparent, so the logo's genuine solid-white
+    // design elements (the outline halo, the two foot notches) stay
+    // opaque instead of being chroma-keyed out along with the
+    // background — confirmed by compositing over a dark background
+    // before delivery.
+    [normTeamKey("Arizona Wildcats")]: teamArtPath("TEN", "ten-team-arizona-wildcats.png"),
   },
   ACC: {
     [normTeamKey("Virginia Tech Hokies")]: teamArtPath("ACC", "acc-team-virginia-tech-hokies.png"),
