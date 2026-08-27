@@ -2283,12 +2283,18 @@ function scoreConferencePool(rowsByTier, poolKeys, year) {
   // retrofit onto it via the historical backfill — same formula, same
   // divisors, un-tuned for that year's raw scale. Troy confirmed the
   // underlying pattern isn't real (SWAC is one of the higher-scoring
-  // leagues, not a weak one) and asked for exactly this: take medMaxPM
+  // leagues, not a weak one) and asked for exactly this: take medMaxPM's
   // and leagueMedian's ALREADY-COMPUTED term values for 2023 and scale
-  // each by 0.1, nothing else. Deliberately scoped to year === 2023 only
-  // — 2024/2025 already read sane (2025: -6.81 to +8.26) and must keep
-  // scoring exactly as before; the live/current-season caller doesn't
-  // pass a year at all, so it's unaffected by construction.
+  // each by 0.1 — then, same session, extended the same ×0.1 to teamMax
+  // for 2023 too, once he asked what that term was and decided it should
+  // get the same treatment. d/avgMaxPM/teamMin stay untouched — Troy
+  // hasn't asked for those, and d/teamMax/teamMin/avgMaxPM already divide
+  // by 100 (vs. 20 for medMaxPM/leagueMedian), so they were never the
+  // ones blowing 2023's range out in the first place. Deliberately scoped
+  // to year === 2023 only — 2024/2025 already read sane (2025: -6.81 to
+  // +8.26) and must keep scoring exactly as before; the live/current-
+  // season caller doesn't pass a year at all, so it's unaffected by
+  // construction.
   const historicalTermDampening = year === 2023 ? 0.1 : 1;
 
   const out = {};
@@ -2306,7 +2312,7 @@ function scoreConferencePool(rowsByTier, poolKeys, year) {
     const termD = (s.d - poolMedianD) / -10 / 10;
     const termAvgMaxPM = (s.avgMaxPM - poolAvgOfAvgMaxPM) / 100;
     const termMedMaxPM = ((s.medMaxPM - poolMedianOfMedMaxPM) / 20) * historicalTermDampening;
-    const termTeamMax = (s.teamMax - poolMedianOfMax) / 100;
+    const termTeamMax = ((s.teamMax - poolMedianOfMax) / 100) * historicalTermDampening;
     const termLeagueMedian = ((s.leagueMedian - poolAvgOfMedians) / 20) * historicalTermDampening;
     const termTeamMin = (s.teamMin - poolMedianOfMin) / 100;
     const score = (termD + termAvgMaxPM + termMedMaxPM + termTeamMax + termLeagueMedian + termTeamMin) / 2; // her sheet sums all six bonus terms, then halves the total
