@@ -32,7 +32,6 @@ import {
   addClub4000Entry,
   watchClub4000Live,
   watchClub4000Historical,
-  correctClub4000HistoricalEntry,
   watchCoachTrophiesHistorical,
   getClub4000ProcessedYear,
   markClub4000ProcessedYear,
@@ -12312,62 +12311,17 @@ export default function App() {
     }
   }, [streakBonusesLive, manualPenalties, conferenceStrengthHistorical]);
 
-  // ── ONE-OFF: club4000Historical team-name corrections (2026-08-26) ──
-  // Four rows in the live 4000 Club were showing no logo — all four
-  // turned out to be short-form/abbreviated team-name strings baked into
-  // club4000Historical during its 2026-08-21 migration off the retired
-  // CLUB_4000 array, none of which match TEAM_ART's existing full-name
-  // keys (see the corrected comments on the archive itself for the
-  // before/after on each). club4000HistoricalKey is tierKey_year_coach —
-  // none of those three fields change here, only `team`, so this is a
-  // batch of plain single-field corrections at each doc's EXISTING key,
-  // not a bulk re-migration.
-  //
-  // Same "used once, then removed" pattern as every other one-off Admin
-  // tool in this project (the original 300/4000 Club migration buttons,
-  // the Trophy migration button, etc.) — this whole block (state, handler,
-  // button) should come out once Troy confirms the result against real
-  // Firestore.
-  //
-  // Coach casing in each key is an ASSUMPTION, not confirmed: it matches
-  // the raw `coach` field exactly as typed in the retired CLUB_4000 array
-  // (e.g. "MambasDisciples", not "mambasdisciples"), since that's
-  // presumably what the original migration button passed to
-  // club4000HistoricalKey when these docs were first written — but that
-  // migration code is gone, so there's no live call site left to confirm
-  // against. correctClub4000HistoricalEntry guards against a wrong
-  // guess: it checks the doc's current `team` before writing anything, so
-  // a casing mismatch shows up as "not-found" below rather than silently
-  // doing nothing or writing to the wrong place.
-  const CLUB_4000_NAME_FIXES = [
-    { key: "SWAC_2023_MambasDisciples", oldTeam: "PVAM Panthers", newTeam: "PVAMU Panthers" },
-    { key: "SWAC_2024_MambasDisciples", oldTeam: "PVAM Panthers", newTeam: "PVAMU Panthers" },
-    { key: "SWAC_2025_MambasDisciples", oldTeam: "PVAM Panthers", newTeam: "PVAMU Panthers" },
-    { key: "SUN_2022_Harvey28", oldTeam: "Coastal Carolina Chanticleers", newTeam: "Carolina Chanticleers" },
-    { key: "SWAC_2023_treetwig", oldTeam: "AK Pine Bluff Lions", newTeam: "Pine Bluff Golden Lions" },
-    { key: "SOCO_2023_bradlevo", oldTeam: "Jax State Gamecocks", newTeam: "Jacksonville State Gamecocks" },
-  ];
-  const [club4000FixRunning, setClub4000FixRunning] = useState(false);
-  const [club4000FixResults, setClub4000FixResults] = useState(null);
-  const runClub4000NameFix = useCallback(async () => {
-    setClub4000FixRunning(true);
-    setClub4000FixResults(null);
-    try {
-      const results = [];
-      for (const { key, oldTeam, newTeam } of CLUB_4000_NAME_FIXES) {
-        try {
-          const res = await correctClub4000HistoricalEntry(key, oldTeam, newTeam);
-          results.push({ key, newTeam, ...res });
-        } catch (e) {
-          console.error(`club4000Historical name fix failed for ${key}`, e);
-          results.push({ key, newTeam, ok: false, reason: "error", error: String(e) });
-        }
-      }
-      setClub4000FixResults(results);
-    } finally {
-      setClub4000FixRunning(false);
-    }
-  }, []);
+  // ── club4000Historical team-name corrections (2026-08-26) — DONE ──
+  // Confirmed by Troy against real Firestore: all 6 entries fixed
+  // (PVAM Panthers -> PVAMU Panthers x3, Coastal Carolina Chanticleers ->
+  // Carolina Chanticleers, AK Pine Bluff Lions -> Pine Bluff Golden Lions,
+  // Jax State Gamecocks -> Jacksonville State Gamecocks). The one-off
+  // Admin button, its state, and its handler have been removed per this
+  // project's standing "used once, then removed" rule for these tools —
+  // same treatment as the original 300/4000 Club and Trophy migration
+  // buttons before it. correctClub4000HistoricalEntry itself stays in
+  // storage.js as reusable machinery for the next one-off fix, same as
+  // correctClub300HistoricalEntry.
 
   // initial: live Sleeper + discovery of the other 12 leagues via the commissioner
   useEffect(() => {
@@ -16367,45 +16321,6 @@ export default function App() {
                   >
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2023/2024/2025)"}
                   </button>
-                </div>
-                {/* ONE-OFF — remove this whole block (state, handler, button)
-                    once Troy confirms the results below against real
-                    Firestore. Not part of the "run these three in order"
-                    season workflow above; unrelated one-time data fix. */}
-                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.ember}`, borderRadius: 6 }}>
-                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
-                    ONE-OFF (2026-08-26): fix 6 club4000Historical docs whose <code>team</code> field is a
-                    short-form/abbreviated string that doesn't match TEAM_ART's full-name key — these were showing
-                    no logo in the live 4000 Club. Safe to click more than once; each entry checks the doc's
-                    current team name before writing and reports "mismatch" instead of guessing if it's already
-                    fixed or the key doesn't exist.
-                  </div>
-                  <button
-                    onClick={runClub4000NameFix}
-                    disabled={club4000FixRunning}
-                    style={{
-                      padding: "8px 14px",
-                      borderRadius: 4,
-                      border: `1px solid ${C.ember}`,
-                      background: club4000FixRunning ? "transparent" : C.ember,
-                      color: club4000FixRunning ? C.slate : C.ink,
-                      fontWeight: 600,
-                      cursor: club4000FixRunning ? "default" : "pointer",
-                    }}
-                  >
-                    {club4000FixRunning ? "Running…" : "Fix 4000 Club Team-Name Mismatches (6 entries)"}
-                  </button>
-                  {club4000FixResults && (
-                    <div style={{ marginTop: 10, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" }}>
-                      {club4000FixResults.map((r) => (
-                        <div key={r.key} style={{ color: r.ok ? C.turf : C.ember, marginBottom: 2 }}>
-                          {r.ok
-                            ? `✓ ${r.key} → "${r.newTeam}"`
-                            : `✗ ${r.key} — ${r.reason}${r.found ? ` (found "${r.found}")` : ""}`}
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </section>
             )}
