@@ -2258,15 +2258,31 @@ function scoreConferencePool(rowsByTier, poolKeys) {
   const out = {};
   keys.forEach((k) => {
     const s = stats[k];
-    const score =
-      ((s.d - poolMedianD) / -10 / 10 +
-        (s.avgMaxPM - poolAvgOfAvgMaxPM) / 100 +
-        (s.medMaxPM - poolMedianOfMedMaxPM) / 20 +
-        (s.teamMax - poolMedianOfMax) / 100 +
-        (s.leagueMedian - poolAvgOfMedians) / 20 +
-        (s.teamMin - poolMedianOfMin) / 100) /
-      2; // her sheet sums all six bonus terms, then halves the total
-    out[k] = { score, poolSize: keys.length };
+    // Named individually (2026-08-27, investigating Troy's report that the
+    // 16-team Alliance tiers range +16 to -38 instead of the intended
+    // ±10, while USFL/XFL look fine) purely so each of the six bonus
+    // terms can be inspected on its own below, without guessing which one
+    // is driving an outlier tier. `score` is the exact same sum of the
+    // exact same six expressions in the exact same order as before this
+    // change — confirmed byte-identical against the prior single-
+    // expression form on mock data before shipping. NOT a formula change.
+    const termD = (s.d - poolMedianD) / -10 / 10;
+    const termAvgMaxPM = (s.avgMaxPM - poolAvgOfAvgMaxPM) / 100;
+    const termMedMaxPM = (s.medMaxPM - poolMedianOfMedMaxPM) / 20;
+    const termTeamMax = (s.teamMax - poolMedianOfMax) / 100;
+    const termLeagueMedian = (s.leagueMedian - poolAvgOfMedians) / 20;
+    const termTeamMin = (s.teamMin - poolMedianOfMin) / 100;
+    const score = (termD + termAvgMaxPM + termMedMaxPM + termTeamMax + termLeagueMedian + termTeamMin) / 2; // her sheet sums all six bonus terms, then halves the total
+    out[k] = {
+      score,
+      poolSize: keys.length,
+      // Diagnostic only — nothing live reads these (conferenceStrength,
+      // the Coaches tab hover, and seasonCPFinal all only ever use
+      // score/poolSize above). Harmless to leave in permanently.
+      terms: { d: termD, avgMaxPM: termAvgMaxPM, medMaxPM: termMedMaxPM, teamMax: termTeamMax, leagueMedian: termLeagueMedian, teamMin: termTeamMin },
+      raw: s,
+      poolRef: { poolMedianD, poolAvgOfAvgMaxPM, poolMedianOfMedMaxPM, poolMedianOfMax, poolAvgOfMedians, poolMedianOfMin },
+    };
   });
   return out;
 }
@@ -12170,7 +12186,9 @@ export default function App() {
   // used elsewhere for past seasons, then scores them with the exact same
   // scoreConferencePool() the live badge uses — see that function's comment
   // for why every tier in the pool is needed, not just one. Returns
-  // { tierKey: { score, poolSize } }, same shape as live conferenceStrength.
+  // { tierKey: { score, poolSize, terms, raw, poolRef } } — the last three
+  // are diagnostic-only fields scoreConferencePool added 2026-08-27;
+  // nothing here changed to produce them.
   const computeHistoricalConferenceStrength = useCallback(async (year) => {
     const rowsByTier = {};
     for (const tKey of [...ALLIANCE_POOL, ...PRO_POOL]) {
@@ -13904,6 +13922,29 @@ export default function App() {
   // there's nothing real to sanity-check. CURRENT_SEASON stays selectable
   // via the toggle for whenever there's real live data worth re-checking.
   const [seasonCPComparisonYear, setSeasonCPComparisonYear] = useState(2025);
+
+  // ── League Strength diagnostic (2026-08-27) ──
+  // Investigating Troy's report: the 16-team Alliance tiers range +16 to
+  // -38 instead of the intended ±10, while USFL/XFL (the 2-tier Pro pool)
+  // look fine. Sandbox can't reach api.sleeper.app directly, so this has
+  // to run in Troy's own browser — click it, and it re-fetches whichever
+  // year the toggle above is set to (via computeHistoricalConferenceStrength,
+  // same fetch the backfill button uses) and shows every ALLIANCE_POOL/
+  // PRO_POOL tier's SIX raw bonus terms side by side with the final score,
+  // so we can see which specific term is actually driving an outlier tier
+  // instead of guessing. Temporary — remove once the report's resolved,
+  // same as every other investigative tool in this project.
+  const [leagueStrengthDebug, setLeagueStrengthDebug] = useState(null);
+  const [leagueStrengthDebugRunning, setLeagueStrengthDebugRunning] = useState(false);
+  const runLeagueStrengthDebug = useCallback(async () => {
+    setLeagueStrengthDebugRunning(true);
+    try {
+      const result = await computeHistoricalConferenceStrength(seasonCPComparisonYear);
+      setLeagueStrengthDebug({ year: seasonCPComparisonYear, result });
+    } finally {
+      setLeagueStrengthDebugRunning(false);
+    }
+  }, [computeHistoricalConferenceStrength, seasonCPComparisonYear]);
 
   // Historical variant of the same comparison, 2026-08-27 — seasonCPFinal
   // already IS the real data the live table above can't provide yet:
@@ -16532,6 +16573,74 @@ export default function App() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+                {/* League Strength diagnostic (2026-08-27) — investigating
+                    Troy's "16-team tiers ±38 instead of ±10" report. Runs a
+                    real Sleeper fetch for whichever year is toggled above,
+                    so it has to happen in his browser, not this sandbox. */}
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.ember}`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                    DIAGNOSTIC (2026-08-27): breaks each tier's League Strength score into its six underlying
+                    bonus terms for {seasonCPComparisonYear}, so we can see which one is actually driving an
+                    outlier instead of guessing. Runs a real fetch against Sleeper — click to run.
+                  </div>
+                  <button
+                    onClick={runLeagueStrengthDebug}
+                    disabled={leagueStrengthDebugRunning}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 4,
+                      border: `1px solid ${C.ember}`,
+                      background: leagueStrengthDebugRunning ? "transparent" : C.ember,
+                      color: leagueStrengthDebugRunning ? C.slate : C.ink,
+                      fontWeight: 600,
+                      cursor: leagueStrengthDebugRunning ? "default" : "pointer",
+                    }}
+                  >
+                    {leagueStrengthDebugRunning ? "Fetching…" : `Break Down League Strength Terms (${seasonCPComparisonYear})`}
+                  </button>
+                  {leagueStrengthDebug && leagueStrengthDebug.year !== seasonCPComparisonYear && (
+                    <div style={{ marginTop: 8, fontSize: 11, color: C.ember }}>
+                      Showing {leagueStrengthDebug.year} — click again to refresh for {seasonCPComparisonYear}.
+                    </div>
+                  )}
+                  {leagueStrengthDebug && (
+                    <div style={{ maxHeight: "26rem", overflowY: "auto", border: `1px solid ${C.line}`, borderRadius: 4, marginTop: 10 }}>
+                      <table className="w-full text-xs" style={{ borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', monospace" }}>
+                        <thead>
+                          <tr style={{ background: C.panel, color: C.slate, position: "sticky", top: 0 }}>
+                            <th className="px-2 py-1.5 text-left">Tier</th>
+                            <th className="px-2 py-1.5 text-right">Pool</th>
+                            <th className="px-2 py-1.5 text-right">Score</th>
+                            <th className="px-2 py-1.5 text-right">d</th>
+                            <th className="px-2 py-1.5 text-right">avgMaxPM</th>
+                            <th className="px-2 py-1.5 text-right">medMaxPM</th>
+                            <th className="px-2 py-1.5 text-right">teamMax</th>
+                            <th className="px-2 py-1.5 text-right">leagueMedian</th>
+                            <th className="px-2 py-1.5 text-right">teamMin</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(leagueStrengthDebug.result)
+                            .sort(([, a], [, b]) => a.score - b.score)
+                            .map(([tierKey, r]) => (
+                              <tr key={tierKey} style={{ borderTop: `1px solid ${C.line}` }}>
+                                <td className="px-2 py-1 uppercase" style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>{tierKey}</td>
+                                <td className="px-2 py-1 text-right" style={{ color: C.slate }}>{r.poolSize}</td>
+                                <td className="px-2 py-1 text-right" style={{ color: r.score >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
+                                  {r.score >= 0 ? "+" : ""}{fmt(r.score)}
+                                </td>
+                                {["d", "avgMaxPM", "medMaxPM", "teamMax", "leagueMedian", "teamMin"].map((t) => (
+                                  <td key={t} className="px-2 py-1 text-right" style={{ color: C.slate }}>
+                                    {r.terms[t] >= 0 ? "+" : ""}{fmt(r.terms[t])}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </section>
             )}
