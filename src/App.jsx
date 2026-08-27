@@ -32,6 +32,7 @@ import {
   addClub4000Entry,
   watchClub4000Live,
   watchClub4000Historical,
+  correctClub4000HistoricalEntry,
   watchCoachTrophiesHistorical,
   getClub4000ProcessedYear,
   markClub4000ProcessedYear,
@@ -782,7 +783,16 @@ const CAREER_STATS = {
   "boonedoggaf": [{ "tierKey": "SUN", "team": "Georgia Southern Eagles", "stats": { "Career CP": "449.90", "Career Avg CP": "112.47", "Record": "31-37", "Win %": "45.6%", "Total Points": "13380.65", "Avg Pts / Season": "191.44", "Alliance High Score": "1", "Alliance Low Score": "3", "League High Score": "1", "League Low Score": "3", "Best Manager": "-5", "Conference Wins": "0", "Division Wins": "0", "Playoff Wins": "0" } }],
   "booshay": [{ "tierKey": "NFL", "team": "Tampa Bay Buccaneers", "stats": { "Career CP": "451.94", "Career Avg CP": "112.99", "Record": "27-41", "Win %": "39.7%", "Total Points": "9815.65", "Avg Pts / Season": "140.24", "Alliance High Score": "0", "Alliance Low Score": "0", "League High Score": "1", "League Low Score": "0", "Best Manager": "6", "Conference Wins": "1", "Division Wins": "1", "Playoff Wins": "0" } }],
   "booyamclovin": [{ "tierKey": "TEN", "team": "Oregon Ducks", "stats": { "Career CP": "485.40", "Career Avg CP": "121.35", "Record": "30-38", "Win %": "44.1%", "Total Points": "13960.75", "Avg Pts / Season": "199.57", "Alliance High Score": "0", "Alliance Low Score": "3", "League High Score": "1", "League Low Score": "3", "Best Manager": "3", "Conference Wins": "0", "Division Wins": "0", "Playoff Wins": "1" } }],
-  "bradlevo": [{ "tierKey": "XFL", "team": "Chicago Enforcers", "stats": { "Career CP": "774.14", "Career Avg CP": "193.54", "Record": "49-19", "Win %": "72.1%", "Total Points": "15126.39", "Avg Pts / Season": "216.25", "Alliance High Score": "0", "Alliance Low Score": "0", "League High Score": "8", "League Low Score": "0", "Best Manager": "2", "Conference Wins": "1", "Division Wins": "1", "Playoff Wins": "5" } }, { "tierKey": "SOCO", "team": "Jax State Gamecocks", "stats": { "Career CP": "774.14", "Career Avg CP": "193.54", "Record": "49-19", "Win %": "72.1%", "Total Points": "15126.39", "Avg Pts / Season": "216.25", "Alliance High Score": "0", "Alliance Low Score": "16", "League High Score": "24", "League Low Score": "16", "Best Manager": "2", "Conference Wins": "1", "Division Wins": "1", "Playoff Wins": "5" } }],
+  // "Jax State Gamecocks" corrected to "Jacksonville State Gamecocks"
+  // 2026-08-26 -- same short-form/full-name mismatch already fixed in
+  // ROSTER_LINKS 2026-08-22 (see its own comment), just never propagated
+  // here. Troy caught it from a live screenshot of a DIFFERENT missing
+  // logo (the 4000 Club, whose live Firestore data needed the same fix
+  // via correctClub4000HistoricalEntry) -- this CAREER_STATS entry isn't
+  // rendered through TeamMark today so it wasn't visibly broken, but it's
+  // the same real team and was worth catching in the same pass rather
+  // than leaving a second wrong copy of a fact already corrected once.
+  "bradlevo": [{ "tierKey": "XFL", "team": "Chicago Enforcers", "stats": { "Career CP": "774.14", "Career Avg CP": "193.54", "Record": "49-19", "Win %": "72.1%", "Total Points": "15126.39", "Avg Pts / Season": "216.25", "Alliance High Score": "0", "Alliance Low Score": "0", "League High Score": "8", "League Low Score": "0", "Best Manager": "2", "Conference Wins": "1", "Division Wins": "1", "Playoff Wins": "5" } }, { "tierKey": "SOCO", "team": "Jacksonville State Gamecocks", "stats": { "Career CP": "774.14", "Career Avg CP": "193.54", "Record": "49-19", "Win %": "72.1%", "Total Points": "15126.39", "Avg Pts / Season": "216.25", "Alliance High Score": "0", "Alliance Low Score": "16", "League High Score": "24", "League Low Score": "16", "Best Manager": "2", "Conference Wins": "1", "Division Wins": "1", "Playoff Wins": "5" } }],
   "broncozzz": [{ "tierKey": "BIG XII", "team": "Kansas JAYhawks", "stats": { "Career CP": "447.59", "Career Avg CP": "111.90", "Record": "27-41", "Win %": "39.7%", "Total Points": "13170.75", "Avg Pts / Season": "188.13", "Alliance High Score": "0", "Alliance Low Score": "2", "League High Score": "1", "League Low Score": "2", "Best Manager": "-4", "Conference Wins": "0", "Division Wins": "0", "Playoff Wins": "0" } }],
   "butterfield": [{ "tierKey": "BIG XII", "team": "Cincinnati Bearcats", "stats": { "Career CP": "255.77", "Career Avg CP": "63.94", "Record": "19-15", "Win %": "55.9%", "Total Points": "6946.45", "Avg Pts / Season": "198.26", "Alliance High Score": "0", "Alliance Low Score": "1", "League High Score": "2", "League Low Score": "1", "Best Manager": "0", "Conference Wins": "0", "Division Wins": "0", "Playoff Wins": "1" } }, { "tierKey": "SOCO", "team": "Tennessee St Tigers", "stats": { "Career CP": "240.20", "Career Avg CP": "60.05", "Record": "19-15", "Win %": "55.9%", "Total Points": "6908.25", "Avg Pts / Season": "197.20", "Alliance High Score": "0", "Alliance Low Score": "1", "League High Score": "1", "League Low Score": "1", "Best Manager": "3", "Conference Wins": "0", "Division Wins": "0", "Playoff Wins": "0" } }],
   "calvins22": [{ "tierKey": "NFL", "team": "Arizona Cardinals", "stats": { "Career CP": "869.74", "Career Avg CP": "217.44", "Record": "41-27", "Win %": "60.3%", "Total Points": "12775.20", "Avg Pts / Season": "183.12", "Alliance High Score": "0", "Alliance Low Score": "0", "League High Score": "4", "League Low Score": "0", "Best Manager": "0", "Conference Wins": "0", "Division Wins": "1", "Playoff Wins": "0" } }],
@@ -1996,25 +2006,34 @@ const CLUB_300 = [
 // than deleted. A future correction would need a fresh one-off fix
 // directly against club4000Historical, same as CAREER_STATS/
 // COACH_TROPHIES/club300Historical corrections already work.
+//
+// 2026-08-26: exactly that kind of one-off fix, on four rows (marked
+// individually below) — short-form/abbreviated team-name strings that
+// never matched TEAM_ART's full-name keys, so those four rows showed no
+// logo in the live 4000 Club. Fixed live via correctClub4000HistoricalEntry
+// (new one-off helper in storage.js, same shape as
+// correctClub300HistoricalEntry) and corrected here too so this archive
+// matches reality, per this project's own standing rule about not leaving
+// a fixed fact wrong in a second place.
 /*
 const CLUB_4000 = [
-  { coach: "MambasDisciples", team: "PVAM Panthers", conf: "SWAC", pts: 4470.3, avg: 262.96, year: 2023 },
+  { coach: "MambasDisciples", team: "PVAMU Panthers", conf: "SWAC", pts: 4470.3, avg: 262.96, year: 2023 }, // CORRECTED 2026-08-26 -- was "PVAM Panthers" (missing the U), a mismatch against TEAM_ART's existing "PVAMU Panthers" key; fixed live via correctClub4000HistoricalEntry, corrected here too
   { coach: "beardmantv", team: "Auburn Tigers", conf: "SEC", pts: 4360.6, avg: 256.51, year: 2022 },
   { coach: "MrCoolBuns", team: "Seattle Dragons", conf: "XFL", pts: 4250.2, avg: 250.01, year: 2023 },
   { coach: "samwow123", team: "Austin Peay Governors", conf: "SOCO", pts: 4241.4, avg: 249.49, year: 2022 },
-  { coach: "Harvey28", team: "Coastal Carolina Chanticleers", conf: "SUN", pts: 4241.15, avg: 249.48, year: 2022 },
+  { coach: "Harvey28", team: "Carolina Chanticleers", conf: "SUN", pts: 4241.15, avg: 249.48, year: 2022 }, // CORRECTED 2026-08-26 -- was "Coastal Carolina Chanticleers", a mismatch against TEAM_ART's existing "Carolina Chanticleers" key; fixed live via correctClub4000HistoricalEntry, corrected here too
   { coach: "TheColburnator01", team: "Bucknell Bison", conf: "IVY", pts: 4202.6, avg: 247.21, year: 2023 },
   { coach: "Wynnguy", team: "Brown Bears", conf: "IVY", pts: 4137.2, avg: 243.36, year: 2023 },
   { coach: "finnbar3", team: "Arizona Wildcats", conf: "PAC", pts: 4133.2, avg: 243.13, year: 2023 },
   { coach: "wdh76", team: "Iowa State Cyclones", conf: "XII", pts: 4132.05, avg: 243.06, year: 2023 },
   { coach: "Sb428", team: "Bethune-Cookman Wildcats", conf: "SWAC", pts: 4125, avg: 242.65, year: 2023 },
   { coach: "RifeLife520", team: "Oklahoma Sooners", conf: "SEC", pts: 4110.7, avg: 241.81, year: 2023 },
-  { coach: "treetwig", team: "AK Pine Bluff Lions", conf: "SWAC", pts: 4109.85, avg: 241.76, year: 2023 },
+  { coach: "treetwig", team: "Pine Bluff Golden Lions", conf: "SWAC", pts: 4109.85, avg: 241.76, year: 2023 }, // CORRECTED 2026-08-26 -- was "AK Pine Bluff Lions", a mismatch against TEAM_ART's existing "Pine Bluff Golden Lions" key; fixed live via correctClub4000HistoricalEntry, corrected here too
   { coach: "Wynnguy", team: "Brown Bears", conf: "IVY", pts: 4087.1, avg: 240.42, year: 2022 },
   { coach: "AZiv49", team: "Ole Miss Rebels", conf: "SEC", pts: 4083.85, avg: 240.23, year: 2022 },
   { coach: "Newkbomb", team: "Arizona Wildcats", conf: "PAC", pts: 4071.8, avg: 239.52, year: 2022 },
   { coach: "gsk1993", team: "Troy Trojans", conf: "SUN", pts: 4065.4, avg: 239.14, year: 2022 },
-  { coach: "bradlevo", team: "Jax State Gamecocks", conf: "SOCO", pts: 4051.15, avg: 238.3, year: 2023 },
+  { coach: "bradlevo", team: "Jacksonville State Gamecocks", conf: "SOCO", pts: 4051.15, avg: 238.3, year: 2023 }, // CORRECTED 2026-08-26 -- was "Jax State Gamecocks", the same short-form/full-name mismatch already fixed in ROSTER_LINKS 2026-08-22; fixed live via correctClub4000HistoricalEntry, corrected here too
   { coach: "samwow123", team: "South Carolina Gamecocks", conf: "SEC", pts: 4050.95, avg: 238.29, year: 2023 },
   { coach: "catinthehat2", team: "St Francis Red Flash", conf: "PION", pts: 4043.25, avg: 237.84, year: 2022 },
   { coach: "Harold2576", team: "Davenport Panthers", conf: "GLIAC", pts: 4035.65, avg: 237.39, year: 2023 },
@@ -2030,7 +2049,7 @@ const CLUB_4000 = [
   { coach: "JuugKing", team: "Georgia State Panthers", conf: "SUN", pts: 4082.65, avg: 240.16, year: 2024 },
   { coach: "acubes21", team: "Belmont Bruins", conf: "SOCO", pts: 4227.4, avg: 248.67, year: 2024 },
   { coach: "Wynnguy", team: "Brown Bears", conf: "IVY", pts: 4184.65, avg: 246.16, year: 2024 },
-  { coach: "MambasDisciples", team: "PVAM Panthers", conf: "SWAC", pts: 4146.85, avg: 243.93, year: 2024 },
+  { coach: "MambasDisciples", team: "PVAMU Panthers", conf: "SWAC", pts: 4146.85, avg: 243.93, year: 2024 }, // CORRECTED 2026-08-26, same fix as the 2023 row above
   { coach: "DirtyByrd30", team: "Jackson State Tigers", conf: "SWAC", pts: 4224.95, avg: 248.53, year: 2024 },
   { coach: "StokesCity", team: "Western Wildcats", conf: "FLHS", pts: 4158.65, avg: 244.63, year: 2024 },
   { coach: "PwnRangr", team: "Miami Beach Hi-Tides", conf: "FLHS", pts: 4129.05, avg: 242.89, year: 2024 },
@@ -2047,7 +2066,7 @@ const CLUB_4000 = [
   { coach: "RifeLife520", team: "Colgate Raiders", conf: "IVY", pts: 4019.95, avg: 236.47, year: 2025 },
   { coach: "garcia925", team: "Lehigh Mountain Hawks", conf: "IVY", pts: 4050.7, avg: 238.28, year: 2025 },
   { coach: "DirtyByrd30", team: "Jackson State Tigers", conf: "SWAC", pts: 4569.7, avg: 268.81, year: 2025 },
-  { coach: "MambasDisciples", team: "PVAM Panthers", conf: "SWAC", pts: 4007.75, avg: 235.75, year: 2025 },
+  { coach: "MambasDisciples", team: "PVAMU Panthers", conf: "SWAC", pts: 4007.75, avg: 235.75, year: 2025 }, // CORRECTED 2026-08-26, same fix as the 2023 row above
   { coach: "z1856z", team: "Mississippi Valley Delta Devils", conf: "SWAC", pts: 4105.45, avg: 241.5, year: 2025 },
   { coach: "cspeece22", team: "WI Parkside Rangers", conf: "GLIAC", pts: 4003.35, avg: 235.49, year: 2025 },
   { coach: "StokesCity", team: "Western Wildcats", conf: "FLHS", pts: 4240.15, avg: 249.42, year: 2025 },
@@ -12293,6 +12312,63 @@ export default function App() {
     }
   }, [streakBonusesLive, manualPenalties, conferenceStrengthHistorical]);
 
+  // ── ONE-OFF: club4000Historical team-name corrections (2026-08-26) ──
+  // Four rows in the live 4000 Club were showing no logo — all four
+  // turned out to be short-form/abbreviated team-name strings baked into
+  // club4000Historical during its 2026-08-21 migration off the retired
+  // CLUB_4000 array, none of which match TEAM_ART's existing full-name
+  // keys (see the corrected comments on the archive itself for the
+  // before/after on each). club4000HistoricalKey is tierKey_year_coach —
+  // none of those three fields change here, only `team`, so this is a
+  // batch of plain single-field corrections at each doc's EXISTING key,
+  // not a bulk re-migration.
+  //
+  // Same "used once, then removed" pattern as every other one-off Admin
+  // tool in this project (the original 300/4000 Club migration buttons,
+  // the Trophy migration button, etc.) — this whole block (state, handler,
+  // button) should come out once Troy confirms the result against real
+  // Firestore.
+  //
+  // Coach casing in each key is an ASSUMPTION, not confirmed: it matches
+  // the raw `coach` field exactly as typed in the retired CLUB_4000 array
+  // (e.g. "MambasDisciples", not "mambasdisciples"), since that's
+  // presumably what the original migration button passed to
+  // club4000HistoricalKey when these docs were first written — but that
+  // migration code is gone, so there's no live call site left to confirm
+  // against. correctClub4000HistoricalEntry guards against a wrong
+  // guess: it checks the doc's current `team` before writing anything, so
+  // a casing mismatch shows up as "not-found" below rather than silently
+  // doing nothing or writing to the wrong place.
+  const CLUB_4000_NAME_FIXES = [
+    { key: "SWAC_2023_MambasDisciples", oldTeam: "PVAM Panthers", newTeam: "PVAMU Panthers" },
+    { key: "SWAC_2024_MambasDisciples", oldTeam: "PVAM Panthers", newTeam: "PVAMU Panthers" },
+    { key: "SWAC_2025_MambasDisciples", oldTeam: "PVAM Panthers", newTeam: "PVAMU Panthers" },
+    { key: "SUN_2022_Harvey28", oldTeam: "Coastal Carolina Chanticleers", newTeam: "Carolina Chanticleers" },
+    { key: "SWAC_2023_treetwig", oldTeam: "AK Pine Bluff Lions", newTeam: "Pine Bluff Golden Lions" },
+    { key: "SOCO_2023_bradlevo", oldTeam: "Jax State Gamecocks", newTeam: "Jacksonville State Gamecocks" },
+  ];
+  const [club4000FixRunning, setClub4000FixRunning] = useState(false);
+  const [club4000FixResults, setClub4000FixResults] = useState(null);
+  const runClub4000NameFix = useCallback(async () => {
+    setClub4000FixRunning(true);
+    setClub4000FixResults(null);
+    try {
+      const results = [];
+      for (const { key, oldTeam, newTeam } of CLUB_4000_NAME_FIXES) {
+        try {
+          const res = await correctClub4000HistoricalEntry(key, oldTeam, newTeam);
+          results.push({ key, newTeam, ...res });
+        } catch (e) {
+          console.error(`club4000Historical name fix failed for ${key}`, e);
+          results.push({ key, newTeam, ok: false, reason: "error", error: String(e) });
+        }
+      }
+      setClub4000FixResults(results);
+    } finally {
+      setClub4000FixRunning(false);
+    }
+  }, []);
+
   // initial: live Sleeper + discovery of the other 12 leagues via the commissioner
   useEffect(() => {
     let cancelled = false;
@@ -16291,6 +16367,45 @@ export default function App() {
                   >
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2023/2024/2025)"}
                   </button>
+                </div>
+                {/* ONE-OFF — remove this whole block (state, handler, button)
+                    once Troy confirms the results below against real
+                    Firestore. Not part of the "run these three in order"
+                    season workflow above; unrelated one-time data fix. */}
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.ember}`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                    ONE-OFF (2026-08-26): fix 6 club4000Historical docs whose <code>team</code> field is a
+                    short-form/abbreviated string that doesn't match TEAM_ART's full-name key — these were showing
+                    no logo in the live 4000 Club. Safe to click more than once; each entry checks the doc's
+                    current team name before writing and reports "mismatch" instead of guessing if it's already
+                    fixed or the key doesn't exist.
+                  </div>
+                  <button
+                    onClick={runClub4000NameFix}
+                    disabled={club4000FixRunning}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 4,
+                      border: `1px solid ${C.ember}`,
+                      background: club4000FixRunning ? "transparent" : C.ember,
+                      color: club4000FixRunning ? C.slate : C.ink,
+                      fontWeight: 600,
+                      cursor: club4000FixRunning ? "default" : "pointer",
+                    }}
+                  >
+                    {club4000FixRunning ? "Running…" : "Fix 4000 Club Team-Name Mismatches (6 entries)"}
+                  </button>
+                  {club4000FixResults && (
+                    <div style={{ marginTop: 10, fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" }}>
+                      {club4000FixResults.map((r) => (
+                        <div key={r.key} style={{ color: r.ok ? C.turf : C.ember, marginBottom: 2 }}>
+                          {r.ok
+                            ? `✓ ${r.key} → "${r.newTeam}"`
+                            : `✗ ${r.key} — ${r.reason}${r.found ? ` (found "${r.found}")` : ""}`}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </section>
             )}
