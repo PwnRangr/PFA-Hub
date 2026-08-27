@@ -2255,7 +2255,11 @@ function baseConferenceStats(tRows) {
   };
 }
 
-function scoreConferencePool(rowsByTier, poolKeys) {
+// `year` (optional) is used ONLY to apply Troy's 2023-specific dampening
+// below — every other year (including undefined, i.e. the live/current-
+// season caller, which never passed a year before this change) scores
+// exactly as before. See the historicalTermDampening comment for why.
+function scoreConferencePool(rowsByTier, poolKeys, year) {
   const stats = {};
   poolKeys.forEach((k) => {
     const s = baseConferenceStats(rowsByTier[k]);
@@ -2273,6 +2277,20 @@ function scoreConferencePool(rowsByTier, poolKeys) {
   const poolAvgOfMedians = average(keys.map((k) => stats[k].leagueMedian));
   const poolMedianOfMin = median(keys.map((k) => stats[k].teamMin));
 
+  // 2023-only dampening, added 2026-08-27 per Troy's direct instruction:
+  // League Strength wasn't built until last season, so it was never
+  // validated/calibrated against a season as old as 2023 before being
+  // retrofit onto it via the historical backfill — same formula, same
+  // divisors, un-tuned for that year's raw scale. Troy confirmed the
+  // underlying pattern isn't real (SWAC is one of the higher-scoring
+  // leagues, not a weak one) and asked for exactly this: take medMaxPM
+  // and leagueMedian's ALREADY-COMPUTED term values for 2023 and scale
+  // each by 0.1, nothing else. Deliberately scoped to year === 2023 only
+  // — 2024/2025 already read sane (2025: -6.81 to +8.26) and must keep
+  // scoring exactly as before; the live/current-season caller doesn't
+  // pass a year at all, so it's unaffected by construction.
+  const historicalTermDampening = year === 2023 ? 0.1 : 1;
+
   const out = {};
   keys.forEach((k) => {
     const s = stats[k];
@@ -2283,12 +2301,13 @@ function scoreConferencePool(rowsByTier, poolKeys) {
     // is driving an outlier tier. `score` is the exact same sum of the
     // exact same six expressions in the exact same order as before this
     // change — confirmed byte-identical against the prior single-
-    // expression form on mock data before shipping. NOT a formula change.
+    // expression form on mock data before shipping. NOT a formula change
+    // (the 2023 dampening above IS a real, deliberate, year-scoped one).
     const termD = (s.d - poolMedianD) / -10 / 10;
     const termAvgMaxPM = (s.avgMaxPM - poolAvgOfAvgMaxPM) / 100;
-    const termMedMaxPM = (s.medMaxPM - poolMedianOfMedMaxPM) / 20;
+    const termMedMaxPM = ((s.medMaxPM - poolMedianOfMedMaxPM) / 20) * historicalTermDampening;
     const termTeamMax = (s.teamMax - poolMedianOfMax) / 100;
-    const termLeagueMedian = (s.leagueMedian - poolAvgOfMedians) / 20;
+    const termLeagueMedian = ((s.leagueMedian - poolAvgOfMedians) / 20) * historicalTermDampening;
     const termTeamMin = (s.teamMin - poolMedianOfMin) / 100;
     const score = (termD + termAvgMaxPM + termMedMaxPM + termTeamMax + termLeagueMedian + termTeamMin) / 2; // her sheet sums all six bonus terms, then halves the total
     out[k] = {
@@ -12230,8 +12249,8 @@ export default function App() {
     }
     return {
       scores: {
-        ...scoreConferencePool(rowsByTier, ALLIANCE_POOL),
-        ...scoreConferencePool(rowsByTier, PRO_POOL),
+        ...scoreConferencePool(rowsByTier, ALLIANCE_POOL, year),
+        ...scoreConferencePool(rowsByTier, PRO_POOL, year),
       },
       rowsByTier,
     };
