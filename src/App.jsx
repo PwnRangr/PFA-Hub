@@ -678,18 +678,15 @@ function parseCSVRows(text) {
 //    300 Club's historical high-score list, which only ever has a team
 //    name) — and even then it beats a hardcoded table, since her sheet gets
 //    republished with the new season's links same as everything else here.
-//  - liveStatsByName: lowercased tagged coach name -> { promotionScore },
-//    column 9 (`PromotionScore` in her header row — CURRENT SEASON).
-//    Keyed by the exact tagged name (e.g. "pwnrangr int1"), same format as
-//    CAREER_STATS's own keys, so allCoachesTable's existing lowerName
-//    lookup matches directly with no extra resolution needed.
+//  - liveStatsByName: lowercased tagged coach name -> { promotionScore,
+//    currentCP }, columns 9 and 21 (`PromotionScore` / `coaching Pts` in her
+//    header row — CURRENT SEASON, distinct from CAREER_STATS's static
+//    "Career CP"). Keyed by the exact tagged name (e.g. "pwnrangr int1"),
+//    same format as CAREER_STATS's own keys, so allCoachesTable's existing
+//    lowerName lookup matches directly with no extra resolution needed.
 //    `#DIV/0!`/`#N/A`/blank (unplayed season, every coach preseason) parse
 //    to null via parseFloat — the same defensive-parse pattern used
-//    throughout this file for her live sheet feeds. (Column 21, "coaching
-//    Pts" — the sheet's own current-season CP — used to be parsed here too,
-//    but Season CP has been computed in-site since 2026-08-19; the sheet
-//    column was never removed from this parse even after nothing read it
-//    anymore. Dropped 2026-08-24 — see the Mistakes log.)
+//    throughout this file for her live sheet feeds.
 //  - teamNameByRosterKey: `${tierKey}:${rosterId}` -> team name, populated
 //    for EVERY row with a team name, including unowned rosters (status
 //    "available"/"retired"/etc, no coach). Sleeper itself has no team name
@@ -737,8 +734,10 @@ function parseSheetLookups(csvText) {
     }
     if (coach) {
       const promotionScore = parseFloat(row[9]);
+      const currentCP = parseFloat(row[21]);
       liveStatsByName[coach.toLowerCase()] = {
         promotionScore: Number.isFinite(promotionScore) ? promotionScore : null,
+        currentCP: Number.isFinite(currentCP) ? currentCP : null,
       };
     }
   }
@@ -6357,7 +6356,10 @@ const TEAM_ART = {
   // PFA_MARK/USFL_MARK/Birmingham Stallions/New Jersey Generals.
   // **THIS COMPLETES TEAM_ART FOR ALL 13 TIERS — 232/232 real per-team
   // slots the project ever needed are now filled (every tier's real
-  // roster size, not the 13x20 theoretical max).**
+  // roster size, not the 13x20 theoretical max).** A PION section
+  // follows below, added 2026-08-26 — that's a 14th, non-tier bucket
+  // for the folded Pioneer league (see its own comment), so it doesn't
+  // change the 232/232 count above.
   NFL: {
     [normTeamKey("Green Bay Packers")]: teamArtPath("NFL", "nfl-team-green-bay-packers.png"),
     [normTeamKey("Cleveland Browns")]: teamArtPath("NFL", "nfl-team-cleveland-browns.png"),
@@ -6407,6 +6409,21 @@ const TEAM_ART = {
     [normTeamKey("Philadelphia Eagles")]: teamArtPath("NFL", "nfl-team-philadelphia-eagles.png"),
     [normTeamKey("Tampa Bay Buccaneers")]: teamArtPath("NFL", "nfl-team-tampa-bay-buccaneers.png"),
     [normTeamKey("Washington Commanders")]: teamArtPath("NFL", "nfl-team-washington-commanders.png"),
+  },
+  // PION — the folded Pioneer Conference/League (2022-only, tagged
+  // "PION" in club300Historical; see the CONF_TO_TIER_KEY comments
+  // above confirming it's deliberately NOT aliased to a current tier).
+  // Not one of the 13 real tiers, so this isn't part of the "232/232"
+  // count on the NFL comment above — it's a 14th bucket that exists
+  // only because two Pioneer teams show up in the 300 Club's
+  // historical list, whose TeamMark lookup falls through to
+  // `CONF_TO_TIER_KEY[r.conf] || r.conf` (i.e. "PION" itself) exactly
+  // like a real tier key. Only the two teams that actually appear in
+  // that data get an entry — there's no full "PION roster" to fill out
+  // since the league folded after 2022.
+  PION: {
+    [normTeamKey("St Francis Red Flash")]: teamArtPath("PION", "pion-team-st-francis-red-flash.png"),
+    [normTeamKey("Butler Bulldogs")]: teamArtPath("PION", "pion-team-butler-bulldogs.png"),
   },
 };
 
@@ -12755,31 +12772,17 @@ export default function App() {
   };
 
   // ── Apply-to-Team ──
-  // Ranks applicants by Promotion Score (the same stat now shown on the
-  // Coaches tab), not Career CP — matches what the Rules page actually
-  // says ("Jobs go to the coach with the highest Promotion Score").
-  //
-  // STAGE 3 of 3 (build -> compare -> replace) — SWITCHED 2026-08-24. This
-  // used to read the sheet's own Promotion Score column directly
-  // (`liveCoachStats[name].promotionScore`); after Stage 2's comparison
-  // table came back close enough to trust (his call, having reviewed real
-  // numbers side by side), this now calls promotionScoreComputedFor
-  // instead — Current CP + Career Bonus, computed in-site. The sheet
-  // column itself is untouched and still fetched: promotionScoreComparison
-  // below still reads it, kept on as an ongoing audit view in case the two
-  // ever drift apart, not deleted just because the switch happened.
-  //
-  // Null-handling changed with the switch, worth noting: previously "null"
-  // meant the sheet's cell for this coach was blank/errored even though
-  // they were a real rostered coach; now promotionScoreComputedFor only
-  // returns null when the name doesn't resolve to any current
-  // coachDirectory entry at all (a genuinely unlisted name) — a rostered
-  // coach always gets a real computed number, even preseason (starts at
-  // whatever their Career Bonus alone comes to). An unresolvable name
-  // still sorts last rather than substituting a different stat.
+  // Ranks applicants by live Promotion Score (the same stat now shown on
+  // the Coaches tab), not Career CP — matches what the Rules page actually
+  // says ("Jobs go to the coach with the highest Promotion Score"). No
+  // fallback to Career CP: the transfer period runs weeks 19-20-ish, after
+  // week 18 ends the fantasy season, by which point every coach has real
+  // season stats — nulls here mean a genuinely unlisted name, not "too
+  // early in the season," so they sort last rather than substituting a
+  // different stat.
   const promotionPointsFor = (name) => {
-    const dirEntry = coachDirectory.find((c) => c.name.toLowerCase() === (name || "").toLowerCase());
-    return promotionScoreComputedFor(dirEntry);
+    const live = liveCoachStats[(name || "").toLowerCase()];
+    return live && live.promotionScore !== null ? live.promotionScore : null;
   };
 
   // Eligibility per the Rules page: the last 5/16, 7/20, or 11/32-placed
@@ -13409,83 +13412,6 @@ export default function App() {
     return map;
   }, [manualPenalties]);
 
-  // Season CP for one coach's CURRENT roster entry. Extracted 2026-08-24
-  // from what used to be inline in allCoachesTable below, so the exact same
-  // formula can be reused by promotionScoreComputedFor further down —
-  // allCoachesTable only ever covers coaches with a CAREER_STATS row, but
-  // Promotion Score needs to work for every current coach, including one
-  // hired this week with no career history yet. Every component here was
-  // confirmed directly with Troy 2026-08-19; see the comments preserved
-  // below from the original inline version.
-  const seasonCPFor = (dirEntry) => {
-    if (!dirEntry) {
-      return { currentCP: -Infinity, subtotal: 0, ptsMaxRatio: 1, winPoints: 0, pointsComponent: 0, avgPPG: 0, faabComponent: 0, faabRemaining: null };
-    }
-    const rosterKey = `${dirEntry.tierKey}_${CURRENT_SEASON}_${dirEntry.rosterId}`;
-    const winPoints = (WIN_POINTS_BY_TIER[dirEntry.tierKey] || 0) * (dirEntry.w || 0);
-    // Average Points Per Game / 4 (confirmed 2026-08-19). "Per game" means
-    // games actually played so far (w+l) — before Week 1 that's 0, so this
-    // is 0 rather than NaN/Infinity, same "starts at 0, not undefined"
-    // rule as everything else in this running total.
-    const gamesPlayed = (dirEntry.w || 0) + (dirEntry.l || 0);
-    const avgPPG = gamesPlayed > 0 ? dirEntry.pts / gamesPlayed : 0;
-    const pointsComponent = avgPPG / 4;
-    // (starting FAAB budget − used) / 50, confirmed 2026-08-19. If
-    // FAAB_STARTING_BUDGET has no entry for CURRENT_SEASON (missed
-    // updating it — see the reminder comment there), contribute 0 rather
-    // than NaN; the Admin tab warning banner is the actual reminder, not
-    // a silently wrong CP number.
-    const faabBudget = FAAB_STARTING_BUDGET[CURRENT_SEASON];
-    const faabRemaining = faabBudget != null ? faabBudget - (dirEntry.faabUsed || 0) : null;
-    const faabComponent = faabRemaining != null ? faabRemaining / 50 : 0;
-    const subtotal =
-      winPoints + pointsComponent + faabComponent + (streakTotalsByRosterKey[rosterKey]?.net || 0) + (modifiersByRosterKey[rosterKey]?.net || 0);
-    // Pts/Max multiplier, confirmed 2026-08-19: dirEntry.pts / dirEntry.maxPts,
-    // both already sourced from Sleeper's settings.fpts/fpts_decimal and
-    // settings.ppts/ppts_decimal (the same fields the Points component and
-    // TeamProfileModal's "Max Total Points" already use). Pre-season,
-    // maxPts is 0 (no games played) — 0/0 is undefined, so this defaults
-    // to a NEUTRAL 1× rather than NaN or 0×, so a real component that's
-    // already meaningful pre-season (FAAB) isn't zeroed out by a ratio
-    // that genuinely doesn't exist yet. ASSUMPTION, not confirmed with
-    // her — flagging in case she wants pre-season CP to show as 0 or "—"
-    // instead until maxPts is real.
-    const ptsMaxRatio = dirEntry.maxPts > 0 ? dirEntry.pts / dirEntry.maxPts : 1;
-    const currentCP = subtotal * ptsMaxRatio;
-    return { currentCP, subtotal, ptsMaxRatio, winPoints, pointsComponent, avgPPG, faabComponent, faabRemaining };
-  };
-
-  // Promotion Score, computed in-site — confirmed directly with Troy,
-  // 2026-08-24: Current CP (seasonCPFor above) + Career Bonus, where
-  // Career Bonus = (Career Avg CP / 10) + (Career CP / 100). A coach with
-  // no CAREER_STATS row yet (just hired, hasn't logged a season) gets
-  // Career Bonus = 0 — his own explicit rule, not an assumption: full
-  // weight on live current-season CP alone until next season, when their
-  // first CAREER_STATS row exists.
-  //
-  // Rolled out in 3 stages the same day (build -> compare -> replace, his
-  // call): built here first as a standalone comparison value against the
-  // sheet's live promotionScore, surfaced in the Engine Room's comparison
-  // table below with nothing live reading it yet. He reviewed that table
-  // — deltas came back close enough to trust — and gave the go-ahead the
-  // same session. promotionPointsFor and allCoachesTable's own
-  // promotionScore field both call this now; the sheet's Promotion Score
-  // column itself is untouched and still fetched, feeding only the
-  // comparison table's audit view from here on.
-  const promotionScoreComputedFor = (dirEntry) => {
-    if (!dirEntry) return null;
-    const { currentCP } = seasonCPFor(dirEntry);
-    const entries = CAREER_STATS[dirEntry.name.toLowerCase()];
-    const match = entries ? entries.find((e) => e.tierKey === dirEntry.tierKey) : null;
-    const chosen = match || (entries ? entries[0] : null);
-    const careerCPRaw = chosen ? parseFloat(chosen.stats["Career CP"]) : 0;
-    const careerAvgCPRaw = chosen ? parseFloat(chosen.stats["Career Avg CP"]) : 0;
-    const careerCP = Number.isFinite(careerCPRaw) ? careerCPRaw : 0;
-    const careerAvgCP = Number.isFinite(careerAvgCPRaw) ? careerAvgCPRaw : 0;
-    const careerBonus = careerAvgCP / 10 + careerCP / 100;
-    return currentCP + careerBonus;
-  };
-
   // Every coach with career data on file, resolved to whichever team they
   // currently hold (same rule as the profile popup) — never a mix-and-match
   // of a different league's numbers.
@@ -13500,6 +13426,7 @@ export default function App() {
         return Number.isFinite(n) ? n : -Infinity;
       };
       const [wStr, lStr] = (s["Record"] || "").split("-");
+      const live = liveCoachStats[lowerName];
       // Season CP is now computed in-site, not read from the sheet — a
       // genuine running total starting at 0 for 2026, built from whatever
       // components are actually wired up so far (streak bonuses + manual
@@ -13508,18 +13435,43 @@ export default function App() {
       // it'll only grow to match the full Rules-page formula as those land.
       // Career CP (`cp` below) is untouched — that one keeps the sheet's
       // history as its baseline, per her call on 2026-08-19.
-      const { currentCP, subtotal, ptsMaxRatio, winPoints, pointsComponent, avgPPG, faabComponent, faabRemaining } = seasonCPFor(dirEntry);
-      // Promotion Score — Stage 3, switched 2026-08-24 alongside
-      // promotionPointsFor above, same reasoning: computed in-site now
-      // (promotionScoreComputedFor), not read off the sheet, so this
-      // column matches what applicant ranking actually uses.
-      const computedPromotionScore = promotionScoreComputedFor(dirEntry);
+      const rosterKey = dirEntry ? `${dirEntry.tierKey}_${CURRENT_SEASON}_${dirEntry.rosterId}` : null;
+      const winPoints = dirEntry ? (WIN_POINTS_BY_TIER[dirEntry.tierKey] || 0) * (dirEntry.w || 0) : 0;
+      // Average Points Per Game / 4 (confirmed 2026-08-19). "Per game" means
+      // games actually played so far (w+l) — before Week 1 that's 0, so this
+      // is 0 rather than NaN/Infinity, same "starts at 0, not undefined"
+      // rule as everything else in this running total.
+      const gamesPlayed = dirEntry ? (dirEntry.w || 0) + (dirEntry.l || 0) : 0;
+      const avgPPG = dirEntry && gamesPlayed > 0 ? dirEntry.pts / gamesPlayed : 0;
+      const pointsComponent = avgPPG / 4;
+      // (starting FAAB budget − used) / 50, confirmed 2026-08-19. If
+      // FAAB_STARTING_BUDGET has no entry for CURRENT_SEASON (missed
+      // updating it — see the reminder comment there), contribute 0 rather
+      // than NaN; the Admin tab warning banner is the actual reminder, not
+      // a silently wrong CP number.
+      const faabBudget = FAAB_STARTING_BUDGET[CURRENT_SEASON];
+      const faabRemaining = dirEntry && faabBudget != null ? faabBudget - (dirEntry.faabUsed || 0) : null;
+      const faabComponent = faabRemaining != null ? faabRemaining / 50 : 0;
+      const subtotal =
+        winPoints + pointsComponent + faabComponent + (streakTotalsByRosterKey[rosterKey]?.net || 0) + (modifiersByRosterKey[rosterKey]?.net || 0);
+      // Pts/Max multiplier, confirmed 2026-08-19: dirEntry.pts / dirEntry.maxPts,
+      // both already sourced from Sleeper's settings.fpts/fpts_decimal and
+      // settings.ppts/ppts_decimal (the same fields the Points component and
+      // TeamProfileModal's "Max Total Points" already use). Pre-season,
+      // maxPts is 0 (no games played) — 0/0 is undefined, so this defaults
+      // to a NEUTRAL 1× rather than NaN or 0×, so a real component that's
+      // already meaningful pre-season (FAAB) isn't zeroed out by a ratio
+      // that genuinely doesn't exist yet. ASSUMPTION, not confirmed with
+      // her — flagging in case she wants pre-season CP to show as 0 or "—"
+      // instead until maxPts is real.
+      const ptsMaxRatio = dirEntry && dirEntry.maxPts > 0 ? dirEntry.pts / dirEntry.maxPts : 1;
+      const currentCP = dirEntry ? subtotal * ptsMaxRatio : -Infinity;
       return {
         name: dirEntry ? dirEntry.name : lowerName,
         team: chosen.team,
         tierKey: chosen.tierKey,
         cp: parseNum(s["Career CP"]),
-        promotionScore: computedPromotionScore !== null ? computedPromotionScore : -Infinity,
+        promotionScore: live && live.promotionScore !== null ? live.promotionScore : -Infinity,
         currentCP,
         subtotal,
         ptsMaxRatio,
@@ -13548,39 +13500,7 @@ export default function App() {
         currentTierKey: dirEntry ? dirEntry.tierKey : undefined,
       };
     });
-  }, [coachDirectory, streakTotalsByRosterKey, modifiersByRosterKey]);
-
-  // Promotion Score comparison — Stage 2 (build -> COMPARE -> replace).
-  // Every current coach (coachDirectory, not just CAREER_STATS's subset),
-  // live sheet Promotion Score next to the new in-site computed one, sorted
-  // by biggest disagreement first so a real discrepancy is easy to spot
-  // before Stage 3 switches anything live over to it. Read-only — no
-  // writes, doesn't touch applicant ranking or auto-hire.
-  const promotionScoreComparison = useMemo(() => {
-    return coachDirectory
-      .map((dirEntry) => {
-        const lowerName = dirEntry.name.toLowerCase();
-        const live = liveCoachStats[lowerName];
-        const sheetScore = live && live.promotionScore !== null ? live.promotionScore : null;
-        const computedScore = promotionScoreComputedFor(dirEntry);
-        const hasCareerRow = Boolean(CAREER_STATS[lowerName]);
-        const delta = sheetScore !== null && computedScore !== null ? computedScore - sheetScore : null;
-        return {
-          name: dirEntry.name,
-          team: dirEntry.team,
-          tierKey: dirEntry.tierKey,
-          sheetScore,
-          computedScore,
-          delta,
-          hasCareerRow,
-        };
-      })
-      .sort((a, b) => {
-        const ad = a.delta === null ? -1 : Math.abs(a.delta);
-        const bd = b.delta === null ? -1 : Math.abs(b.delta);
-        return bd - ad;
-      });
-  }, [coachDirectory, liveCoachStats]);
+  }, [coachDirectory, liveCoachStats, streakTotalsByRosterKey, modifiersByRosterKey]);
 
   const sortedCoachesTable = useMemo(() => {
     const arr = [...allCoachesTable];
@@ -13700,7 +13620,7 @@ export default function App() {
     setSelectedTeam({
       team: row.team,
       tierKey: tKey,
-      tierName: t ? t.name : tKey === "PION" ? "Pioneer" : tKey,
+      tierName: t ? t.name : tKey,
       maxPts: row.maxPts,
       rosterId: row.rosterId,
       leagueId,
@@ -15479,7 +15399,7 @@ export default function App() {
                         {r.coach}
                         <TrophyBadges name={r.coach} size={11} trophies={coachTrophiesHistorical} />
                       </button>
-                      <div className="text-xs truncate flex items-center gap-1.5" style={{ color: C.slate }}>
+                      <div className="text-xs truncate" style={{ color: C.slate }}>
                         <button
                           type="button"
                           onClick={() => openTeamProfile({ team: r.team, maxPts: undefined, playerIds: [] }, CONF_TO_TIER_KEY[r.conf] || r.conf)}
@@ -15487,18 +15407,7 @@ export default function App() {
                         >
                           {r.team}
                         </button>{" "}
-                        {r.conf === "PION" ? (
-                          <span
-                            className="px-1.5 py-0.5 text-[10px] uppercase tracking-wider rounded-sm shrink-0"
-                            style={{ background: "rgba(148,163,184,0.15)", color: C.slate }}
-                            title="Pioneer — a folded league, not one of the current 13 tiers"
-                          >
-                            Pioneer · folded league
-                          </span>
-                        ) : (
-                          <span>· {r.conf}</span>
-                        )}{" "}
-                        · Wk {r.week}, {r.year}
+                        · {r.conf} · Wk {r.week}, {r.year}
                       </div>
                     </div>
                   </div>
@@ -15553,7 +15462,7 @@ export default function App() {
                     const max = club300ByConf[0][1];
                     return (
                       <div key={conf} className="flex items-center gap-2 text-xs">
-                        <span className="w-12 shrink-0 uppercase" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, color: C.slate }}>{conf === "PION" ? "Pioneer" : conf}</span>
+                        <span className="w-12 shrink-0 uppercase" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600, color: C.slate }}>{conf}</span>
                         <div className="flex-1 rounded-sm overflow-hidden" style={{ background: C.ink, height: "0.9rem" }}>
                           <div style={{ width: `${(count / max) * 100}%`, background: C.gold, height: "100%" }} />
                         </div>
@@ -16362,65 +16271,6 @@ export default function App() {
                   >
                     {cpLockRunning ? "Running…" : "Lock Final Season CP (2023/2024/2025)"}
                   </button>
-                </div>
-                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.turf}`, borderRadius: 6 }}>
-                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
-                    <strong style={{ color: C.chalk }}>Promotion Score, in-site vs. sheet.</strong>{" "}
-                    Current CP + Career Bonus, where Career Bonus = (Career Avg CP ÷ 10) + (Career CP ÷ 100) — confirmed
-                    directly, 2026-08-24. A coach with no career row yet gets Career Bonus = 0. Stage 3 shipped the
-                    same day: applicant ranking, auto-hire, and this Coaches tab's own Promotion Score column all run
-                    on the computed value now, not the sheet's — Troy reviewed this exact table first and the deltas
-                    came back close enough to trust. Kept on as an ongoing audit view rather than removed, since it
-                    costs nothing to leave running and still catches it immediately if the two ever drift apart later.
-                    Sorted by biggest disagreement first.
-                  </div>
-                  <div style={{ maxHeight: 420, overflowY: "auto", border: `1px solid ${C.line}`, borderRadius: 4 }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                      <thead>
-                        <tr style={{ position: "sticky", top: 0, background: C.panel, zIndex: 1 }}>
-                          <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: `1px solid ${C.line}` }}>Coach</th>
-                          <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: `1px solid ${C.line}` }}>Team</th>
-                          <th style={{ textAlign: "left", padding: "6px 8px", borderBottom: `1px solid ${C.line}` }}>Tier</th>
-                          <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${C.line}`, fontFamily: "'IBM Plex Mono', monospace" }}>
-                            Sheet PS
-                          </th>
-                          <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${C.line}`, fontFamily: "'IBM Plex Mono', monospace" }}>
-                            Computed PS
-                          </th>
-                          <th style={{ textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${C.line}`, fontFamily: "'IBM Plex Mono', monospace" }}>
-                            Δ
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {promotionScoreComparison.map((r) => {
-                          const deltaColor =
-                            r.delta === null ? C.slate : Math.abs(r.delta) < 1 ? C.turf : Math.abs(r.delta) < 10 ? C.gold : C.ember;
-                          return (
-                            <tr key={`${r.tierKey}-${r.name}`} style={{ borderBottom: `1px solid ${C.line}` }}>
-                              <td style={{ padding: "6px 8px" }}>
-                                {r.name}
-                                {!r.hasCareerRow && (
-                                  <span style={{ color: C.slate, fontStyle: "italic" }}> (new)</span>
-                                )}
-                              </td>
-                              <td style={{ padding: "6px 8px", color: C.slate }}>{r.team}</td>
-                              <td style={{ padding: "6px 8px", color: C.slate }}>{r.tierKey}</td>
-                              <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
-                                {r.sheetScore === null ? "—" : fmt(r.sheetScore)}
-                              </td>
-                              <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
-                                {r.computedScore === null ? "—" : fmt(r.computedScore)}
-                              </td>
-                              <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: deltaColor, fontWeight: 600 }}>
-                                {r.delta === null ? "—" : `${r.delta >= 0 ? "+" : ""}${fmt(r.delta)}`}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
                 </div>
               </section>
             )}
