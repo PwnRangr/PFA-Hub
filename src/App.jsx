@@ -37,6 +37,9 @@ import {
   markClub4000ProcessedYear,
   addStreakBonusEntry,
   watchStreakBonusesLive,
+  xPointsKey,
+  replaceXPointsForTierYear,
+  watchXPointsLive,
   addManualPenalty,
   removeManualPenalty,
   watchManualPenalties,
@@ -1380,6 +1383,325 @@ const computeStreakBonuses = (results) => {
   });
   return { total, weekly };
 };
+
+// ── X Points: the award bonuses (built 2026-08-28, Troy's rule list) ──
+// Everything here is SEPARATE from the streak bonuses above, which were the
+// only X Points feeding Season CP before this. Values confirmed by Troy
+// directly; the four judgement calls he settled in the same message are
+// noted at the rules they affect, so a future session doesn't re-litigate
+// them from the numbers alone.
+const X_POINTS_RULES = {
+  leagueWeeklyHigh: 3, leagueWeeklyLow: -3,
+  allianceWeeklyHigh: 5, allianceWeeklyLow: -5,
+  winOver10: 1, lossOver10: -1,
+  leagueMostPts: 5, leagueLeastPts: -5,
+  allianceMostPts: 15, allianceLeastPts: -15,
+  playoffWin: 3,
+  divisionWinner: 5,
+  conf8Winner: 7,
+  conf16Winner: 10,
+  undefeated: 50,
+};
+
+// Which week each tier's playoffs START. Confirmed: NFL/USFL/XFL open their
+// bracket in week 14, every 16-team league in week 15. That makes the
+// REGULAR SEASON weeks 1..(start - 1) — 1-13 for the three big tiers, 1-14
+// for the ten 16-team ones. This distinction is load-bearing for the winner
+// bonuses: Troy's rule is "first place in their division/conference at the
+// end of their regular season BEFORE playoffs start," and Sleeper's own
+// season W/L bakes the playoff weeks in, so a final-standings read would
+// silently crown the wrong team.
+const PLAYOFF_START_WEEK = { NFL: 14, USFL: 14, XFL: 14 };
+const playoffStartWeekFor = (tKey) => PLAYOFF_START_WEEK[tKey] || 15;
+// Points totals and win/loss counts span weeks 1-17 — Troy, 2026-08-28:
+// "Most least points in the Alliance and Leagues should only include week
+// 1-17." Week 18 is the novelty/exhibition slot and is excluded from every
+// rule here EXCEPT undefeated (below), which deliberately includes it.
+const X_SEASON_WEEKS = 17;
+const X_FINAL_WEEK = 18;
+
+// Which groups inside a tier earn a "first place" bonus, and which of the
+// three award sizes each one pays. Confirmed reading of Troy's list against
+// how the leagues are really structured:
+//   +5  division/district — NFL's 8 divisions, FLHS's 4 districts,
+//                           USFL/XFL's 4 divisions each
+//   +7  8-team conference — the two conferences inside SUN/SOCO/IVY/SWAC/GLIAC
+//   +10 16-team conference — SEC/BIG XII/ACC/TEN (the whole flat league is
+//                           one 16-team conference) and NFL's AFC and NFC
+// USFL/XFL get division winners only: they have four divisions and no
+// conference layer above them.
+function xPointsWinnerGroups(tKey, rosterIds, divisionByRoster) {
+  const byDiv = {};
+  rosterIds.forEach((rid) => {
+    const d = divisionByRoster[rid];
+    if (d == null) return;
+    (byDiv[d] = byDiv[d] || []).push(rid);
+  });
+  const groups = [];
+  if (tKey === "NFL") {
+    Object.values(byDiv).forEach((rs) => groups.push({ rosters: rs, kind: "divisionWinner" }));
+    const afc = [], nfc = [];
+    rosterIds.forEach((rid) => {
+      const d = divisionByRoster[rid];
+      if (d == null) return;
+      (Number(d) <= 4 ? afc : nfc).push(rid);
+    });
+    if (afc.length) groups.push({ rosters: afc, kind: "conf16Winner" });
+    if (nfc.length) groups.push({ rosters: nfc, kind: "conf16Winner" });
+  } else if (tKey === "FLHS" || tKey === "USFL" || tKey === "XFL") {
+    Object.values(byDiv).forEach((rs) => groups.push({ rosters: rs, kind: "divisionWinner" }));
+  } else if (TWO_CONF_NAMES[tKey]) {
+    Object.values(byDiv).forEach((rs) => groups.push({ rosters: rs, kind: "conf8Winner" }));
+  } else {
+    // SEC / BIG XII / ACC / TEN — one flat 16-team conference, no divisions.
+    groups.push({ rosters: rosterIds.slice(), kind: "conf16Winner" });
+  }
+  return groups;
+}
+
+// The whole award engine, as ONE pure function over already-fetched data so
+// it can be exercised hard against synthetic seasons in Node before it ever
+// touches real data (same discipline computeStreakBonuses got, and the same
+// reason: this is new LOGIC, not new data, so the usual data-verification
+// checks don't apply to it).
+//
+// tiers: { [tierKey]: { weeks: { [week]: pairs[] }, divisionByRoster,
+//                       nameByRoster } }
+//   where pairs is the same [{a, b}] shape getWeeklyResultCached already
+//   returns, each side carrying { rosterId, coach, team, points }.
+// Returns { [tierKey]: entries[] }, one entry per award earned.
+//
+// Alliance-wide rules mean this CANNOT be computed one tier at a time the
+// way the streak sweep is — the weekly Alliance high/low and the season
+// Alliance most/least points all need every tier's data for that year
+// present at once, same structural constraint League Strength has.
+function computeAllianceXPoints(tiers, year) {
+  const out = {};
+  const tierKeys = Object.keys(tiers);
+  tierKeys.forEach((k) => (out[k] = []));
+
+  const push = (tKey, rosterId, kind, label, week) => {
+    const bonus = X_POINTS_RULES[kind];
+    if (!bonus) return;
+    const nm = (tiers[tKey].nameByRoster || {})[rosterId] || {};
+    out[tKey].push({
+      coach: nm.coach || "—",
+      team: nm.team || "—",
+      conf: tKey,
+      rosterId: Number(rosterId),
+      year,
+      week: week || 0,
+      kind,
+      label,
+      bonus,
+    });
+  };
+
+  // Normalise every week into {rosterId: points} and {rosterId: W/L/T}.
+  const scores = {}, results = {};
+  tierKeys.forEach((tKey) => {
+    scores[tKey] = {};
+    results[tKey] = {};
+    Object.entries(tiers[tKey].weeks || {}).forEach(([wk, pairs]) => {
+      const s = {}, r = {};
+      (pairs || []).forEach((pair) => {
+        const a = pair && pair.a, b = pair && pair.b;
+        if (!a || !b || a.rosterId == null || b.rosterId == null) return;
+        const ap = a.points || 0, bp = b.points || 0;
+        s[a.rosterId] = ap;
+        s[b.rosterId] = bp;
+        if (ap === bp) { r[a.rosterId] = "T"; r[b.rosterId] = "T"; }
+        else if (ap > bp) { r[a.rosterId] = "W"; r[b.rosterId] = "L"; }
+        else { r[a.rosterId] = "L"; r[b.rosterId] = "W"; }
+      });
+      scores[tKey][Number(wk)] = s;
+      results[tKey][Number(wk)] = r;
+    });
+  });
+
+  // ── Weekly high/low, per league (±3) and Alliance-wide (±5) ──
+  // Ties at the extreme all pay: with decimal scoring an exact tie is
+  // vanishingly rare, and splitting it arbitrarily would be worse than
+  // paying both. A team can take the league AND the Alliance award in the
+  // same week (+8) — they're separate awards, not one escalating one.
+  for (let wk = 1; wk <= X_SEASON_WEEKS; wk++) {
+    let allianceBest = null, allianceWorst = null;
+    tierKeys.forEach((tKey) => {
+      const s = scores[tKey][wk];
+      if (!s) return;
+      const vals = Object.values(s);
+      if (!vals.length) return;
+      const hi = Math.max(...vals), lo = Math.min(...vals);
+      Object.entries(s).forEach(([rid, v]) => {
+        if (v === hi) push(tKey, rid, "leagueWeeklyHigh", `League high score, week ${wk}`, wk);
+        if (v === lo) push(tKey, rid, "leagueWeeklyLow", `League low score, week ${wk}`, wk);
+      });
+      allianceBest = allianceBest == null ? hi : Math.max(allianceBest, hi);
+      allianceWorst = allianceWorst == null ? lo : Math.min(allianceWorst, lo);
+    });
+    if (allianceBest != null) {
+      tierKeys.forEach((tKey) => {
+        const s = scores[tKey][wk];
+        if (!s) return;
+        Object.entries(s).forEach(([rid, v]) => {
+          if (v === allianceBest) push(tKey, rid, "allianceWeeklyHigh", `Alliance high score, week ${wk}`, wk);
+          if (v === allianceWorst) push(tKey, rid, "allianceWeeklyLow", `Alliance low score, week ${wk}`, wk);
+        });
+      });
+    }
+  }
+
+  // ── Season totals and records, weeks 1-17 ──
+  const totalPts = {}, wins = {}, losses = {}, played = {};
+  tierKeys.forEach((tKey) => {
+    totalPts[tKey] = {}; wins[tKey] = {}; losses[tKey] = {}; played[tKey] = {};
+    for (let wk = 1; wk <= X_SEASON_WEEKS; wk++) {
+      const s = scores[tKey][wk] || {}, r = results[tKey][wk] || {};
+      Object.entries(s).forEach(([rid, v]) => {
+        totalPts[tKey][rid] = (totalPts[tKey][rid] || 0) + v;
+        played[tKey][rid] = (played[tKey][rid] || 0) + 1;
+      });
+      Object.entries(r).forEach(([rid, res]) => {
+        if (res === "W") wins[tKey][rid] = (wins[tKey][rid] || 0) + 1;
+        if (res === "L") losses[tKey][rid] = (losses[tKey][rid] || 0) + 1;
+      });
+    }
+  });
+
+  // ── +1 per win over 10, −1 per loss over 10 ──
+  tierKeys.forEach((tKey) => {
+    Object.keys(played[tKey]).forEach((rid) => {
+      const w = wins[tKey][rid] || 0, l = losses[tKey][rid] || 0;
+      for (let i = 11; i <= w; i++) push(tKey, rid, "winOver10", `Win #${i}`, 0);
+      for (let i = 11; i <= l; i++) push(tKey, rid, "lossOver10", `Loss #${i}`, 0);
+    });
+  });
+
+  // ── Most/least points: per league (±5) and Alliance-wide (±15) ──
+  let aBest = null, aWorst = null;
+  tierKeys.forEach((tKey) => {
+    const vals = Object.values(totalPts[tKey]);
+    if (!vals.length) return;
+    const hi = Math.max(...vals), lo = Math.min(...vals);
+    Object.entries(totalPts[tKey]).forEach(([rid, v]) => {
+      if (v === hi) push(tKey, rid, "leagueMostPts", "Most points in league", 0);
+      if (v === lo) push(tKey, rid, "leagueLeastPts", "Fewest points in league", 0);
+    });
+    aBest = aBest == null ? hi : Math.max(aBest, hi);
+    aWorst = aWorst == null ? lo : Math.min(aWorst, lo);
+  });
+  if (aBest != null) {
+    tierKeys.forEach((tKey) => {
+      Object.entries(totalPts[tKey]).forEach(([rid, v]) => {
+        if (v === aBest) push(tKey, rid, "allianceMostPts", "Most points in the Alliance", 0);
+        if (v === aWorst) push(tKey, rid, "allianceLeastPts", "Fewest points in the Alliance", 0);
+      });
+    });
+  }
+
+  // ── Division / conference winners, by REGULAR-SEASON record only ──
+  tierKeys.forEach((tKey) => {
+    const cutoff = playoffStartWeekFor(tKey) - 1;
+    const rw = {}, rl = {}, rp = {};
+    for (let wk = 1; wk <= cutoff; wk++) {
+      const s = scores[tKey][wk] || {}, r = results[tKey][wk] || {};
+      Object.entries(s).forEach(([rid, v]) => { rp[rid] = (rp[rid] || 0) + v; });
+      Object.entries(r).forEach(([rid, res]) => {
+        if (res === "W") rw[rid] = (rw[rid] || 0) + 1;
+        if (res === "L") rl[rid] = (rl[rid] || 0) + 1;
+      });
+    }
+    const rosterIds = Object.keys(rp);
+    if (!rosterIds.length) return;
+    const groups = xPointsWinnerGroups(tKey, rosterIds, tiers[tKey].divisionByRoster || {});
+    groups.forEach(({ rosters, kind }) => {
+      if (!rosters.length) return;
+      // Same ordering buildStandings itself uses for a standings table:
+      // wins first, points as the tiebreak. An exact tie on both pays both.
+      let bestW = -1, bestP = -Infinity;
+      rosters.forEach((rid) => {
+        const w = rw[rid] || 0, p = rp[rid] || 0;
+        if (w > bestW || (w === bestW && p > bestP)) { bestW = w; bestP = p; }
+      });
+      rosters.forEach((rid) => {
+        if ((rw[rid] || 0) === bestW && (rp[rid] || 0) === bestP) {
+          push(tKey, rid, kind, "First place, regular season", 0);
+        }
+      });
+    });
+  });
+
+  // ── +3 per playoff win, championship bracket only ──
+  // Troy, 2026-08-28: "The only playoff wins that pay are the title run
+  // games. In terms of X points treat the title bracket like an elimination,
+  // only winners get a bonus." So a placement game inside the championship
+  // half (3rd/5th/7th) pays nothing — once you lose, you're done earning.
+  //
+  // The championship field is the top HALF by regular-season standing (8 of
+  // 16, 10 of 20, 16 of 32). Each playoff week, only a game with BOTH teams
+  // still alive is a title-run game; anyone alive who isn't in one is on a
+  // bye (USFL/XFL seeds 1-6 in week 14) and carries forward untouched. That
+  // falls out of the data rather than being hardcoded per format, so it
+  // handles all three bracket shapes without a table of round counts.
+  tierKeys.forEach((tKey) => {
+    const cutoff = playoffStartWeekFor(tKey) - 1;
+    const rw = {}, rp = {};
+    for (let wk = 1; wk <= cutoff; wk++) {
+      const s = scores[tKey][wk] || {}, r = results[tKey][wk] || {};
+      Object.entries(s).forEach(([rid, v]) => { rp[rid] = (rp[rid] || 0) + v; });
+      Object.entries(r).forEach(([rid, res]) => { if (res === "W") rw[rid] = (rw[rid] || 0) + 1; });
+    }
+    const ranked = Object.keys(rp).sort(
+      (a, b) => (rw[b] || 0) - (rw[a] || 0) || (rp[b] || 0) - (rp[a] || 0)
+    );
+    if (!ranked.length) return;
+    let alive = new Set(ranked.slice(0, Math.floor(ranked.length / 2)));
+    for (let wk = playoffStartWeekFor(tKey); wk <= X_SEASON_WEEKS; wk++) {
+      const pairs = (tiers[tKey].weeks || {})[wk] || [];
+      const next = new Set(alive);
+      pairs.forEach((pair) => {
+        const a = pair && pair.a, b = pair && pair.b;
+        if (!a || !b || a.rosterId == null || b.rosterId == null) return;
+        const ai = String(a.rosterId), bi = String(b.rosterId);
+        if (!alive.has(ai) || !alive.has(bi)) return; // not a title-run game
+        const ap = a.points || 0, bp = b.points || 0;
+        next.delete(ai);
+        next.delete(bi);
+        if (ap === bp) return; // a tie eliminates both rather than inventing a winner
+        const winner = ap > bp ? ai : bi;
+        next.add(winner);
+        push(tKey, winner, "playoffWin", `Playoff win, week ${wk}`, wk);
+      });
+      alive = next;
+    }
+  });
+
+  // ── +50 undefeated ──
+  // Troy's call: week 18 counts. "Undefeated should cover week 18 as well
+  // since that is a rare feat and being forced to win a novelty bowl to go
+  // undefeated makes week 18 more fun." So this is the ONE rule that looks
+  // past week 17 — a team that runs the table through 17 and then drops its
+  // week-18 bowl does not get it. The played-count floor stops a season with
+  // missing week data from handing out +50 on a technicality.
+  tierKeys.forEach((tKey) => {
+    const w = {}, bad = {}, count = {};
+    for (let wk = 1; wk <= X_FINAL_WEEK; wk++) {
+      const r = results[tKey][wk] || {};
+      Object.entries(r).forEach(([rid, res]) => {
+        count[rid] = (count[rid] || 0) + 1;
+        if (res === "W") w[rid] = (w[rid] || 0) + 1;
+        else bad[rid] = true;
+      });
+    }
+    Object.keys(count).forEach((rid) => {
+      if (!bad[rid] && count[rid] >= X_SEASON_WEEKS) {
+        push(tKey, rid, "undefeated", `Undefeated, ${count[rid]}-0`, 0);
+      }
+    });
+  });
+
+  return out;
+}
 
 // Ineligible for a promotion or demotion: the last 5 places in a 16-team
 // league, the last 7 in a 20-team league, the last 11 in the 32-team NFL --
@@ -11857,6 +12179,10 @@ export default function App() {
   const [club4000Historical, setClub4000Historical] = useState([]);
   const [coachTrophiesHistorical, setCoachTrophiesHistorical] = useState({});
   const [streakBonusesLive, setStreakBonusesLive] = useState([]);
+  // The award-based X Points (Troy's 2026-08-28 rule list) — a separate
+  // collection from streakBonusesLive above, summed together with it
+  // everywhere X Points are shown or locked.
+  const [xPointsLive, setXPointsLive] = useState([]);
   const [manualPenalties, setManualPenalties] = useState([]);
   // The permanent, locked Season CP record for completed tier/years — see
   // storage.js's seasonCPFinal comment. Empty until the Admin "Lock Final
@@ -12455,6 +12781,72 @@ export default function App() {
     [getWeeklyResultCached]
   );
 
+  // ── X Points awards: Alliance-wide sweep for one season ──
+  // Structurally different from sweepStreakBonuses above, which works one
+  // tier at a time: the weekly Alliance high/low and the season Alliance
+  // most/least-points awards compare every tier against every other, so a
+  // whole year has to be in hand at once (the same constraint League
+  // Strength has). Gathers weeks 1-18 for all 13 tiers via the same
+  // cache-first getWeeklyResultCached everything else uses, plus one
+  // rosters fetch per tier for division/conference membership, then runs
+  // the pure engine and writes each tier's results with the self-healing
+  // replace (so a re-run after a corrected score reconciles cleanly rather
+  // than leaving an orphaned award on the roster that used to have it).
+  const sweepXPointsAwards = useCallback(
+    async (year, onProgress) => {
+      const tiers = {};
+      const yearMap = LEAGUE_HISTORY[year] || {};
+      for (const [tierKey, leagueId] of Object.entries(yearMap)) {
+        if (onProgress) onProgress(`${tierKey} ${year}`);
+        const weeks = {};
+        for (let week = 1; week <= X_FINAL_WEEK; week++) {
+          const stored = await getWeeklyResultCached(tierKey, leagueId, year, week);
+          if (!stored || !stored.pairs || !stored.pairs.length) continue; // week 18 legitimately doesn't exist for most tiers
+          weeks[week] = stored.pairs;
+        }
+        if (!Object.keys(weeks).length) continue;
+        // Division/conference membership comes from the rosters themselves,
+        // for THAT season's league id — not from the current-season map.
+        const divisionByRoster = {};
+        const nameByRoster = {};
+        try {
+          const [users, rosters] = await Promise.all([
+            j(`${SLEEPER}/league/${leagueId}/users`),
+            j(`${SLEEPER}/league/${leagueId}/rosters`),
+          ]);
+          buildStandings(users, rosters, leagueId, tierKey, year === CURRENT_SEASON).forEach((r) => {
+            if (r.rosterId == null) return;
+            divisionByRoster[r.rosterId] = r.division;
+            nameByRoster[r.rosterId] = { coach: r.coach, team: r.team };
+          });
+        } catch (e) {
+          console.error(`X Points: roster fetch failed for ${tierKey} ${year}`, e);
+        }
+        // Fall back to whatever names the weekly pairs carry for any roster
+        // the standings fetch didn't cover, so an entry is never nameless.
+        Object.values(weeks).forEach((pairs) =>
+          pairs.forEach((pair) => {
+            [pair && pair.a, pair && pair.b].forEach((s) => {
+              if (s && s.rosterId != null && !nameByRoster[s.rosterId]) {
+                nameByRoster[s.rosterId] = { coach: s.coach || "—", team: s.team || "—" };
+              }
+            });
+          })
+        );
+        tiers[tierKey] = { weeks, divisionByRoster, nameByRoster };
+      }
+
+      const computed = computeAllianceXPoints(tiers, year);
+      for (const [tierKey, entries] of Object.entries(computed)) {
+        const fresh = entries.map((e) => [xPointsKey(tierKey, year, e.rosterId, e.kind, e.week), e]);
+        const local = await replaceXPointsForTierYear(tierKey, year, fresh);
+        if (local) setXPointsLive(local);
+      }
+      return computed;
+    },
+    [getWeeklyResultCached]
+  );
+
   // ── Streak Bonuses: live sweep, 2026 going forward ──
   // Fires whenever the live NFL week advances. Sweeps every tier's
   // COMPLETED weeks only (1 through nflState.week - 1) — the current
@@ -12485,6 +12877,30 @@ export default function App() {
     };
   }, [mode, nflState, leagueMap, sweepStreakBonuses]);
 
+  // ── X Points awards: live sweep, current season ──
+  // Recomputes the whole current season's awards whenever the live NFL week
+  // advances. It has to be a full recompute rather than an incremental one:
+  // most of these awards (most/least points, division and conference
+  // winners, undefeated, wins over 10) are season-long and can change hands
+  // as later weeks land, and the self-healing replace is what makes that
+  // safe — last week's leader losing the lead has their doc deleted, not
+  // left behind. Deliberately runs only once per week ROLLOVER, not on
+  // every render, since it's an Alliance-wide pass over 13 leagues.
+  useEffect(() => {
+    if (mode !== "live" || !nflState || nflState.week <= 1) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!cancelled) await sweepXPointsAwards(CURRENT_SEASON);
+      } catch (e) {
+        console.error("X Points award sweep failed for the current season", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, nflState, sweepXPointsAwards]);
+
   // ── Streak Bonuses: one-time 2023/2024/2025 backfill ──
   // Manual trigger only (see the temporary Admin button below) — not
   // wired to run automatically, since it's a one-off. Loops every tier for
@@ -12502,6 +12918,31 @@ export default function App() {
   const [backfillRunning, setBackfillRunning] = useState(false);
   const [cpLockRunning, setCpLockRunning] = useState(false);
   const [strengthBackfillRunning, setStrengthBackfillRunning] = useState(false);
+  // X Points awards sweep (2026-08-28). Covers the three completed seasons
+  // AND the current one — Troy's call that these are retroactive, so past
+  // seasons get the full rule set too. Safe to re-click: every tier/year is
+  // written through replaceXPointsForTierYear, which reconciles rather than
+  // appends. Re-run "Lock Final Season CP" afterwards to fold the new totals
+  // into the locked historical records.
+  const [xPointsSweepRunning, setXPointsSweepRunning] = useState(false);
+  const [xPointsSweepStatus, setXPointsSweepStatus] = useState("");
+  const runXPointsSweep = useCallback(async () => {
+    setXPointsSweepRunning(true);
+    setXPointsSweepStatus("");
+    try {
+      for (const year of [2023, 2024, 2025, CURRENT_SEASON]) {
+        try {
+          await sweepXPointsAwards(year, (label) => setXPointsSweepStatus(label));
+        } catch (e) {
+          console.error(`X Points award sweep failed for ${year}`, e);
+        }
+      }
+      setXPointsSweepStatus("Done.");
+    } finally {
+      setXPointsSweepRunning(false);
+    }
+  }, [sweepXPointsAwards]);
+
   const runStreakBonusBackfill = useCallback(async () => {
     setBackfillRunning(true);
     try {
@@ -12648,7 +13089,11 @@ export default function App() {
               const faabComponent = faabBudget != null ? (faabBudget - (row.faabUsed || 0)) / 50 : 0;
               const placeCP = cpForPlace(tierKey, place);
 
-              const rosterEntries = streakBonusesLive.filter(
+              // Both X Points collections, same as streakTotalsByRosterKey
+              // above — streak bonuses AND the award bonuses. Missing the
+              // second one here would lock a total that disagrees with the
+              // number the Coaches tab shows all season.
+              const rosterEntries = [...streakBonusesLive, ...xPointsLive].filter(
                 (b) => b.conf === tierKey && b.year === year && Number(b.rosterId) === Number(row.rosterId)
               );
               const xPointsTotal = rosterEntries.reduce((sum, b) => sum + (b.bonus || 0), 0);
@@ -12701,7 +13146,7 @@ export default function App() {
     } finally {
       setCpLockRunning(false);
     }
-  }, [streakBonusesLive, manualPenalties, conferenceStrengthHistorical]);
+  }, [streakBonusesLive, xPointsLive, manualPenalties, conferenceStrengthHistorical]);
 
   // ── club4000Historical team-name corrections (2026-08-26) — DONE ──
   // Confirmed by Troy against real Firestore: all 6 entries fixed
@@ -12764,6 +13209,7 @@ export default function App() {
     const unsubClub4000Historical = watchClub4000Historical((entries) => setClub4000Historical(entries));
     const unsubCoachTrophiesHistorical = watchCoachTrophiesHistorical((obj) => setCoachTrophiesHistorical(obj));
     const unsubStreakBonuses = watchStreakBonusesLive((entries) => setStreakBonusesLive(entries));
+    const unsubXPoints = watchXPointsLive((entries) => setXPointsLive(entries));
     const unsubManualPenalties = watchManualPenalties((entries) => setManualPenalties(entries));
     const unsubSeasonCPFinal = watchSeasonCPFinal((entries) => setSeasonCPFinal(entries));
     const unsubConferenceStrengthHistorical = watchConferenceStrengthHistorical((entries) => setConferenceStrengthHistorical(entries));
@@ -12780,6 +13226,7 @@ export default function App() {
       unsubClub4000Historical();
       unsubCoachTrophiesHistorical();
       unsubStreakBonuses();
+      unsubXPoints();
       unsubManualPenalties();
       unsubSeasonCPFinal();
       unsubConferenceStrengthHistorical();
@@ -13827,16 +14274,25 @@ export default function App() {
   // {tierKey_year_rosterId -> total} — summed once here rather than
   // re-scanning streakBonusesLive/manualPenalties inside allCoachesTable's
   // own map over every coach.
+  //
+  // Sums BOTH X Points collections (2026-08-28): the win/loss streak bonuses
+  // that have always been here, plus xPointsLive's award bonuses (weekly
+  // high/low, wins/losses over 10, most/least points, division and
+  // conference winners, playoff wins, undefeated). They're stored
+  // separately — streaks have their own proven sweep, and the awards need an
+  // Alliance-wide pass — but they're one number to a coach, so everything
+  // downstream (the Coaches hover's "X Pts" row, Season CP, the Engine Room
+  // comparison table) picks the new ones up with no further change.
   const streakTotalsByRosterKey = useMemo(() => {
     const map = {};
-    streakBonusesLive.forEach((b) => {
+    [...streakBonusesLive, ...xPointsLive].forEach((b) => {
       const key = `${b.conf}_${b.year}_${b.rosterId}`;
       if (!map[key]) map[key] = { net: 0, entries: [] };
       map[key].net += b.bonus || 0;
       map[key].entries.push(b);
     });
     return map;
-  }, [streakBonusesLive]);
+  }, [streakBonusesLive, xPointsLive]);
 
   // {tierKey_year_rosterId -> {net, entries}} — the Coaches tab hover reads
   // this to show what's behind a coach's modifier total without re-scanning
@@ -16905,6 +17361,45 @@ export default function App() {
                   >
                     {backfillRunning ? "Running…" : "Backfill 2023/2024/2025 Streak Bonuses"}
                   </button>
+                </div>
+                {/* X Points awards (2026-08-28, Troy's rule list) — separate
+                    from the streak backfill above, which stays exactly as it
+                    was. This one is Alliance-wide by necessity: the weekly
+                    Alliance high/low and season most/least-points awards
+                    compare every tier against every other, so it can't be run
+                    a tier at a time. */}
+                <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
+                    Compute the award-based X Points for 2023, 2024, 2025 and {CURRENT_SEASON}, all 13 tiers:
+                    weekly league high/low (±3) and Alliance high/low (±5), every win over 10 (+1) and loss over
+                    10 (−1), most/least points in a league (±5) and in the Alliance (±15), division/district
+                    winners (+5), 8-team conference winners (+7), 16-team conference winners (+10), each
+                    title-run playoff win (+3), and an undefeated season (+50). Winners are decided on
+                    regular-season record only — week 13 for NFL/USFL/XFL, week 14 for the 16-team leagues —
+                    and points totals cover weeks 1–17. Undefeated is the one rule that includes week 18.
+                    Safe to re-click: each tier/year is reconciled, not appended to. Re-run the lock button
+                    below afterwards so completed seasons pick the new totals up.
+                  </div>
+                  <button
+                    onClick={runXPointsSweep}
+                    disabled={xPointsSweepRunning}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 4,
+                      border: `1px solid ${C.gold}`,
+                      background: xPointsSweepRunning ? "transparent" : C.gold,
+                      color: xPointsSweepRunning ? C.slate : C.ink,
+                      fontWeight: 600,
+                      cursor: xPointsSweepRunning ? "default" : "pointer",
+                    }}
+                  >
+                    {xPointsSweepRunning ? "Running…" : "Compute X Points Awards (2023–" + CURRENT_SEASON + ")"}
+                  </button>
+                  {xPointsSweepStatus && (
+                    <span style={{ marginLeft: 10, fontSize: 11, color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>
+                      {xPointsSweepStatus}
+                    </span>
+                  )}
                 </div>
                 <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.line}`, borderRadius: 6 }}>
                   <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>

@@ -588,6 +588,65 @@ export function watchStreakBonusesLive(cb) {
   return () => unsub();
 }
 
+// ── X Points: computed award bonuses (2026-08-28) ──
+// A SECOND X Points collection alongside streakBonusesLive above, not a
+// replacement for it: streaks have their own well-tested sweep and stay
+// exactly as they are. This one holds everything from Troy's award list —
+// weekly high/low, wins/losses over 10, most/least points, division and
+// conference winners, title-run playoff wins, undefeated. Both collections
+// are summed together wherever "X Pts" is shown or locked.
+//
+// Key carries `kind` and `week` because a single roster can legitimately
+// earn several different awards in the same week (league high AND Alliance
+// high), and several of the same kind across a season (a playoff win in
+// weeks 15, 16 and 17). Season-long awards use week 0.
+export function xPointsKey(tierKey, year, rosterId, kind, week) {
+  return `${tierKey}_${year}_${rosterId}_${kind}_${week || 0}`;
+}
+
+// Self-healing bulk replace, scoped to ONE tier/year — built this shape from
+// the first line rather than as a per-entry writer, per the lesson the 300
+// Club migration cost us: an award can legitimately MOVE from one roster to
+// another when the rules or the underlying data change (a corrected score
+// flips who had the week's high), and a naive setDoc-by-key leaves the old
+// roster's doc orphaned, silently double-paying. Deleting anything under
+// this tier/year prefix that isn't in the fresh set makes a re-run always
+// reconcile to exactly what the engine currently computes.
+export async function replaceXPointsForTierYear(tierKey, year, freshEntries) {
+  const prefix = `${tierKey}_${year}_`;
+  if (!firebaseReady) {
+    const all = localGet("pfa-xpoints-live") || {};
+    Object.keys(all).forEach((k) => { if (k.startsWith(prefix)) delete all[k]; });
+    for (const [key, entry] of freshEntries) all[key] = entry;
+    localSet("pfa-xpoints-live", all);
+    return Object.values(all); // local fallback only; Firebase updates via watchXPointsLive's snapshot
+  }
+  await ensureDb();
+  const freshKeys = new Set(freshEntries.map(([key]) => key));
+  const snap = await fs.getDocs(fs.collection(db, "xPointsLive"));
+  const deletions = [];
+  snap.forEach((d) => {
+    if (d.id.startsWith(prefix) && !freshKeys.has(d.id)) deletions.push(fs.deleteDoc(d.ref));
+  });
+  await Promise.all(deletions);
+  for (const [key, entry] of freshEntries) {
+    await fs.setDoc(fs.doc(db, "xPointsLive", key), entry);
+  }
+  return null;
+}
+
+export function watchXPointsLive(cb) {
+  if (!firebaseReady) {
+    cb(Object.values(localGet("pfa-xpoints-live") || {}));
+    return () => {};
+  }
+  let unsub = () => {};
+  ensureDb().then(() => {
+    unsub = fs.onSnapshot(fs.collection(db, "xPointsLive"), (snap) => cb(snap.docs.map((d) => d.data())));
+  });
+  return () => unsub();
+}
+
 // ── Manual Coach Penalties/Bonuses ──
 // Unlike streakBonusesLive above (deterministic key, one doc per paying
 // week), these are entered one at a time by an admin for real-life-conduct
