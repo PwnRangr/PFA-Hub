@@ -40,6 +40,8 @@ import {
   xPointsKey,
   replaceXPointsForTierYear,
   watchXPointsLive,
+  getXPointsProcessedWeek,
+  setXPointsProcessedWeek,
   addManualPenalty,
   removeManualPenalty,
   watchManualPenalties,
@@ -12923,13 +12925,19 @@ export default function App() {
   // replace (so a re-run after a corrected score reconciles cleanly rather
   // than leaving an orphaned award on the roster that used to have it).
   const sweepXPointsAwards = useCallback(
-    async (year, onProgress) => {
+    async (year, throughWeek = X_FINAL_WEEK, onProgress) => {
       const tiers = {};
       const yearMap = LEAGUE_HISTORY[year] || {};
+      // Never read past the last COMPLETED week. An in-progress week's scores
+      // are still moving, so folding them in would hand out a "week high
+      // score" mid-Sunday and then silently take it back on the next sweep.
+      // Same reasoning loadLeague already uses for skipping the permanent
+      // weeklyResults cache on a live week.
+      const lastWeek = Math.min(throughWeek, X_FINAL_WEEK);
       for (const [tierKey, leagueId] of Object.entries(yearMap)) {
         if (onProgress) onProgress(`${tierKey} ${year}`);
         const weeks = {};
-        for (let week = 1; week <= X_FINAL_WEEK; week++) {
+        for (let week = 1; week <= lastWeek; week++) {
           const stored = await getWeeklyResultCached(tierKey, leagueId, year, week);
           if (!stored || !stored.pairs || !stored.pairs.length) continue; // week 18 legitimately doesn't exist for most tiers
           weeks[week] = stored.pairs;
@@ -13018,11 +13026,25 @@ export default function App() {
   // every render, since it's an Alliance-wide pass over 13 leagues.
   useEffect(() => {
     if (mode !== "live" || !nflState || nflState.week <= 1) return;
+    // Only completed weeks count, so the target is the week before the live
+    // one — matching the streak sweep's own rule.
+    const target = Math.min(nflState.week - 1, X_FINAL_WEEK);
+    if (target < 1) return;
     let cancelled = false;
     (async () => {
       try {
-        if (!cancelled) await sweepXPointsAwards(CURRENT_SEASON);
+        // The guard that makes this affordable. Without it this ran a full
+        // 13-tier x 18-week pass on every page load for every signed-in
+        // user; now the first visitor after a week goes final pays for it
+        // once and everyone else reads one marker doc and stops.
+        const done = await getXPointsProcessedWeek(CURRENT_SEASON);
+        if (cancelled || done >= target) return;
+        await sweepXPointsAwards(CURRENT_SEASON, target);
+        if (!cancelled) await setXPointsProcessedWeek(CURRENT_SEASON, target);
       } catch (e) {
+        // Deliberately does NOT advance the marker on failure, so a partial
+        // or failed sweep is retried by the next visitor rather than being
+        // recorded as done.
         console.error("X Points award sweep failed for the current season", e);
       }
     })();
@@ -13062,7 +13084,16 @@ export default function App() {
     try {
       for (const year of [2023, 2024, 2025, CURRENT_SEASON]) {
         try {
-          await sweepXPointsAwards(year, (label) => setXPointsSweepStatus(label));
+          // The button always FORCES a recompute — clicking it means "redo
+          // this now", so it deliberately ignores the processed marker the
+          // automatic sweep respects. Completed seasons sweep all 18 weeks;
+          // the current one stops at the last finished week.
+          const target =
+            year === CURRENT_SEASON && nflState ? Math.min(nflState.week - 1, X_FINAL_WEEK) : X_FINAL_WEEK;
+          if (target >= 1) {
+            await sweepXPointsAwards(year, target, (label) => setXPointsSweepStatus(label));
+            if (year === CURRENT_SEASON) await setXPointsProcessedWeek(year, target);
+          }
         } catch (e) {
           console.error(`X Points award sweep failed for ${year}`, e);
         }
@@ -13071,7 +13102,7 @@ export default function App() {
     } finally {
       setXPointsSweepRunning(false);
     }
-  }, [sweepXPointsAwards]);
+  }, [sweepXPointsAwards, nflState]);
 
   const runStreakBonusBackfill = useCallback(async () => {
     setBackfillRunning(true);

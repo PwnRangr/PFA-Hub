@@ -635,6 +635,39 @@ export async function replaceXPointsForTierYear(tierKey, year, freshEntries) {
   return null;
 }
 
+// How far the award sweep has already been run for a season. Without this,
+// the live effect re-ran a full 13-tier x 18-week pass on EVERY page load for
+// EVERY signed-in user — up to 234 cache lookups a load, most of them hitting
+// Firestore. Same idea as club4000Processed, with one deliberate difference:
+// that one is write-once per season, because a 4000-point season total can
+// only be judged after week 17. These awards accumulate week by week, so this
+// marker has to move forward rather than latch — hence a stored week number
+// instead of a boolean, and an `update` rule rather than `allow update: if
+// false`.
+//
+// Returns 0 rather than null when there's no marker yet, so callers can just
+// compare numbers without a null check.
+export async function getXPointsProcessedWeek(year) {
+  if (!firebaseReady) {
+    const all = localGet("pfa-xpoints-processed") || {};
+    return all[String(year)] || 0;
+  }
+  await ensureDb();
+  const snap = await fs.getDoc(fs.doc(db, "xPointsProcessed", String(year)));
+  return snap.exists() ? snap.data().throughWeek || 0 : 0;
+}
+
+export async function setXPointsProcessedWeek(year, throughWeek) {
+  if (!firebaseReady) {
+    const all = localGet("pfa-xpoints-processed") || {};
+    all[String(year)] = throughWeek;
+    localSet("pfa-xpoints-processed", all);
+    return;
+  }
+  await ensureDb();
+  await fs.setDoc(fs.doc(db, "xPointsProcessed", String(year)), { throughWeek, updatedAt: Date.now() });
+}
+
 export function watchXPointsLive(cb) {
   if (!firebaseReady) {
     cb(Object.values(localGet("pfa-xpoints-live") || {}));
