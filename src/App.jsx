@@ -17611,7 +17611,7 @@ export default function App() {
                   <div style={{ maxHeight: "26rem", overflow: "auto", border: `1px solid ${C.line}`, borderRadius: 4 }}>
                     <table className="text-xs" style={{ borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', monospace", whiteSpace: "nowrap", margin: "0 auto" }}>
                       <thead>
-                        <tr style={{ background: C.panel, position: "sticky", top: 0 }}>
+                        <tr style={{ background: C.panel, position: "sticky", top: 0, zIndex: 2 }}>
                           <SortTH label="Coach" sortKey="name" sort={seasonCPSort} setSort={setSeasonCPSort} defaultDir="asc" />
                           <SortTH label="Tier" sortKey="tier" sort={seasonCPSort} setSort={setSeasonCPSort} defaultDir="asc" title="Sort by ladder order, NFL down to FLHS" />
                           <SortTH label="Place" sortKey="placeComponent" sort={seasonCPSort} setSort={setSeasonCPSort} />
@@ -17628,7 +17628,16 @@ export default function App() {
                           <SortTH label="Δ" sortKey="delta" sort={seasonCPSort} setSort={setSeasonCPSort} />
                         </tr>
                       </thead>
-                      <tbody>
+                      {/* Keyed on the current year + sort so a change REPLACES these
+                          rows rather than mutating the existing DOM nodes in place.
+                          Troy hit a real bug where a new sort or year only appeared
+                          after switching Admin tabs and back — the data was right and
+                          React was re-rendering, but the rows on screen didn't repaint
+                          until the subtree was torn down and rebuilt. A changing key
+                          makes every update do exactly that, which is cheap here (a
+                          few hundred rows) and immune to whichever repaint quirk was
+                          behind it. */}
+                      <tbody key={`${seasonCPComparisonYear}-${seasonCPSort.key}-${seasonCPSort.dir}`}>
                         {seasonCPComparisonDisplayed.length === 0 ? (
                           <tr>
                             <td colSpan={14} className="px-2 py-3 text-center" style={{ color: C.slate }}>
@@ -17742,7 +17751,7 @@ export default function App() {
                     <div style={{ maxHeight: "26rem", overflowY: "auto", border: `1px solid ${C.line}`, borderRadius: 4, marginTop: 10 }}>
                       <table className="w-full text-xs" style={{ borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', monospace", margin: "0 auto" }}>
                         <thead>
-                          <tr style={{ background: C.panel, position: "sticky", top: 0 }}>
+                          <tr style={{ background: C.panel, position: "sticky", top: 0, zIndex: 2 }}>
                             <SortTH label="Tier" sortKey="tier" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} defaultDir="asc" title="Sort by ladder order, NFL down to FLHS" />
                             <SortTH label="Pool" sortKey="pool" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} />
                             <SortTH label="Score" sortKey="score" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} />
@@ -17756,7 +17765,8 @@ export default function App() {
                             <SortTH label="teamMin" sortKey="teamMin" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} />
                           </tr>
                         </thead>
-                        <tbody>
+                        {/* Same keyed-remount fix as the Season CP table above. */}
+                        <tbody key={`${leagueStrengthDebug.year}-${leagueStrengthSort.key}-${leagueStrengthSort.dir}-${leagueStrengthDebugExpanded || ""}`}>
                           {leagueStrengthRows
                             .map((r) => {
                               const tierKey = r.tierKey;
