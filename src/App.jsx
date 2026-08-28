@@ -1066,6 +1066,33 @@ const TIERS = [
   { key: "FLHS", name: "Florida High School", tier: 13, size: 16 },
 ];
 
+// ── House style: the ladder is the default order for anything listing
+// leagues (Troy, 2026-08-28: "In general, lists display the leagues in that
+// hierarchy order. Make that part of the overall style"). TIERS is already
+// declared NFL-down-to-FLHS, so the ladder order IS its index — never
+// re-derive it from tier numbers or sort keys alphabetically. Unknown keys
+// (a folded league like PION showing up in historical data) sort last
+// rather than jumping to the front on an undefined lookup.
+const TIER_ORDER = Object.fromEntries(TIERS.map((t, i) => [t.key, i]));
+const tierRank = (tierKey) => (TIER_ORDER[tierKey] != null ? TIER_ORDER[tierKey] : 999);
+
+// Shared row sorter for the click-to-sort tables. `get(row, key)` returns
+// the value to compare. A null/undefined value always sorts LAST whichever
+// direction is active, so a blank cell never displaces real data at the top
+// of a descending sort. Numbers compare numerically, everything else by
+// locale string — so a mixed column can't silently compare "10" < "9".
+function sortRowsBy(rows, sort, get) {
+  const dir = sort.dir === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const av = get(a, sort.key), bv = get(b, sort.key);
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
+    return String(av).localeCompare(String(bv)) * dir;
+  });
+}
+
 // Some historical records (300 Club, older exports) abbreviate conferences
 // slightly differently than the site's TIERS keys — map the ones that differ.
 // "PAC 12" added 2026-08-21, confirmed by Lainey: the exact same rebrand
@@ -1667,8 +1694,22 @@ function computeAllianceXPoints(tiers, year) {
         const ap = a.points || 0, bp = b.points || 0;
         next.delete(ai);
         next.delete(bi);
-        if (ap === bp) return; // a tie eliminates both rather than inventing a winner
-        const winner = ap > bp ? ai : bi;
+        // Tie-break confirmed by Troy 2026-08-28: a tied playoff game is won
+        // by whoever left MORE points on their bench. Scoped to the playoff
+        // walk only — the ordinary W/L/T used for streaks and season records
+        // still treats a tie as a tie, which is long-established behaviour.
+        // benchPoints already rides on every pair side (buildPairsWithBench
+        // adds it, and the Weekly Awards bench cards read the same field), so
+        // this needs no extra data. If bench points are level too, no winner
+        // is invented: both drop out and neither is paid, since the rule is
+        // "only winners get a bonus."
+        let winner = null;
+        if (ap !== bp) winner = ap > bp ? ai : bi;
+        else {
+          const ab = a.benchPoints || 0, bb = b.benchPoints || 0;
+          if (ab !== bb) winner = ab > bb ? ai : bi;
+        }
+        if (!winner) return;
         next.add(winner);
         push(tKey, winner, "playoffWin", `Playoff win, week ${wk}`, wk);
       });
@@ -4344,6 +4385,39 @@ function TrendLineChart({ title, points, xAxisLabel, yAxisLabel, yFloor, yCeil }
         </svg>
       </div>
     </div>
+  );
+}
+
+// Click-to-sort header cell for the Engine Room tables (Troy, 2026-08-28:
+// "tables that I can sort by any category"). Kept generic and shared rather
+// than written twice, so a third table gets identical behaviour for free —
+// same toggle rule, same active-column highlight, same arrow.
+//
+// Centre-aligned by default, per the same message's standing preference:
+// "In general I like things horizontally center aligned please make that
+// part of the overall style."
+function SortTH({ label, sortKey, sort, setSort, defaultDir = "desc", color, title }) {
+  const active = sort.key === sortKey;
+  return (
+    <th
+      className="px-2 py-1.5 text-center"
+      style={{
+        cursor: "pointer",
+        whiteSpace: "nowrap",
+        userSelect: "none",
+        color: active ? C.chalk : color || C.slate,
+        fontWeight: active ? 700 : 600,
+      }}
+      title={title || `Sort by ${label}`}
+      onClick={() =>
+        setSort((s) =>
+          s.key === sortKey ? { key: sortKey, dir: s.dir === "asc" ? "desc" : "asc" } : { key: sortKey, dir: defaultDir }
+        )
+      }
+    >
+      {label}
+      {active ? (sort.dir === "asc" ? " ▲" : " ▼") : ""}
+    </th>
   );
 }
 
@@ -14826,6 +14900,42 @@ export default function App() {
   const seasonCPComparisonDisplayed =
     seasonCPComparisonYear === CURRENT_SEASON ? seasonCPLeagueStrengthComparison : seasonCPHistoricalComparison;
 
+  // Click-to-sort state for the two Engine Room tables (2026-08-28). Both
+  // default to the ladder — NFL down to FLHS — rather than to the biggest
+  // swing, per Troy's standing "lists display the leagues in hierarchy
+  // order" rule.
+  const [seasonCPSort, setSeasonCPSort] = useState({ key: "tier", dir: "asc" });
+  const [leagueStrengthSort, setLeagueStrengthSort] = useState({ key: "tier", dir: "asc" });
+
+  // Pre-sorted by Season CP descending BEFORE the chosen sort is applied, so
+  // that a ladder sort (the default) reads as tier order with the best coach
+  // first inside each tier. Array.prototype.sort is stable, so that
+  // secondary order survives; any other column simply overrides it.
+  const seasonCPComparisonSorted = useMemo(() => {
+    const base = [...seasonCPComparisonDisplayed].sort((a, b) => b.newCurrentCP - a.newCurrentCP);
+    return sortRowsBy(base, seasonCPSort, (r, k) => {
+      if (k === "tier") return tierRank(r.tierKey);
+      if (k === "name") return r.name;
+      return r[k];
+    });
+  }, [seasonCPComparisonDisplayed, seasonCPSort]);
+
+  // Same treatment for the League Strength breakdown. Its rows ARE tiers, so
+  // the ladder default needs no secondary sort. Flattened out of the result
+  // object here rather than in the JSX so the sort has plain rows to work on.
+  const leagueStrengthRows = useMemo(() => {
+    if (!leagueStrengthDebug) return [];
+    const rows = Object.entries(leagueStrengthDebug.result).map(([tierKey, r]) => ({ tierKey, ...r }));
+    return sortRowsBy(rows, leagueStrengthSort, (r, k) => {
+      if (k === "tier") return tierRank(r.tierKey);
+      if (k === "pool") return r.poolSize;
+      if (k === "score") return r.score;
+      if (k === "medOfMaxPts") return r.raw.medOfMaxPts;
+      if (k === "medOfPtsPerMax") return r.raw.medOfPtsPerMax;
+      return r.terms[k];
+    });
+  }, [leagueStrengthDebug, leagueStrengthSort]);
+
   // The 7 Weekly Awards categories, crowned across ALL 13 tiers combined
   // ("Alliance" High/Low, not per-tier) from weeklyAwardsPairs. Bench Points
   // is the confirmed 2026-08-06 substitute for a true weekly Pts-vs-Max —
@@ -17477,7 +17587,7 @@ export default function App() {
                     games are played; the year toggle pulls historical years' real numbers straight out of
                     the locked seasonCPFinal data instead, no new fetch needed.
                   </div>
-                  <div className="flex gap-1.5 mb-2">
+                  <div className="flex gap-1.5 mb-2 justify-center">
                     {[2023, 2024, 2025, CURRENT_SEASON].map((yr) => (
                       <button
                         key={yr}
@@ -17499,23 +17609,23 @@ export default function App() {
                     ))}
                   </div>
                   <div style={{ maxHeight: "26rem", overflow: "auto", border: `1px solid ${C.line}`, borderRadius: 4 }}>
-                    <table className="text-xs" style={{ borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', monospace", whiteSpace: "nowrap" }}>
+                    <table className="text-xs" style={{ borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', monospace", whiteSpace: "nowrap", margin: "0 auto" }}>
                       <thead>
-                        <tr style={{ background: C.panel, color: C.slate, position: "sticky", top: 0 }}>
-                          <th className="px-2 py-1.5 text-left">Coach</th>
-                          <th className="px-2 py-1.5 text-left">Tier</th>
-                          <th className="px-2 py-1.5 text-right">Place</th>
-                          <th className="px-2 py-1.5 text-right">Wins</th>
-                          <th className="px-2 py-1.5 text-right">Av Pts</th>
-                          <th className="px-2 py-1.5 text-right">FAAB</th>
-                          <th className="px-2 py-1.5 text-right">X Pts</th>
-                          <th className="px-2 py-1.5 text-right">Penalties/Bonuses</th>
-                          <th className="px-2 py-1.5 text-right">Subtotal</th>
-                          <th className="px-2 py-1.5 text-right">Pts/Max</th>
-                          <th className="px-2 py-1.5 text-right">League Strength</th>
-                          <th className="px-2 py-1.5 text-right">Old Season CP</th>
-                          <th className="px-2 py-1.5 text-right">New Season CP</th>
-                          <th className="px-2 py-1.5 text-right">Δ</th>
+                        <tr style={{ background: C.panel, position: "sticky", top: 0 }}>
+                          <SortTH label="Coach" sortKey="name" sort={seasonCPSort} setSort={setSeasonCPSort} defaultDir="asc" />
+                          <SortTH label="Tier" sortKey="tier" sort={seasonCPSort} setSort={setSeasonCPSort} defaultDir="asc" title="Sort by ladder order, NFL down to FLHS" />
+                          <SortTH label="Place" sortKey="placeComponent" sort={seasonCPSort} setSort={setSeasonCPSort} />
+                          <SortTH label="Wins" sortKey="winPoints" sort={seasonCPSort} setSort={setSeasonCPSort} />
+                          <SortTH label="Av Pts" sortKey="pointsComponent" sort={seasonCPSort} setSort={setSeasonCPSort} />
+                          <SortTH label="FAAB" sortKey="faabComponent" sort={seasonCPSort} setSort={setSeasonCPSort} />
+                          <SortTH label="X Pts" sortKey="xPts" sort={seasonCPSort} setSort={setSeasonCPSort} />
+                          <SortTH label="Penalties/Bonuses" sortKey="penalties" sort={seasonCPSort} setSort={setSeasonCPSort} />
+                          <SortTH label="Subtotal" sortKey="subtotal" sort={seasonCPSort} setSort={setSeasonCPSort} />
+                          <SortTH label="Pts/Max" sortKey="ptsMaxRatio" sort={seasonCPSort} setSort={setSeasonCPSort} />
+                          <SortTH label="League Strength" sortKey="leagueStrengthComponent" sort={seasonCPSort} setSort={setSeasonCPSort} />
+                          <SortTH label="Old Season CP" sortKey="oldCurrentCP" sort={seasonCPSort} setSort={setSeasonCPSort} />
+                          <SortTH label="New Season CP" sortKey="newCurrentCP" sort={seasonCPSort} setSort={setSeasonCPSort} />
+                          <SortTH label="Δ" sortKey="delta" sort={seasonCPSort} setSort={setSeasonCPSort} />
                         </tr>
                       </thead>
                       <tbody>
@@ -17528,26 +17638,26 @@ export default function App() {
                             </td>
                           </tr>
                         ) : (
-                          seasonCPComparisonDisplayed.map((r) => (
+                          seasonCPComparisonSorted.map((r) => (
                             <tr key={r.name} style={{ borderTop: `1px solid ${C.line}` }}>
-                              <td className="px-2 py-1" style={{ fontFamily: "'Barlow', sans-serif" }}>{r.name}</td>
-                              <td className="px-2 py-1 uppercase" style={{ color: C.slate }}>{r.tierKey}</td>
-                              <td className="px-2 py-1 text-right" style={{ color: r.placeComponent ? (r.placeComponent >= 0 ? C.turf : C.ember) : C.slate }}>
+                              <td className="px-2 py-1 text-center" style={{ fontFamily: "'Barlow', sans-serif" }}>{r.name}</td>
+                              <td className="px-2 py-1 text-center uppercase" style={{ color: C.slate }}>{r.tierKey}</td>
+                              <td className="px-2 py-1 text-center" style={{ color: r.placeComponent ? (r.placeComponent >= 0 ? C.turf : C.ember) : C.slate }}>
                                 {fmt(r.placeComponent || 0)}
                               </td>
-                              <td className="px-2 py-1 text-right" style={{ color: r.winPoints ? C.turf : C.slate }}>{fmt(r.winPoints || 0)}</td>
-                              <td className="px-2 py-1 text-right" style={{ color: r.pointsComponent ? C.turf : C.slate }}>{fmt(r.pointsComponent || 0)}</td>
-                              <td className="px-2 py-1 text-right" style={{ color: r.faabComponent >= 0 ? C.turf : C.ember }}>{fmt(r.faabComponent || 0)}</td>
-                              <td className="px-2 py-1 text-right" style={{ color: r.xPts ? (r.xPts >= 0 ? C.turf : C.ember) : C.slate }}>{fmt(r.xPts || 0)}</td>
-                              <td className="px-2 py-1 text-right" style={{ color: r.penalties ? (r.penalties >= 0 ? C.turf : C.ember) : C.slate }}>{fmt(r.penalties || 0)}</td>
-                              <td className="px-2 py-1 text-right" style={{ color: C.chalk, fontWeight: 600 }}>{fmt(r.subtotal || 0)}</td>
-                              <td className="px-2 py-1 text-right" style={{ color: C.slate }}>{fmt(r.ptsMaxRatio ?? 1)}</td>
-                              <td className="px-2 py-1 text-right" style={{ color: r.leagueStrengthComponent >= 0 ? C.turf : C.ember }}>
+                              <td className="px-2 py-1 text-center" style={{ color: r.winPoints ? C.turf : C.slate }}>{fmt(r.winPoints || 0)}</td>
+                              <td className="px-2 py-1 text-center" style={{ color: r.pointsComponent ? C.turf : C.slate }}>{fmt(r.pointsComponent || 0)}</td>
+                              <td className="px-2 py-1 text-center" style={{ color: r.faabComponent >= 0 ? C.turf : C.ember }}>{fmt(r.faabComponent || 0)}</td>
+                              <td className="px-2 py-1 text-center" style={{ color: r.xPts ? (r.xPts >= 0 ? C.turf : C.ember) : C.slate }}>{fmt(r.xPts || 0)}</td>
+                              <td className="px-2 py-1 text-center" style={{ color: r.penalties ? (r.penalties >= 0 ? C.turf : C.ember) : C.slate }}>{fmt(r.penalties || 0)}</td>
+                              <td className="px-2 py-1 text-center" style={{ color: C.chalk, fontWeight: 600 }}>{fmt(r.subtotal || 0)}</td>
+                              <td className="px-2 py-1 text-center" style={{ color: C.slate }}>{fmt(r.ptsMaxRatio ?? 1)}</td>
+                              <td className="px-2 py-1 text-center" style={{ color: r.leagueStrengthComponent >= 0 ? C.turf : C.ember }}>
                                 {r.leagueStrengthComponent >= 0 ? "+" : ""}{fmt(r.leagueStrengthComponent)}
                               </td>
-                              <td className="px-2 py-1 text-right" style={{ color: C.slate }}>{fmt(r.oldCurrentCP)}</td>
-                              <td className="px-2 py-1 text-right" style={{ color: C.gold, fontWeight: 600 }}>{fmt(r.newCurrentCP)}</td>
-                              <td className="px-2 py-1 text-right" style={{ color: r.delta >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
+                              <td className="px-2 py-1 text-center" style={{ color: C.slate }}>{fmt(r.oldCurrentCP)}</td>
+                              <td className="px-2 py-1 text-center" style={{ color: C.gold, fontWeight: 600 }}>{fmt(r.newCurrentCP)}</td>
+                              <td className="px-2 py-1 text-center" style={{ color: r.delta >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
                                 {r.delta >= 0 ? "+" : ""}{fmt(r.delta)}
                               </td>
                             </tr>
@@ -17630,26 +17740,27 @@ export default function App() {
                   )}
                   {leagueStrengthDebug && (
                     <div style={{ maxHeight: "26rem", overflowY: "auto", border: `1px solid ${C.line}`, borderRadius: 4, marginTop: 10 }}>
-                      <table className="w-full text-xs" style={{ borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', monospace" }}>
+                      <table className="w-full text-xs" style={{ borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', monospace", margin: "0 auto" }}>
                         <thead>
-                          <tr style={{ background: C.panel, color: C.slate, position: "sticky", top: 0 }}>
-                            <th className="px-2 py-1.5 text-left">Tier</th>
-                            <th className="px-2 py-1.5 text-right">Pool</th>
-                            <th className="px-2 py-1.5 text-right">Score</th>
-                            <th className="px-2 py-1.5 text-right">d</th>
-                            <th className="px-2 py-1.5 text-right">avgMaxPM</th>
-                            <th className="px-2 py-1.5 text-right">medMaxPM</th>
-                            <th className="px-2 py-1.5 text-right" style={{ color: C.gold }}>Med MaxPts</th>
-                            <th className="px-2 py-1.5 text-right" style={{ color: C.gold }}>Med Pts/Max</th>
-                            <th className="px-2 py-1.5 text-right">teamMax</th>
-                            <th className="px-2 py-1.5 text-right">leagueMedian</th>
-                            <th className="px-2 py-1.5 text-right">teamMin</th>
+                          <tr style={{ background: C.panel, position: "sticky", top: 0 }}>
+                            <SortTH label="Tier" sortKey="tier" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} defaultDir="asc" title="Sort by ladder order, NFL down to FLHS" />
+                            <SortTH label="Pool" sortKey="pool" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} />
+                            <SortTH label="Score" sortKey="score" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} />
+                            <SortTH label="d" sortKey="d" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} />
+                            <SortTH label="avgMaxPM" sortKey="avgMaxPM" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} />
+                            <SortTH label="medMaxPM" sortKey="medMaxPM" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} />
+                            <SortTH label="Med MaxPts" sortKey="medOfMaxPts" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} color={C.gold} />
+                            <SortTH label="Med Pts/Max" sortKey="medOfPtsPerMax" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} color={C.gold} />
+                            <SortTH label="teamMax" sortKey="teamMax" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} />
+                            <SortTH label="leagueMedian" sortKey="leagueMedian" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} />
+                            <SortTH label="teamMin" sortKey="teamMin" sort={leagueStrengthSort} setSort={setLeagueStrengthSort} />
                           </tr>
                         </thead>
                         <tbody>
-                          {Object.entries(leagueStrengthDebug.result)
-                            .sort(([, a], [, b]) => a.score - b.score)
-                            .map(([tierKey, r]) => (
+                          {leagueStrengthRows
+                            .map((r) => {
+                              const tierKey = r.tierKey;
+                              return (
                               <Fragment key={tierKey}>
                                 <tr
                                   style={{ borderTop: `1px solid ${C.line}`, cursor: "pointer" }}
@@ -17657,7 +17768,7 @@ export default function App() {
                                   title="Click to see every roster's own pts/maxPts for this tier"
                                 >
                                   <td
-                                    className="px-2 py-1 uppercase"
+                                    className="px-2 py-1 text-center uppercase"
                                     style={{
                                       fontFamily: "'Barlow', sans-serif",
                                       fontWeight: 600,
@@ -17666,19 +17777,19 @@ export default function App() {
                                   >
                                     {tierKey}
                                   </td>
-                                  <td className="px-2 py-1 text-right" style={{ color: C.slate }}>{r.poolSize}</td>
-                                  <td className="px-2 py-1 text-right" style={{ color: r.score >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
+                                  <td className="px-2 py-1 text-center" style={{ color: C.slate }}>{r.poolSize}</td>
+                                  <td className="px-2 py-1 text-center" style={{ color: r.score >= 0 ? C.turf : C.ember, fontWeight: 600 }}>
                                     {r.score >= 0 ? "+" : ""}{fmt(r.score)}
                                   </td>
                                   {["d", "avgMaxPM", "medMaxPM"].map((t) => (
-                                    <td key={t} className="px-2 py-1 text-right" style={{ color: C.slate }}>
+                                    <td key={t} className="px-2 py-1 text-center" style={{ color: C.slate }}>
                                       {r.terms[t] >= 0 ? "+" : ""}{fmt(r.terms[t])}
                                     </td>
                                   ))}
-                                  <td className="px-2 py-1 text-right" style={{ color: C.gold }}>{fmt(r.raw.medOfMaxPts)}</td>
-                                  <td className="px-2 py-1 text-right" style={{ color: C.gold }}>{fmt(r.raw.medOfPtsPerMax, 3)}</td>
+                                  <td className="px-2 py-1 text-center" style={{ color: C.gold }}>{fmt(r.raw.medOfMaxPts)}</td>
+                                  <td className="px-2 py-1 text-center" style={{ color: C.gold }}>{fmt(r.raw.medOfPtsPerMax, 3)}</td>
                                   {["teamMax", "leagueMedian", "teamMin"].map((t) => (
-                                    <td key={t} className="px-2 py-1 text-right" style={{ color: C.slate }}>
+                                    <td key={t} className="px-2 py-1 text-center" style={{ color: C.slate }}>
                                       {r.terms[t] >= 0 ? "+" : ""}{fmt(r.terms[t])}
                                     </td>
                                   ))}
@@ -17694,11 +17805,11 @@ export default function App() {
                                       <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
                                         <thead>
                                           <tr style={{ color: C.slate }}>
-                                            <th className="px-2 py-1 text-left">Coach</th>
-                                            <th className="px-2 py-1 text-left">Team</th>
-                                            <th className="px-2 py-1 text-right">Pts</th>
-                                            <th className="px-2 py-1 text-right">MaxPts</th>
-                                            <th className="px-2 py-1 text-right">Pts/Max</th>
+                                            <th className="px-2 py-1 text-center">Coach</th>
+                                            <th className="px-2 py-1 text-center">Team</th>
+                                            <th className="px-2 py-1 text-center">Pts</th>
+                                            <th className="px-2 py-1 text-center">MaxPts</th>
+                                            <th className="px-2 py-1 text-center">Pts/Max</th>
                                           </tr>
                                         </thead>
                                         <tbody>
@@ -17706,11 +17817,11 @@ export default function App() {
                                             .sort((a, b) => a.maxPts - b.maxPts)
                                             .map((row) => (
                                               <tr key={row.rosterId} style={{ borderTop: `1px solid ${C.line}` }}>
-                                                <td className="px-2 py-1">{row.coach}</td>
-                                                <td className="px-2 py-1">{row.team}</td>
-                                                <td className="px-2 py-1 text-right">{fmt(row.pts)}</td>
-                                                <td className="px-2 py-1 text-right">{fmt(row.maxPts)}</td>
-                                                <td className="px-2 py-1 text-right">{row.maxPts ? fmt(row.pts / row.maxPts, 3) : "—"}</td>
+                                                <td className="px-2 py-1 text-center">{row.coach}</td>
+                                                <td className="px-2 py-1 text-center">{row.team}</td>
+                                                <td className="px-2 py-1 text-center">{fmt(row.pts)}</td>
+                                                <td className="px-2 py-1 text-center">{fmt(row.maxPts)}</td>
+                                                <td className="px-2 py-1 text-center">{row.maxPts ? fmt(row.pts / row.maxPts, 3) : "—"}</td>
                                               </tr>
                                             ))}
                                         </tbody>
@@ -17719,7 +17830,8 @@ export default function App() {
                                   </tr>
                                 )}
                               </Fragment>
-                            ))}
+                              );
+                            })}
                         </tbody>
                       </table>
                     </div>
