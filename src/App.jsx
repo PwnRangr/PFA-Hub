@@ -1682,6 +1682,11 @@ function computeAllianceXPoints(tiers, year) {
       (a, b) => (rw[b] || 0) - (rw[a] || 0) || (rp[b] || 0) - (rp[a] || 0)
     );
     if (!ranked.length) return;
+    // Seed = position in that regular-season ranking, 1 = top seed. Used as
+    // the final playoff tie-break below; it can never itself tie, so the
+    // chain always resolves to a winner.
+    const seedOf = {};
+    ranked.forEach((rid, i) => { seedOf[rid] = i + 1; });
     let alive = new Set(ranked.slice(0, Math.floor(ranked.length / 2)));
     for (let wk = playoffStartWeekFor(tKey); wk <= X_SEASON_WEEKS; wk++) {
       const pairs = (tiers[tKey].weeks || {})[wk] || [];
@@ -1694,20 +1699,31 @@ function computeAllianceXPoints(tiers, year) {
         const ap = a.points || 0, bp = b.points || 0;
         next.delete(ai);
         next.delete(bi);
-        // Tie-break confirmed by Troy 2026-08-28: a tied playoff game is won
-        // by whoever left MORE points on their bench. Scoped to the playoff
-        // walk only — the ordinary W/L/T used for streaks and season records
-        // still treats a tie as a tie, which is long-established behaviour.
-        // benchPoints already rides on every pair side (buildPairsWithBench
-        // adds it, and the Weekly Awards bench cards read the same field), so
-        // this needs no extra data. If bench points are level too, no winner
-        // is invented: both drop out and neither is paid, since the rule is
-        // "only winners get a bonus."
+        // Playoff tie-break chain, confirmed by Troy 2026-08-28 across two
+        // messages: points, then BENCH POINTS, then REGULAR-SEASON RECORD,
+        // then SEED. Scoped to the playoff walk only — the ordinary W/L/T
+        // used for streaks and season records still treats a tie as a tie,
+        // which is long-established behaviour. benchPoints already rides on
+        // every pair side (buildPairsWithBench adds it, and the Weekly Awards
+        // bench cards read the same field), so none of this needs extra data.
+        //
+        // Seed is last and is a unique index, so unlike the earlier
+        // bench-only version this ALWAYS produces a winner — there's no
+        // longer a dead-heat case where neither team advances and the
+        // bracket quietly loses a finalist.
         let winner = null;
         if (ap !== bp) winner = ap > bp ? ai : bi;
-        else {
+        if (!winner) {
           const ab = a.benchPoints || 0, bb = b.benchPoints || 0;
           if (ab !== bb) winner = ab > bb ? ai : bi;
+        }
+        if (!winner) {
+          const aw = rw[ai] || 0, bw = rw[bi] || 0;
+          if (aw !== bw) winner = aw > bw ? ai : bi;
+        }
+        if (!winner) {
+          const as = seedOf[ai], bs = seedOf[bi];
+          if (as != null && bs != null && as !== bs) winner = as < bs ? ai : bi;
         }
         if (!winner) return;
         next.add(winner);
@@ -2585,6 +2601,15 @@ const postDate = (ts) => {
 // already present in standingsCache — nothing new to fetch.
 const ALLIANCE_POOL = ["SEC", "BIG XII", "ACC", "TEN", "SUN", "SOCO", "IVY", "SWAC", "GLIAC", "FLHS"];
 const PRO_POOL = ["USFL", "XFL"];
+
+// NFL sits in NEITHER pool — it has nothing to be compared against, so it
+// genuinely has no League Strength score, by design rather than by omission.
+// That distinction matters: a null score for NFL is the correct, final
+// answer, while a null score for any other tier means "not computed yet."
+// Anything filtering or flagging on a missing score has to tell those two
+// apart, or it silently drops every NFL row (which is exactly what the
+// Engine Room's historical Season CP table did until 2026-08-28).
+const tierHasStrengthPool = (tierKey) => ALLIANCE_POOL.includes(tierKey) || PRO_POOL.includes(tierKey);
 
 const median = (arr) => {
   if (!arr.length) return 0;
@@ -13214,7 +13239,10 @@ export default function App() {
               const leagueStrengthCP = strengthEntry ? strengthEntry.score : null;
 
               const pending = [];
-              if (leagueStrengthCP == null) pending.push("leagueStrength");
+              // Only a tier that HAS a pool can be missing a League Strength
+              // score. NFL is in neither pool by design, so flagging it here
+              // would mark a complete record as incomplete forever.
+              if (leagueStrengthCP == null && tierHasStrengthPool(tierKey)) pending.push("leagueStrength");
               if (faabBudget == null) pending.push("faab");
 
               const total =
@@ -14899,9 +14927,20 @@ export default function App() {
   // that was never computed, not a real zero.
   const seasonCPHistoricalComparison = useMemo(() => {
     return seasonCPFinal
-      .filter((e) => e.year === seasonCPComparisonYear && e.leagueStrengthCP != null)
+      // Keep a row if League Strength was really computed for it, OR if its
+      // tier has no pool at all (NFL) — for those the null IS the answer, so
+      // treating it as 0 below is accurate, not a misleading placeholder.
+      // The original filter dropped both cases alike, which is why 2022-2025
+      // showed USFL as the top tier and NFL not at all (Troy, 2026-08-28).
+      // Rows genuinely still missing a score are skipped as before, rather
+      // than showing a fake zero delta for data nobody has computed yet.
+      .filter(
+        (e) =>
+          e.year === seasonCPComparisonYear &&
+          (e.leagueStrengthCP != null || !tierHasStrengthPool(e.tierKey))
+      )
       .map((e) => {
-        const leagueStrengthComponent = e.leagueStrengthCP;
+        const leagueStrengthComponent = e.leagueStrengthCP ?? 0;
         const oldCurrentCP = e.total - leagueStrengthComponent * e.ptsMaxRatio;
         return {
           name: e.coach,
