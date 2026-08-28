@@ -3752,7 +3752,7 @@ function Club4000Mark({ maxW = 40, maxH = 40 }) {
 // never gates a number. `points` is [{ x: "2023", y: 39 }, …] already in
 // display order; callers fill their own gaps with real zeros rather than
 // dropping a bucket, so the x-axis stays evenly spaced.
-function TrendLineChart({ title, points, xAxisLabel, yAxisLabel }) {
+function TrendLineChart({ title, points, xAxisLabel, yAxisLabel, yFloor, yCeil }) {
   const [activeIdx, setActiveIdx] = useState(null);
   // The chart is drawn in REAL PIXELS at the card's measured width, not in
   // fixed viewBox units scaled to fit. A fixed viewBox scales its text
@@ -3802,24 +3802,41 @@ function TrendLineChart({ title, points, xAxisLabel, yAxisLabel }) {
     );
   }
 
-  // Clean round y-axis ticks (0/5/10/15/20), never the raw data max as the
+  // Clean round y-axis ticks (25/30/35/…), never the raw data max as the
   // top gridline — step snaps to a 1/2/5/10 progression so the axis reads
   // as whole numbers a person can actually count by. Floored at 1 because
   // this only ever plots COUNTS of games: without it a low-count chart
   // (a brand-new season with two entries) draws a "0 / 0.5 / 1 / 1.5 / 2"
   // axis, and half a game doesn't exist.
+  //
+  // yFloor/yCeil let a caller frame the axis explicitly — Troy's call for
+  // the season chart (2026-08-28): 25 at the bottom, 50 at the top, so four
+  // seasons all sitting in the 30s read as a real shape instead of a nearly
+  // flat line squashed against a 0 baseline. They're a FRAMING, not a clamp:
+  // if a season ever lands outside them the axis widens to fit rather than
+  // drawing that point through the axis and quietly misreporting it. Charts
+  // that pass neither (the by-week one) keep the auto 0-based axis.
   const rawMax = Math.max(...points.map((p) => p.y), 0);
-  const rough = Math.max(rawMax, 1) / 4;
+  // No `, 0` seed here, unlike rawMax above — seeding the MIN with zero
+  // would pin it at 0 for every real dataset and silently defeat yFloor.
+  // Safe without a seed: the empty-points case already returned above.
+  const rawMin = Math.min(...points.map((p) => p.y));
+  const framed = yFloor != null && yCeil != null && yCeil > yFloor;
+  const span = framed ? yCeil - yFloor : Math.max(rawMax, 1);
+  const rough = span / 5;
   const mag = Math.pow(10, Math.floor(Math.log10(rough)));
   const norm = rough / mag;
   const step = Math.max(1, (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag);
-  const yMax = Math.max(step * Math.ceil(rawMax / step), step);
+  const yMin = framed ? Math.min(yFloor, Math.floor(rawMin / step) * step) : 0;
+  const yMax = framed
+    ? Math.max(yCeil, Math.ceil(rawMax / step) * step)
+    : Math.max(step * Math.ceil(rawMax / step), step);
   const ticks = [];
-  for (let v = 0; v <= yMax + 1e-9; v += step) ticks.push(v);
+  for (let v = yMin; v <= yMax + 1e-9; v += step) ticks.push(v);
 
   const n = points.length;
   const xAt = (i) => (n === 1 ? padL + plotW / 2 : padL + (i * plotW) / (n - 1));
-  const yAt = (v) => padT + plotH * (1 - v / yMax);
+  const yAt = (v) => padT + plotH * (1 - (v - yMin) / (yMax - yMin));
 
   const linePath = points.map((p, i) => `${i ? "L" : "M"}${xAt(i).toFixed(2)} ${yAt(p.y).toFixed(2)}`).join(" ");
   // Direct-label the peak only. A value beside every point is noise and
@@ -16126,6 +16143,8 @@ export default function App() {
               points={club300BySeason}
               xAxisLabel="Season"
               yAxisLabel="Appearances"
+              yFloor={25}
+              yCeil={50}
             />
             <TrendLineChart
               title="300pt Games by Week · All Seasons"
