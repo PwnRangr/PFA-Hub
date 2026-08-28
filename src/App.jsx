@@ -3729,6 +3729,285 @@ function Club4000Mark({ maxW = 40, maxH = 40 }) {
   );
 }
 
+// ── Trend line chart (built 2026-08-28 for the 300 Club, Troy's request) ──
+// Inline SVG rather than a charting library on purpose: this project has no
+// chart dependency today, and adding one for two small line charts isn't
+// worth the build weight — every new package is a real deploy risk here,
+// since Troy/Lainey push straight to GitHub with no local build to catch a
+// bad resolve (see the otplib deploy-order note in the project docs).
+//
+// Styled to the site rather than to any chart library's defaults, per
+// Troy's ask: the line and markers wear C.gold, so they rotate with the
+// site's accent theme like every other accent on the site (all six
+// THEME_PALETTE colors were contrast-checked against C.panel and clear
+// 3:1, so the line stays readable in every rotation); grid and axes are
+// hairline C.line, one shade off the panel surface; and every piece of
+// text uses the site's own stack — Barlow Condensed for labels, IBM Plex
+// Mono for numbers — in text colors, never the data color.
+//
+// Single series, so there's deliberately no legend (the heading above the
+// card already says what's plotted). Values stay reachable WITHOUT
+// hovering — the y-axis ticks, a direct label on the peak, and a per-point
+// aria-label for screen readers — so the tooltip only ever enhances, it
+// never gates a number. `points` is [{ x: "2023", y: 39 }, …] already in
+// display order; callers fill their own gaps with real zeros rather than
+// dropping a bucket, so the x-axis stays evenly spaced.
+function TrendLineChart({ title, points, xAxisLabel, yAxisLabel }) {
+  const [activeIdx, setActiveIdx] = useState(null);
+  // The chart is drawn in REAL PIXELS at the card's measured width, not in
+  // fixed viewBox units scaled to fit. A fixed viewBox scales its text
+  // along with the geometry, which meant 10px axis labels rendering at
+  // ~7px on a phone and ~14px on a wide desktop — the same chart looking
+  // like two different designs. Measuring instead keeps every label at
+  // exactly the size it's set to at any viewport, and only the plot gets
+  // wider or narrower. Falls back to a sane fixed width where
+  // ResizeObserver isn't available (older browsers, SSR) so it always
+  // renders something reasonable.
+  const wrapRef = useRef(null);
+  const [boxW, setBoxW] = useState(520);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      const cw = entries[0].contentRect.width;
+      if (cw > 0) setBoxW(Math.round(cw));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Bottom padding leaves room for the x tick row AND its axis title — a
+  // container sized to the plot alone would clip the axis band and give
+  // the card its own tiny nested scrollbar.
+  const W = Math.max(boxW, 260), H = 260;
+  const padL = 46, padR = 20, padT = 24, padB = 46;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+
+  const headingEl = (
+    <div className="text-xs uppercase tracking-widest mb-2" style={{ color: C.slate, letterSpacing: "0.2em" }}>
+      {title}
+    </div>
+  );
+
+  if (!points || !points.length) {
+    return (
+      <div className="flex-1 min-w-0">
+        {headingEl}
+        <div className="rounded-sm text-sm px-3 py-6 text-center"
+             style={{ background: C.panel, border: `1px solid ${C.line}`, color: C.slate }}>
+          No games on file yet.
+        </div>
+      </div>
+    );
+  }
+
+  // Clean round y-axis ticks (0/5/10/15/20), never the raw data max as the
+  // top gridline — step snaps to a 1/2/5/10 progression so the axis reads
+  // as whole numbers a person can actually count by. Floored at 1 because
+  // this only ever plots COUNTS of games: without it a low-count chart
+  // (a brand-new season with two entries) draws a "0 / 0.5 / 1 / 1.5 / 2"
+  // axis, and half a game doesn't exist.
+  const rawMax = Math.max(...points.map((p) => p.y), 0);
+  const rough = Math.max(rawMax, 1) / 4;
+  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  const norm = rough / mag;
+  const step = Math.max(1, (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag);
+  const yMax = Math.max(step * Math.ceil(rawMax / step), step);
+  const ticks = [];
+  for (let v = 0; v <= yMax + 1e-9; v += step) ticks.push(v);
+
+  const n = points.length;
+  const xAt = (i) => (n === 1 ? padL + plotW / 2 : padL + (i * plotW) / (n - 1));
+  const yAt = (v) => padT + plotH * (1 - v / yMax);
+
+  const linePath = points.map((p, i) => `${i ? "L" : "M"}${xAt(i).toFixed(2)} ${yAt(p.y).toFixed(2)}`).join(" ");
+  // Direct-label the peak only. A value beside every point is noise and
+  // goes unread; the axis and the tooltip carry the rest.
+  const peakIdx = points.reduce((best, p, i) => (p.y > points[best].y ? i : best), 0);
+  // Dense charts (a full 17-18 week season) get slightly smaller dots and
+  // every-other x label so neither collides with its neighbour.
+  const dotR = n > 14 ? 3.2 : 4;
+  const labelEvery = n > 12 ? 2 : 1;
+
+  const active = activeIdx == null ? null : points[activeIdx];
+  const tipLabel = active ? `${active.x} · ${active.y} ${active.y === 1 ? "game" : "games"}` : "";
+  const tipW = tipLabel.length * 6.3 + 16;
+  const tipH = 21;
+  let tipX = 0, tipY = 0;
+  if (active) {
+    tipX = Math.min(Math.max(xAt(activeIdx) - tipW / 2, 2), W - tipW - 2);
+    tipY = yAt(active.y) - 13 - tipH;
+    if (tipY < 2) tipY = yAt(active.y) + 13; // flip below when the point sits near the top
+  }
+
+  // Hide the peak's direct label only while a tooltip actually covers it.
+  // Found by rendering and looking: hovering the peak itself put the
+  // tooltip box straight through its own "18", since the point sits high
+  // enough that the tooltip doesn't trigger the flip-below above. An
+  // explicit box-intersection test means the label only disappears when
+  // it's genuinely obscured (and the tooltip is showing that same number
+  // anyway) rather than blanking on every unrelated hover.
+  const peakAnchor = peakIdx === 0 ? "start" : peakIdx === n - 1 ? "end" : "middle";
+  const peakLabelW = String(points[peakIdx].y).length * 6.6 + 2;
+  const peakCx = xAt(peakIdx);
+  const peakL = peakAnchor === "start" ? peakCx : peakAnchor === "end" ? peakCx - peakLabelW : peakCx - peakLabelW / 2;
+  const peakBottom = yAt(points[peakIdx].y) - 11;
+  const peakLabelHidden =
+    !!active &&
+    !(tipX > peakL + peakLabelW || tipX + tipW < peakL || tipY > peakBottom || tipY + tipH < peakBottom - 12);
+
+  return (
+    <div className="flex-1 min-w-0">
+      {headingEl}
+      <div ref={wrapRef} className="rounded-sm" style={{ background: C.panel, border: `1px solid ${C.line}`, padding: 10 }}>
+        <svg
+          width={W}
+          height={H}
+          viewBox={`0 0 ${W} ${H}`}
+          role="img"
+          aria-label={`${title}. ${points.map((p) => `${p.x}: ${p.y}`).join(", ")}.`}
+          style={{ display: "block", maxWidth: "100%" }}
+        >
+          {/* Grid + y ticks. Solid hairlines, one shade off the surface —
+              never dashed, which reads as a threshold rather than a grid. */}
+          {ticks.map((v) => (
+            <g key={v}>
+              <line x1={padL} y1={yAt(v)} x2={padL + plotW} y2={yAt(v)} stroke={C.line} strokeWidth={1} />
+              <text
+                x={padL - 8}
+                y={yAt(v) + 3.5}
+                textAnchor="end"
+                style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fill: C.slate }}
+              >
+                {v}
+              </text>
+            </g>
+          ))}
+          {/* Axis rules */}
+          <line x1={padL} y1={padT} x2={padL} y2={padT + plotH} stroke={C.line} strokeWidth={1} />
+          <line x1={padL} y1={padT + plotH} x2={padL + plotW} y2={padT + plotH} stroke={C.line} strokeWidth={1} />
+
+          {/* x tick labels */}
+          {points.map((p, i) =>
+            i % labelEvery === 0 ? (
+              <text
+                key={`xl${p.x}`}
+                x={xAt(i)}
+                y={padT + plotH + 15}
+                textAnchor="middle"
+                style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fill: C.slate }}
+              >
+                {p.x}
+              </text>
+            ) : null
+          )}
+
+          {/* Axis titles */}
+          <text
+            x={padL + plotW / 2}
+            y={H - 8}
+            textAnchor="middle"
+            style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fill: C.slate, letterSpacing: "0.12em", textTransform: "uppercase" }}
+          >
+            {xAxisLabel}
+          </text>
+          <text
+            transform={`rotate(-90 12 ${padT + plotH / 2})`}
+            x={12}
+            y={padT + plotH / 2}
+            textAnchor="middle"
+            style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fill: C.slate, letterSpacing: "0.12em", textTransform: "uppercase" }}
+          >
+            {yAxisLabel}
+          </text>
+
+          {/* Crosshair for the hovered/focused point, under the line */}
+          {active && (
+            <line
+              x1={xAt(activeIdx)}
+              y1={padT}
+              x2={xAt(activeIdx)}
+              y2={padT + plotH}
+              stroke={C.slate}
+              strokeWidth={1}
+              opacity={0.5}
+            />
+          )}
+
+          {/* The series itself */}
+          <path d={linePath} fill="none" stroke={C.gold} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+          {points.map((p, i) => (
+            <circle
+              key={`d${p.x}`}
+              cx={xAt(i)}
+              cy={yAt(p.y)}
+              r={activeIdx === i ? dotR + 1.8 : dotR}
+              fill={C.gold}
+              stroke={C.panel}
+              strokeWidth={2}
+            />
+          ))}
+
+          {/* Peak label — the one direct label on the chart */}
+          {!peakLabelHidden && (
+            <text
+              x={peakCx}
+              y={peakBottom}
+              textAnchor={peakAnchor}
+              style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fill: C.chalk, fontWeight: 600 }}
+            >
+              {points[peakIdx].y}
+            </text>
+          )}
+
+          {/* Hit targets: one full-height column per point, spanning the
+              midpoints either side, so there's no pinpoint dot to land on.
+              tabIndex/onFocus give keyboard users the identical readout. */}
+          {points.map((p, i) => {
+            const left = i === 0 ? padL : (xAt(i - 1) + xAt(i)) / 2;
+            const right = i === n - 1 ? padL + plotW : (xAt(i) + xAt(i + 1)) / 2;
+            return (
+              <rect
+                key={`h${p.x}`}
+                x={left}
+                y={padT}
+                width={Math.max(right - left, 1)}
+                height={plotH}
+                fill="transparent"
+                tabIndex={0}
+                role="img"
+                aria-label={`${p.x}: ${p.y} ${p.y === 1 ? "game" : "games"}`}
+                style={{ outline: "none", cursor: "default" }}
+                onMouseEnter={() => setActiveIdx(i)}
+                onMouseLeave={() => setActiveIdx((cur) => (cur === i ? null : cur))}
+                onFocus={() => setActiveIdx(i)}
+                onBlur={() => setActiveIdx((cur) => (cur === i ? null : cur))}
+              />
+            );
+          })}
+
+          {/* Tooltip, drawn last so nothing overlaps it */}
+          {active && (
+            <g pointerEvents="none">
+              <rect x={tipX} y={tipY} width={tipW} height={tipH} rx={3}
+                    fill={C.panelHi} stroke={C.line} strokeWidth={1} />
+              <text
+                x={tipX + tipW / 2}
+                y={tipY + 14}
+                textAnchor="middle"
+                style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10.5, fill: C.chalk }}
+              >
+                {tipLabel}
+              </text>
+            </g>
+          )}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 // A Directory league band — the same shape as a bracket banner: mark on the
 // left, conference name centred, tier key on the right. Sits above that
 // league's block of coach cards.
@@ -14196,6 +14475,51 @@ export default function App() {
   // via the `|| r.conf` default, which is correct for those.
   const club300ByConf = useMemo(() => tally(club300All, (r) => CONF_TO_TIER_KEY[r.conf] || r.conf), [club300All]);
 
+  // ── 300 Club trend data (2026-08-28, Troy's request) ──
+  // Feeds the two TrendLineChart cards at the bottom of the 300 Club page:
+  // total 300-point games per season, and per week across every season
+  // combined. Both deliberately FILL THEIR GAPS with real zeros instead of
+  // skipping an empty bucket — a week nobody cracked 300 is a genuine zero
+  // and should read as one, and dropping it would also squash the x-axis
+  // into uneven spacing (week 3 sitting right next to week 5 as if they
+  // were adjacent). Not run through tally() like club300ByConf above: that
+  // sorts by count and drops zero-count keys, which is right for a ranked
+  // bar list and exactly wrong for a time axis.
+  const club300BySeason = useMemo(() => {
+    const counts = {};
+    club300All.forEach((r) => {
+      const y = Number(r.year);
+      if (!Number.isFinite(y)) return;
+      counts[y] = (counts[y] || 0) + 1;
+    });
+    const years = Object.keys(counts).map(Number);
+    if (!years.length) return [];
+    const lo = Math.min(...years), hi = Math.max(...years);
+    const out = [];
+    for (let y = lo; y <= hi; y++) out.push({ x: String(y), y: counts[y] || 0 });
+    return out;
+  }, [club300All]);
+
+  // Always starts at week 1 rather than the earliest week that happens to
+  // have a game — week 1 is a real week of the season either way, so a
+  // 300-less week 1 is a zero, not a missing bucket. Runs through the
+  // highest week actually on file (17 in a normal season; 18 only if a
+  // week-18 novelty game ever produced one).
+  const club300ByWeek = useMemo(() => {
+    const counts = {};
+    club300All.forEach((r) => {
+      const w = Number(r.week);
+      if (!Number.isFinite(w)) return;
+      counts[w] = (counts[w] || 0) + 1;
+    });
+    const weeks = Object.keys(counts).map(Number);
+    if (!weeks.length) return [];
+    const hi = Math.max(...weeks);
+    const out = [];
+    for (let w = 1; w <= hi; w++) out.push({ x: String(w), y: counts[w] || 0 });
+    return out;
+  }, [club300All]);
+
   // ── The 4000 Club ──
   // club4000Historical (Firestore — migrated 2026-08-21 off the old
   // static CLUB_4000 array, confirmed 53/53, same permanent-migration
@@ -15671,6 +15995,7 @@ export default function App() {
         )}
 
         {view === "300club" && (
+          <>
           <div className="flex flex-col lg:flex-row gap-6">
             <section className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-1">
@@ -15788,6 +16113,28 @@ export default function App() {
               </div>
             </aside>
           </div>
+
+          {/* 300 Club trend charts (2026-08-28, Troy's request) — full width
+              below both columns rather than squeezed into either one, so the
+              two sit side by side on desktop and stack on mobile. Both read
+              from club300All, the same merged list the roll of honour and
+              every sidebar panel already use, so a chart can never disagree
+              with the list right above it. */}
+          <div className="mt-8 flex flex-col lg:flex-row gap-6">
+            <TrendLineChart
+              title="300pt Games by Season"
+              points={club300BySeason}
+              xAxisLabel="Season"
+              yAxisLabel="Appearances"
+            />
+            <TrendLineChart
+              title="300pt Games by Week · All Seasons"
+              points={club300ByWeek}
+              xAxisLabel="Week"
+              yAxisLabel="300pt Games"
+            />
+          </div>
+          </>
         )}
 
         {view === "4000club" && (
