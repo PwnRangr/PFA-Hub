@@ -2523,12 +2523,41 @@ const fmt = (n, d = 2) =>
 // as a percentage (e.g. 75.0, matching how CAREER_STATS's "Win %" strings
 // already read once the % is stripped). Rounds, doesn't truncate, so it
 // matches what the raw percentage would round to at one decimal.
+// ── House style: ratios read as three digits, baseball-style ──
+// Troy, 2026-08-28: "Always display Pts/Max and Win percentage as a three
+// digit number (.889 or .545 for example)." Two helpers because the two
+// inputs are on different scales, but they print identically:
+//   winPctLabel  takes a PERCENTAGE (55.9)  -> ".559"
+//   ratio3       takes a RATIO      (0.559) -> ".559"
+// Both drop the leading zero, keep a real leading 1 for a perfect 1.000
+// (never ".1000" — rounding 99.95% up is exactly how that malformed before),
+// and pad short values so .045 doesn't render as .45.
 const winPctLabel = (n) => {
+  if (typeof n !== "number" || !Number.isFinite(n)) return "—";
   const frac = n / 100;
   const thousandths = Math.round(frac * 1000);
   if (thousandths >= 1000) return "1.000";
   if (thousandths <= 0) return ".000";
   return `.${thousandths.toString().padStart(3, "0")}`;
+};
+
+const ratio3 = (v) => {
+  if (typeof v !== "number" || !Number.isFinite(v)) return "—";
+  const thousandths = Math.round(v * 1000);
+  // Anything at or past 1.000 (or -1.000) keeps its whole-number part —
+  // Pts/Max sits at a neutral 1.000 all pre-season, so this is the common
+  // case, not an edge case.
+  if (thousandths >= 1000 || thousandths <= -1000) return (thousandths / 1000).toFixed(3);
+  return `${thousandths < 0 ? "-" : ""}.${Math.abs(thousandths).toString().padStart(3, "0")}`;
+};
+
+// CAREER_STATS stores Win % as a display STRING off the sheet ("55.9%"), and
+// a coach with no season logged has a literal "—" there — so parse first and
+// hand back whatever was there if it isn't a number, rather than printing
+// ".NaN".
+const winPctFromSheet = (raw) => {
+  const n = parseFloat(String(raw).replace("%", ""));
+  return Number.isFinite(n) ? winPctLabel(n) : raw;
 };
 
 const ago = (ts) => {
@@ -3068,7 +3097,9 @@ function CoachProfileModal({ coach, onClose, coachTrophies }) {
             {Object.entries(stats).map(([label, value]) => (
               <div key={label} className="px-2.5 py-2 rounded-sm" style={{ background: C.ink, border: `1px solid ${C.line}` }}>
                 <div className="text-xs uppercase tracking-wider" style={{ color: C.slate }}>{label}</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold, fontWeight: 600 }}>{value}</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.gold, fontWeight: 600 }}>
+                  {label === "Win %" ? winPctFromSheet(value) : value}
+                </div>
               </div>
             ))}
           </div>
@@ -16480,7 +16511,7 @@ export default function App() {
                                   style={{ color: C.chalk, borderTop: `1px solid ${C.line}` }}
                                 >
                                   <span>× Pts/Max</span>
-                                  <span style={{ color: C.slate, fontWeight: 600 }}>{fmt(r.ptsMaxRatio)}</span>
+                                  <span style={{ color: C.slate, fontWeight: 600 }}>{ratio3(r.ptsMaxRatio)}</span>
                                 </div>
                               </span>
                             </span>
@@ -17685,7 +17716,7 @@ export default function App() {
                               <td className="px-2 py-1 text-center" style={{ color: r.xPts ? (r.xPts >= 0 ? C.turf : C.ember) : C.slate }}>{fmt(r.xPts || 0)}</td>
                               <td className="px-2 py-1 text-center" style={{ color: r.penalties ? (r.penalties >= 0 ? C.turf : C.ember) : C.slate }}>{fmt(r.penalties || 0)}</td>
                               <td className="px-2 py-1 text-center" style={{ color: C.chalk, fontWeight: 600 }}>{fmt(r.subtotal || 0)}</td>
-                              <td className="px-2 py-1 text-center" style={{ color: C.slate }}>{fmt(r.ptsMaxRatio ?? 1)}</td>
+                              <td className="px-2 py-1 text-center" style={{ color: C.slate }}>{ratio3(r.ptsMaxRatio ?? 1)}</td>
                               <td className="px-2 py-1 text-center" style={{ color: r.leagueStrengthComponent >= 0 ? C.turf : C.ember }}>
                                 {r.leagueStrengthComponent >= 0 ? "+" : ""}{fmt(r.leagueStrengthComponent)}
                               </td>
@@ -17826,7 +17857,7 @@ export default function App() {
                                     </td>
                                   ))}
                                   <td className="px-2 py-1 text-center" style={{ color: C.gold }}>{fmt(r.raw.medOfMaxPts)}</td>
-                                  <td className="px-2 py-1 text-center" style={{ color: C.gold }}>{fmt(r.raw.medOfPtsPerMax, 3)}</td>
+                                  <td className="px-2 py-1 text-center" style={{ color: C.gold }}>{ratio3(r.raw.medOfPtsPerMax)}</td>
                                   {["teamMax", "leagueMedian", "teamMin"].map((t) => (
                                     <td key={t} className="px-2 py-1 text-center" style={{ color: C.slate }}>
                                       {r.terms[t] >= 0 ? "+" : ""}{fmt(r.terms[t])}
@@ -17860,7 +17891,7 @@ export default function App() {
                                                 <td className="px-2 py-1 text-center">{row.team}</td>
                                                 <td className="px-2 py-1 text-center">{fmt(row.pts)}</td>
                                                 <td className="px-2 py-1 text-center">{fmt(row.maxPts)}</td>
-                                                <td className="px-2 py-1 text-center">{row.maxPts ? fmt(row.pts / row.maxPts, 3) : "—"}</td>
+                                                <td className="px-2 py-1 text-center">{row.maxPts ? ratio3(row.pts / row.maxPts) : "—"}</td>
                                               </tr>
                                             ))}
                                         </tbody>
