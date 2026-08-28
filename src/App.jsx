@@ -13955,9 +13955,24 @@ export default function App() {
       .map((r) => {
         const leagueStrengthComponent = conferenceStrength[r.currentTierKey || r.tierKey]?.score ?? 0;
         const newCurrentCP = (r.subtotal + leagueStrengthComponent) * r.ptsMaxRatio;
+        // Full per-component breakdown (2026-08-28), added alongside the
+        // existing League-Strength-only columns at Troy's request — same
+        // rosterKey lookup the Coaches-tab hover already uses for X Pts/
+        // Penalties, so this reads as the same numbers, not a re-derivation.
+        const rosterKey = `${r.currentTierKey || r.tierKey}_${CURRENT_SEASON}_${r.rosterId}`;
+        const xPts = streakTotalsByRosterKey[rosterKey]?.net || 0;
+        const penalties = modifiersByRosterKey[rosterKey]?.net || 0;
         return {
           name: r.name,
           tierKey: r.currentTierKey || r.tierKey,
+          placeComponent: r.placeComponent,
+          winPoints: r.winPoints,
+          pointsComponent: r.pointsComponent,
+          faabComponent: r.faabComponent,
+          xPts,
+          penalties,
+          subtotal: r.subtotal,
+          ptsMaxRatio: r.ptsMaxRatio,
           leagueStrengthComponent,
           oldCurrentCP: r.currentCP,
           newCurrentCP,
@@ -13965,7 +13980,7 @@ export default function App() {
         };
       })
       .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
-  }, [allCoachesTable, conferenceStrength]);
+  }, [allCoachesTable, conferenceStrength, streakTotalsByRosterKey, modifiersByRosterKey]);
 
   // Which year the Engine Room comparison table renders — defaults to 2025
   // (most recent confirmed/locked year) rather than live 2026 on purpose:
@@ -14034,6 +14049,18 @@ export default function App() {
         return {
           name: e.coach,
           tierKey: e.tierKey,
+          // Same full breakdown as the live comparison above, straight off
+          // the locked seasonCPFinal entry's own separately-stored
+          // components — no re-derivation, this IS what runSeasonCPFinalLock
+          // actually wrote.
+          placeComponent: e.placeCP,
+          winPoints: e.winPoints,
+          pointsComponent: e.pointsComponent,
+          faabComponent: e.faabComponent,
+          xPts: e.xPointsTotal,
+          penalties: e.penaltiesBonusesTotal,
+          subtotal: e.winPoints + e.pointsComponent + e.faabComponent + e.placeCP + e.xPointsTotal + e.penaltiesBonusesTotal,
+          ptsMaxRatio: e.ptsMaxRatio,
           leagueStrengthComponent,
           oldCurrentCP,
           newCurrentCP: e.total,
@@ -16566,7 +16593,16 @@ export default function App() {
                     Troy's reviewed the Δ column and it looks right, Stage 3
                     is a one-line change (fold leagueStrengthComponent into
                     allCoachesTable's own subtotal) and this block comes out,
-                    same as every other staging tool in this project. */}
+                    same as every other staging tool in this project.
+                    Extended 2026-08-28 (Troy's request) to break out every
+                    component of the formula, not just League Strength — same
+                    "show your work" treatment the term-breakdown tool below
+                    already gives League Strength on its own. Every column
+                    for 2026 (Live) should read 0 except FAAB (unspent
+                    budget/50) and Pts/Max (a neutral 1.000 pre-season) until
+                    real games are played — whichever column ISN'T 0 for a
+                    given coach is exactly where a preseason discrepancy is
+                    coming from. */}
                 <div style={{ margin: "16px 0", padding: 12, border: `1px dashed ${C.gold}`, borderRadius: 6 }}>
                   <div style={{ fontSize: 12, color: C.slate, marginBottom: 8 }}>
                     Season CP formula expansion, Stage 2 (2026-08-27): League Strength is fully live already
@@ -16574,9 +16610,11 @@ export default function App() {
                     shows what every coach's Season CP would become if it were, sorted by biggest swing, so
                     you can review before it's wired in for real. Place landed the same session but isn't in
                     this table: it's already live-wired and folded in, just 0 for virtually everyone all
-                    season by design (see the Coaches tab hover). 2026 is pre-season (nobody's played a game
-                    yet, so it's all zeros) — the year toggle below pulls real numbers straight out of the
-                    locked seasonCPFinal data instead, no new fetch needed.
+                    season by design (see the Coaches tab hover). Every column below is a real, separately-
+                    computed piece of the formula, not just a total — for 2026 (Live) everything should read
+                    0 except FAAB (unspent budget/50) and Pts/Max (a neutral 1.000 pre-season) until real
+                    games are played; the year toggle pulls historical years' real numbers straight out of
+                    the locked seasonCPFinal data instead, no new fetch needed.
                   </div>
                   <div className="flex gap-1.5 mb-2">
                     {[2023, 2024, 2025, CURRENT_SEASON].map((yr) => (
@@ -16599,12 +16637,20 @@ export default function App() {
                       </button>
                     ))}
                   </div>
-                  <div style={{ maxHeight: "26rem", overflowY: "auto", border: `1px solid ${C.line}`, borderRadius: 4 }}>
-                    <table className="w-full text-xs" style={{ borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', monospace" }}>
+                  <div style={{ maxHeight: "26rem", overflow: "auto", border: `1px solid ${C.line}`, borderRadius: 4 }}>
+                    <table className="text-xs" style={{ borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', monospace", whiteSpace: "nowrap" }}>
                       <thead>
                         <tr style={{ background: C.panel, color: C.slate, position: "sticky", top: 0 }}>
                           <th className="px-2 py-1.5 text-left">Coach</th>
                           <th className="px-2 py-1.5 text-left">Tier</th>
+                          <th className="px-2 py-1.5 text-right">Place</th>
+                          <th className="px-2 py-1.5 text-right">Wins</th>
+                          <th className="px-2 py-1.5 text-right">Av Pts</th>
+                          <th className="px-2 py-1.5 text-right">FAAB</th>
+                          <th className="px-2 py-1.5 text-right">X Pts</th>
+                          <th className="px-2 py-1.5 text-right">Penalties/Bonuses</th>
+                          <th className="px-2 py-1.5 text-right">Subtotal</th>
+                          <th className="px-2 py-1.5 text-right">Pts/Max</th>
                           <th className="px-2 py-1.5 text-right">League Strength</th>
                           <th className="px-2 py-1.5 text-right">Old Season CP</th>
                           <th className="px-2 py-1.5 text-right">New Season CP</th>
@@ -16614,7 +16660,7 @@ export default function App() {
                       <tbody>
                         {seasonCPComparisonDisplayed.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="px-2 py-3 text-center" style={{ color: C.slate }}>
+                            <td colSpan={14} className="px-2 py-3 text-center" style={{ color: C.slate }}>
                               {seasonCPComparisonYear === CURRENT_SEASON
                                 ? "No live coaches yet."
                                 : `No locked seasonCPFinal data for ${seasonCPComparisonYear} yet.`}
@@ -16625,6 +16671,16 @@ export default function App() {
                             <tr key={r.name} style={{ borderTop: `1px solid ${C.line}` }}>
                               <td className="px-2 py-1" style={{ fontFamily: "'Barlow', sans-serif" }}>{r.name}</td>
                               <td className="px-2 py-1 uppercase" style={{ color: C.slate }}>{r.tierKey}</td>
+                              <td className="px-2 py-1 text-right" style={{ color: r.placeComponent ? (r.placeComponent >= 0 ? C.turf : C.ember) : C.slate }}>
+                                {fmt(r.placeComponent || 0)}
+                              </td>
+                              <td className="px-2 py-1 text-right" style={{ color: r.winPoints ? C.turf : C.slate }}>{fmt(r.winPoints || 0)}</td>
+                              <td className="px-2 py-1 text-right" style={{ color: r.pointsComponent ? C.turf : C.slate }}>{fmt(r.pointsComponent || 0)}</td>
+                              <td className="px-2 py-1 text-right" style={{ color: r.faabComponent >= 0 ? C.turf : C.ember }}>{fmt(r.faabComponent || 0)}</td>
+                              <td className="px-2 py-1 text-right" style={{ color: r.xPts ? (r.xPts >= 0 ? C.turf : C.ember) : C.slate }}>{fmt(r.xPts || 0)}</td>
+                              <td className="px-2 py-1 text-right" style={{ color: r.penalties ? (r.penalties >= 0 ? C.turf : C.ember) : C.slate }}>{fmt(r.penalties || 0)}</td>
+                              <td className="px-2 py-1 text-right" style={{ color: C.chalk, fontWeight: 600 }}>{fmt(r.subtotal || 0)}</td>
+                              <td className="px-2 py-1 text-right" style={{ color: C.slate }}>{fmt(r.ptsMaxRatio ?? 1)}</td>
                               <td className="px-2 py-1 text-right" style={{ color: r.leagueStrengthComponent >= 0 ? C.turf : C.ember }}>
                                 {r.leagueStrengthComponent >= 0 ? "+" : ""}{fmt(r.leagueStrengthComponent)}
                               </td>
