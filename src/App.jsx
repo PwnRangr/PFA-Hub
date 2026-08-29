@@ -9644,7 +9644,16 @@ const R3_LIVE = {
 // declaration, so calling it here is safe (no TDZ risk, unlike a `const`
 // arrow function would be) -- same reasoning already used elsewhere in this
 // file for exactly this kind of forward reference.
-const LIVE_BRACKET_SCORED_TIERS = ["SEC", "BIG XII", "ACC", "TEN"];
+// 2026-08-29: extended to the five conference-top4 tiers (SUN/SOCO/IVY/
+// SWAC/GLIAC) -- same r3ChampHalf/r3ConsoHalf visual shape as the four
+// tiers above, just seeded from two 4-team conference groups instead of a
+// merged 1-8 list (see resolveR3LiveBracketConf below). FLHS/NFL/USFL/XFL
+// still return null here -- different bracket shapes, each gets its own
+// resolver in a later pass.
+const LIVE_BRACKET_SCORED_TIERS = [
+  "SEC", "BIG XII", "ACC", "TEN",
+  "SUN", "SOCO", "IVY", "SWAC", "GLIAC",
+];
 
 // One resolved game -> the [name,score,name,score] tuple r3ChampHalf/
 // r3ConsoHalf expect. Shows the team name with a blank score once a game's
@@ -9720,17 +9729,94 @@ function r3LiveScoredHalf(cfg, seeds, scores, half) {
   return r3ConsoHalf(o);
 }
 
+// ── conference-top4 tiers, scored (SUN/SOCO/IVY/SWAC/GLIAC) ───────────────
+// Same idea as resolveR3LiveBracket/r3LiveScoredHalf above, but each wk15
+// game's two seeds come from ONE conference's own 1v4/2v3 pairing (see
+// r3LiveHalfConf's comment for why that's the correct pairing, confirmed
+// structurally against SUN's real 2025 data) instead of a merged 1-8 seed
+// list. `group` = bracket.playoffGroup or .consolationGroup, each
+// `{east, west}` with up to 4 rows (index 0 = that conference's own #1
+// seed) -- same shape r3LiveHalfConf already consumes for the unscored
+// version. wk15 index 0/1 = east's two games (left half of the printed
+// bracket), 2/3 = west's (right half) -- matching R3_SEED_SLOTS' own
+// left/right convention so lqual/rqual below stay correct without change.
+function resolveR3LiveBracketConf(cfg, group, scores) {
+  const east = (group && group.east) || [];
+  const west = (group && group.west) || [];
+  const bySeed = (rows, n) => {
+    const row = rows[n - 1];
+    return row ? { rosterId: row.rosterId, team: r3ShortName(row.team, cfg.colors, cfg.aliases) } : null;
+  };
+  const games = {};
+  games.wk15_0 = tourneyPlay(bySeed(east, 1), bySeed(east, 4), 15, scores, false);
+  games.wk15_1 = tourneyPlay(bySeed(east, 2), bySeed(east, 3), 15, scores, false);
+  games.wk15_2 = tourneyPlay(bySeed(west, 1), bySeed(west, 4), 15, scores, false);
+  games.wk15_3 = tourneyPlay(bySeed(west, 2), bySeed(west, 3), 15, scores, false);
+  const w = (i) => (games[`wk15_${i}`] || {}).winner || null;
+  const l = (i) => (games[`wk15_${i}`] || {}).loser || null;
+  games.semis0 = tourneyPlay(w(0), w(1), 16, scores, false);
+  games.semis1 = tourneyPlay(w(2), w(3), 16, scores, false);
+  games.lqual = tourneyPlay(l(0), l(1), 16, scores, false);
+  games.rqual = tourneyPlay(l(2), l(3), 16, scores, false);
+  const sw = (k) => (games[k] || {}).winner || null;
+  const sl = (k) => (games[k] || {}).loser || null;
+  games.final = tourneyPlay(sw("semis0"), sw("semis1"), 17, scores, false);
+  games.third = tourneyPlay(sl("semis0"), sl("semis1"), 17, scores, false);
+  games.fifth = tourneyPlay(sw("lqual"), sw("rqual"), 17, scores, false);
+  games.seventh = tourneyPlay(sl("lqual"), sl("rqual"), 17, scores, false);
+  return games;
+}
+
+function r3LiveScoredHalfConf(cfg, group, scores, half) {
+  const games = resolveR3LiveBracketConf(cfg, group, scores);
+  const o = {
+    colors: cfg.colors, logoSrc: cfg.logoSrc, logo: cfg.logo,
+    banners: half === "playoffs" ? cfg.banners : cfg.consoBanners,
+    trophy: cfg.trophy,
+    wk15: [0, 1, 2, 3].map((i) => r3LiveTuple(games[`wk15_${i}`])),
+    semis: [r3LiveTuple(games.semis0), r3LiveTuple(games.semis1)],
+    final: r3LiveTuple(games.final),
+    fifth: {
+      leftQual: r3LiveTuple(games.lqual),
+      rightQual: r3LiveTuple(games.rqual),
+      final: r3LiveTuple(games.fifth),
+    },
+  };
+  if (half === "playoffs") {
+    o.third = r3LiveTuple(games.third);
+    o.seventh = r3LiveTuple(games.seventh);
+    return r3ChampHalf(o);
+  }
+  o.eleventh = r3LiveTuple(games.third);
+  o.thirteenth = o.fifth;
+  delete o.fifth;
+  o.fifteenth = r3LiveTuple(games.seventh);
+  o.footer = [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"];
+  return r3ConsoHalf(o);
+}
+
 // scores: {week: {rosterId: points}} for this ONE tier, from the component's
 // liveBracketScores[tierKey] state (see the fetch effect near tierKey).
+// Branches on which shape computeBracket returned, same split buildR3Live
+// (the unscored version) already makes: a flat 1-8 `playoffSeeds` list
+// (top8-cascade) or an `{east, west}` `playoffGroup` (conference-top4).
 function buildR3LiveScored(tierKey, bracket, scores) {
   if (!LIVE_BRACKET_SCORED_TIERS.includes(tierKey)) return null;
   const cfg = R3_LIVE[tierKey];
   if (!cfg || !bracket || !scores) return null;
-  if (!bracket.playoffSeeds || bracket.playoffSeeds.length === 0) return null;
-  return {
-    playoffs: r3LiveScoredHalf(cfg, bracket.playoffSeeds, scores, "playoffs"),
-    consolation: r3LiveScoredHalf(cfg, bracket.consolationSeeds || [], scores, "consolation"),
-  };
+  if (bracket.playoffSeeds && bracket.playoffSeeds.length > 0) {
+    return {
+      playoffs: r3LiveScoredHalf(cfg, bracket.playoffSeeds, scores, "playoffs"),
+      consolation: r3LiveScoredHalf(cfg, bracket.consolationSeeds || [], scores, "consolation"),
+    };
+  }
+  if (bracket.playoffGroup && (bracket.playoffGroup.east?.length || bracket.playoffGroup.west?.length)) {
+    return {
+      playoffs: r3LiveScoredHalfConf(cfg, bracket.playoffGroup, scores, "playoffs"),
+      consolation: r3LiveScoredHalfConf(cfg, bracket.consolationGroup || { east: [], west: [] }, scores, "consolation"),
+    };
+  }
+  return null;
 }
 
 // ===========================================================================
@@ -13518,15 +13604,19 @@ export default function App() {
     return () => { cancelled = true; };
   }, [view, tourneySeeds, nflState, leagueMap, getWeeklyResultCached]);
 
-  // Playoff bracket live scores — pilot on SEC only (LIVE_BRACKET_SCORED_TIERS,
-  // her request 2026-08-20). Same "fetch each playoff week once it's worth
-  // fetching, cache-first via getWeeklyResultCached" pattern as the
-  // Tournament effect just above — no new Sleeper calls, just a new caller.
-  // Fetches weeks 15/16/17 progressively as they pass, PLUS whichever of
-  // those weeks is currently in progress (so live/partial scores show up
-  // mid-week, matching what the old Week Matchups list used to do before
-  // it was removed) — never fetches before week 15 (playoffs haven't
-  // started) or once week 17 is done and cached (nothing left to refresh).
+  // Playoff bracket live scores — piloted on SEC alone 2026-08-20, now
+  // covers every tier in LIVE_BRACKET_SCORED_TIERS (the four top8-cascade
+  // tiers plus the five conference-top4 tiers as of 2026-08-29). Same
+  // "fetch each playoff week once it's worth fetching, cache-first via
+  // getWeeklyResultCached" pattern as the Tournament effect just above —
+  // no new Sleeper calls, just a new caller. Fetches weeks 15/16/17
+  // progressively as they pass, PLUS whichever of those weeks is currently
+  // in progress (so live/partial scores show up mid-week, matching what
+  // the old Week Matchups list used to do before it was removed) — never
+  // fetches before week 15 (playoffs haven't started) or once week 17 is
+  // done and cached (nothing left to refresh). Weeks 15-17 are correct for
+  // every tier in this list — NFL/USFL/XFL start a week earlier (see
+  // PLAYOFF_START_WEEK) but neither is in this list yet.
   useEffect(() => {
     if (view !== "standings" || standingsSeason !== CURRENT_SEASON || !nflState) return;
     if (!LIVE_BRACKET_SCORED_TIERS.includes(tierKey)) return;
