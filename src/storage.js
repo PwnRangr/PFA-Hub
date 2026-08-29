@@ -624,13 +624,31 @@ export async function replaceXPointsForTierYear(tierKey, year, freshEntries) {
   await ensureDb();
   const freshKeys = new Set(freshEntries.map(([key]) => key));
   const snap = await fs.getDocs(fs.collection(db, "xPointsLive"));
-  const deletions = [];
+
+  // BATCHED on purpose, not one write at a time. A full sweep touches
+  // thousands of docs (weekly high/low alone is 17 weeks x 13 tiers x 2),
+  // and every individual setDoc fires watchXPointsLive's onSnapshot, which
+  // calls setXPointsLive, which re-renders the whole app. Writing them
+  // singly turned one sweep into thousands of renders and pinned the main
+  // thread — the app stayed responsive-ish but stopped repainting, which
+  // showed up as sorts and year changes appearing only after switching
+  // tabs. Batching collapses that into a handful of snapshot events.
+  //
+  // 400 ops per batch keeps clear headroom under Firestore's 500-operation
+  // limit, and deletes and writes share the same batches since they're the
+  // same kind of operation to Firestore.
+  const ops = [];
   snap.forEach((d) => {
-    if (d.id.startsWith(prefix) && !freshKeys.has(d.id)) deletions.push(fs.deleteDoc(d.ref));
+    if (d.id.startsWith(prefix) && !freshKeys.has(d.id)) ops.push((b) => b.delete(d.ref));
   });
-  await Promise.all(deletions);
   for (const [key, entry] of freshEntries) {
-    await fs.setDoc(fs.doc(db, "xPointsLive", key), entry);
+    ops.push((b) => b.set(fs.doc(db, "xPointsLive", key), entry));
+  }
+  const CHUNK = 400;
+  for (let i = 0; i < ops.length; i += CHUNK) {
+    const batch = fs.writeBatch(db);
+    ops.slice(i, i + CHUNK).forEach((apply) => apply(batch));
+    await batch.commit();
   }
   return null;
 }

@@ -15028,6 +15028,35 @@ export default function App() {
   const renderProbeRef = useRef(0);
   renderProbeRef.current += 1;
   const renderProbe = renderProbeRef.current;
+
+  // Troy's first probe reading was "render #1823" — the app isn't failing to
+  // repaint, it's re-rendering ~1800 times and starving the browser of paint
+  // time. So the probe now also counts WHICH piece of state changed identity
+  // on each render, and prints the worst four. Whatever is at the top of that
+  // list is what's driving the churn — no more guessing at it.
+  //
+  // Refs only, and comparison by identity, so this costs one reference check
+  // per watched value per render and can't itself cause a render.
+  const probeCountsRef = useRef({});
+  const probePrevRef = useRef({});
+  const probeWatched = {
+    standingsCache, matchupsCache, weeklyResultsCache, xPointsLive, streakBonusesLive,
+    applications, hireTimers, chat, news, seasonCPFinal, club300Live, club300Historical,
+    club4000Live, club4000Historical, coachTrophiesHistorical, manualPenalties,
+    conferenceStrengthHistorical, nflState, leagueMap, pendingApprovalCount,
+    currentUser, view, adminSubTab,
+  };
+  Object.keys(probeWatched).forEach((k) => {
+    if (probePrevRef.current[k] !== probeWatched[k]) {
+      probeCountsRef.current[k] = (probeCountsRef.current[k] || 0) + 1;
+      probePrevRef.current[k] = probeWatched[k];
+    }
+  });
+  const probeTop = Object.entries(probeCountsRef.current)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([k, n]) => `${k} ${n}`)
+    .join(", ");
   const sortLabel = (srt) => `${srt.key} ${srt.dir === "asc" ? "up" : "down"}`;
 
   // Pre-sorted by Season CP descending BEFORE the chosen sort is applied, so
@@ -17733,6 +17762,7 @@ export default function App() {
                   </div>
                   <div style={{ fontSize: 11, color: C.slate, marginBottom: 6, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }}>
                     year {seasonCPComparisonYear} · sorted by {sortLabel(seasonCPSort)} · {seasonCPComparisonSorted.length} rows · render #{renderProbe}
+                    {probeTop && <div style={{ color: C.ember }}>changing most: {probeTop}</div>}
                   </div>
                   <div style={{ maxHeight: "26rem", overflow: "auto", border: `1px solid ${C.line}`, borderRadius: 4 }}>
                     <table className="text-xs" style={{ borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', monospace", whiteSpace: "nowrap", margin: "0 auto" }}>
