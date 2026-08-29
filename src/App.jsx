@@ -15008,55 +15008,6 @@ export default function App() {
   const [seasonCPSort, setSeasonCPSort] = useState({ key: "tier", dir: "asc" });
   const [leagueStrengthSort, setLeagueStrengthSort] = useState({ key: "tier", dir: "asc" });
 
-  // ── Render probe (2026-08-28) ──
-  // Troy reported that a new sort or year only shows up after switching Admin
-  // tabs and back, on Chrome AND Brave. Static analysis ruled out the usual
-  // suspects (nothing memoised, no duplicated block, one component, standard
-  // React root, no CSS containment), and it can't be reproduced from this
-  // sandbox — so rather than guess at a cause a third time, this makes the
-  // answer visible on the page itself, no devtools needed.
-  //
-  // Increments once per App render, printed above each Engine Room table
-  // next to that table's live sort state. Reading it:
-  //   - number climbs on click and the sort text updates, but the ROWS
-  //     don't -> paint layer; React has the right data, the DOM isn't
-  //     showing it.
-  //   - number does NOT climb on click -> React isn't re-rendering at all,
-  //     so the fault is above the table entirely (state/event layer).
-  //   - everything moves together -> fixed.
-  // Delete this once the cause is confirmed. It's a probe, not a feature.
-  const renderProbeRef = useRef(0);
-  renderProbeRef.current += 1;
-  const renderProbe = renderProbeRef.current;
-
-  // Troy's first probe reading was "render #1823" — the app isn't failing to
-  // repaint, it's re-rendering ~1800 times and starving the browser of paint
-  // time. So the probe now also counts WHICH piece of state changed identity
-  // on each render, and prints the worst four. Whatever is at the top of that
-  // list is what's driving the churn — no more guessing at it.
-  //
-  // Refs only, and comparison by identity, so this costs one reference check
-  // per watched value per render and can't itself cause a render.
-  const probeCountsRef = useRef({});
-  const probePrevRef = useRef({});
-  const probeWatched = {
-    standingsCache, matchupsCache, weeklyResultsCache, xPointsLive, streakBonusesLive,
-    applications, hireTimers, chat, news, seasonCPFinal, club300Live, club300Historical,
-    club4000Live, club4000Historical, coachTrophiesHistorical, manualPenalties,
-    conferenceStrengthHistorical, nflState, leagueMap, pendingApprovalCount,
-    currentUser, view, adminSubTab,
-  };
-  Object.keys(probeWatched).forEach((k) => {
-    if (probePrevRef.current[k] !== probeWatched[k]) {
-      probeCountsRef.current[k] = (probeCountsRef.current[k] || 0) + 1;
-      probePrevRef.current[k] = probeWatched[k];
-    }
-  });
-  const probeTop = Object.entries(probeCountsRef.current)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 4)
-    .map(([k, n]) => `${k} ${n}`)
-    .join(", ");
   const sortLabel = (srt) => `${srt.key} ${srt.dir === "asc" ? "up" : "down"}`;
 
   // Pre-sorted by Season CP descending BEFORE the chosen sort is applied, so
@@ -17761,8 +17712,7 @@ export default function App() {
                     ))}
                   </div>
                   <div style={{ fontSize: 11, color: C.slate, marginBottom: 6, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }}>
-                    year {seasonCPComparisonYear} · sorted by {sortLabel(seasonCPSort)} · {seasonCPComparisonSorted.length} rows · render #{renderProbe}
-                    {probeTop && <div style={{ color: C.ember }}>changing most: {probeTop}</div>}
+                    year {seasonCPComparisonYear} · sorted by {sortLabel(seasonCPSort)} · {seasonCPComparisonSorted.length} rows
                   </div>
                   <div style={{ maxHeight: "26rem", overflow: "auto", border: `1px solid ${C.line}`, borderRadius: 4 }}>
                     <table className="text-xs" style={{ borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', monospace", whiteSpace: "nowrap", margin: "0 auto" }}>
@@ -17906,7 +17856,7 @@ export default function App() {
                   {leagueStrengthDebug && (
                     <>
                     <div style={{ fontSize: 11, color: C.slate, marginTop: 10, marginBottom: 6, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }}>
-                      {leagueStrengthDebug.year} · sorted by {sortLabel(leagueStrengthSort)} · {leagueStrengthRows.length} tiers · render #{renderProbe}
+                      {leagueStrengthDebug.year} · sorted by {sortLabel(leagueStrengthSort)} · {leagueStrengthRows.length} tiers
                     </div>
                     <div style={{ maxHeight: "26rem", overflowY: "auto", border: `1px solid ${C.line}`, borderRadius: 4 }}>
                       <table className="w-full text-xs" style={{ borderCollapse: "collapse", fontFamily: "'IBM Plex Mono', monospace", margin: "0 auto" }}>
