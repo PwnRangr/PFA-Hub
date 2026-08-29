@@ -9655,16 +9655,18 @@ const R3_LIVE = {
 // "FLHS is division-only (same flat playoffSeeds shape...)" comment on its
 // R3_LIVE entry above), so it needed no new resolver at all, just this one
 // line -- buildR3LiveScored's existing flat-seed branch (r3LiveScoredHalf)
-// already handles it generically. This list only gates buildR3LiveScored's
-// tiers (the R3_LIVE-shaped ones) -- USFL/XFL get their OWN gate inside
-// buildUSFLXFLLiveScored below (same list, different resolver/cfg lookup,
-// since USFL/XFL live in USFLXFL_LIVE not R3_LIVE), and NFL isn't in this
-// list at all yet -- its bracket shape is next.
+// already handles it generically. This one list gates all four builders
+// below (buildR3LiveScored, buildUSFLXFLLiveScored, buildNFLLiveScored) --
+// each does its own cfg lookup in its own registry (R3_LIVE/USFLXFL_LIVE/
+// BR_LIVE) and returns null for a tier it doesn't own, so one shared gate
+// is safe. As of 2026-08-29, all 13 tiers are in this list -- every
+// playoff bracket on the site now live-scores.
 const LIVE_BRACKET_SCORED_TIERS = [
   "SEC", "BIG XII", "ACC", "TEN",
   "SUN", "SOCO", "IVY", "SWAC", "GLIAC",
   "FLHS",
   "USFL", "XFL",
+  "NFL",
 ];
 
 // One resolved game -> the [name,score,name,score] tuple r3ChampHalf/
@@ -9947,6 +9949,133 @@ function buildBRLive(tierKey, bracket) {
   return {
     playoffs: brLiveHalf(cfg, bracket.playoffGroup, "playoffs"),
     consolation: brLiveHalf(cfg, bracket.consolationGroup || { east: [], west: [] }, "consolation"),
+  };
+}
+
+// ── NFL, scored (2026-08-29) ────────────────────────────────────────────────
+// The 32-team conference-division bracket -- 8 seeds/conference, 4 real
+// rounds to a champion, plus a full mirrored losers' ladder down to 15th/
+// 16th place, exactly the shape brChampHalf's own comment block documents
+// (see its "`conf` shape" note above, which this resolver follows game-by-
+// game: r1 wild card, r2 divisional, r3 conf championship, lr1 losers'
+// wild card, lr2w/lr2l/r2lose feeding the placement games, all mirrored
+// across two conferences and joined by 8 cross-conference games). Every one
+// of the 32 games below was hand-verified against BOTH real NFL_2025_
+// PLAYOFFS and NFL_2025_CONSOLATION's actual scores before shipping this --
+// not inferred from the shape alone, the same bar brChampHalf's own
+// comment says this routing was originally built to.
+//
+// Week mapping (PLAYOFF_START_WEEK.NFL = 14, one week earlier than every
+// R3-shaped tier, same as USFL/XFL): week 14 = r1 (wild card); week 15 =
+// r2 (divisional) + lr1 (losers' wild card, using the free week-14 losers);
+// week 16 = r3 (conf championship) + lr2w/lr2l/r2lose (using the free
+// week-15 losers); week 17 = the 8 cross-conference games (champ through
+// fifteenth), all decided the same week once both conferences' own
+// internal ladders are fully resolved -- exactly the "placement games run
+// the same final week as the championship" pattern every other scored
+// bracket in this file already uses.
+function resolveNFLConfLiveBracket(cfg, seeds, scores) {
+  const bySeed = (n) => {
+    const row = seeds[n - 1];
+    return row ? { rosterId: row.rosterId, team: r3ShortName(row.team, cfg.colors, cfg.aliases) } : null;
+  };
+  const games = {};
+  games.r1_0 = tourneyPlay(bySeed(1), bySeed(8), 14, scores, false);
+  games.r1_1 = tourneyPlay(bySeed(4), bySeed(5), 14, scores, false);
+  games.r1_2 = tourneyPlay(bySeed(3), bySeed(6), 14, scores, false);
+  games.r1_3 = tourneyPlay(bySeed(2), bySeed(7), 14, scores, false);
+  const w = (k) => (games[k] || {}).winner || null;
+  const l = (k) => (games[k] || {}).loser || null;
+  games.r2_0 = tourneyPlay(w("r1_0"), w("r1_1"), 15, scores, false);
+  games.r2_1 = tourneyPlay(w("r1_2"), w("r1_3"), 15, scores, false);
+  games.lr1_0 = tourneyPlay(l("r1_0"), l("r1_1"), 15, scores, false);
+  games.lr1_1 = tourneyPlay(l("r1_2"), l("r1_3"), 15, scores, false);
+  games.r3 = tourneyPlay(w("r2_0"), w("r2_1"), 16, scores, false);
+  games.r2lose = tourneyPlay(l("r2_0"), l("r2_1"), 16, scores, false);
+  games.lr2w = tourneyPlay(w("lr1_0"), w("lr1_1"), 16, scores, false);
+  games.lr2l = tourneyPlay(l("lr1_0"), l("lr1_1"), 16, scores, false);
+  return games;
+}
+
+function resolveNFLLiveBracket(cfg, group, scores) {
+  const east = resolveNFLConfLiveBracket(cfg, (group && group.east) || [], scores);
+  const west = resolveNFLConfLiveBracket(cfg, (group && group.west) || [], scores);
+  const ew = (k) => (east[k] || {}).winner || null;
+  const el = (k) => (east[k] || {}).loser || null;
+  const ww = (k) => (west[k] || {}).winner || null;
+  const wl = (k) => (west[k] || {}).loser || null;
+  const cross = {};
+  cross.champ = tourneyPlay(ew("r3"), ww("r3"), 17, scores, false);
+  cross.third = tourneyPlay(el("r3"), wl("r3"), 17, scores, false);
+  cross.fifth = tourneyPlay(ew("r2lose"), ww("r2lose"), 17, scores, false);
+  cross.seventh = tourneyPlay(el("r2lose"), wl("r2lose"), 17, scores, false);
+  cross.ninth = tourneyPlay(ew("lr2w"), ww("lr2w"), 17, scores, false);
+  cross.eleventh = tourneyPlay(el("lr2w"), wl("lr2w"), 17, scores, false);
+  cross.thirteenth = tourneyPlay(ew("lr2l"), ww("lr2l"), 17, scores, false);
+  cross.fifteenth = tourneyPlay(el("lr2l"), wl("lr2l"), 17, scores, false);
+  return { east, west, cross };
+}
+
+// Converts one conference's resolved games into the `conf` shape brChampHalf
+// (via brMainSide/brLadderSide) expects -- the same [team,score,team,score]
+// tuples r3LiveTuple already produces for every other scored bracket.
+function nflConfTuples(games) {
+  return {
+    r1: [r3LiveTuple(games.r1_0), r3LiveTuple(games.r1_1), r3LiveTuple(games.r1_2), r3LiveTuple(games.r1_3)],
+    r2: [r3LiveTuple(games.r2_0), r3LiveTuple(games.r2_1)],
+    r3: r3LiveTuple(games.r3),
+    lr1: [r3LiveTuple(games.lr1_0), r3LiveTuple(games.lr1_1)],
+    lr2w: r3LiveTuple(games.lr2w),
+    lr2l: r3LiveTuple(games.lr2l),
+    r2lose: r3LiveTuple(games.r2lose),
+  };
+}
+
+// Same shape as brLiveHalf (the unscored version) -- same champSlots/
+// ladderH/places/footer per half, just real resolved tuples in place of
+// brBlank everywhere.
+function nflLiveScoredHalf(cfg, group, scores, half) {
+  const resolved = resolveNFLLiveBracket(cfg, group, scores);
+  const o = {
+    east: nflConfTuples(resolved.east), west: nflConfTuples(resolved.west),
+    champ: r3LiveTuple(resolved.cross.champ),
+    third: r3LiveTuple(resolved.cross.third),
+    fifth: r3LiveTuple(resolved.cross.fifth),
+    seventh: r3LiveTuple(resolved.cross.seventh),
+    ninth: r3LiveTuple(resolved.cross.ninth),
+    eleventh: r3LiveTuple(resolved.cross.eleventh),
+    thirteenth: r3LiveTuple(resolved.cross.thirteenth),
+    fifteenth: r3LiveTuple(resolved.cross.fifteenth),
+    banners: cfg.banners, brMainPaths: BR_MAIN_PATHS, logo: cfg.logo, logoSrc: cfg.logoSrc,
+    ladderPaths: [], // connector lines removed for live/future seasons, same as brLiveHalf and every real 2025+ static season
+  };
+  if (half === "playoffs") {
+    o.championSub = "";
+    o.champSlots = [[448, 16, 100, 150, "Trophy", cfg.trophy], [448, 334, 100, 100, "PFA", PFA_MARK]];
+    o.ladderH = 690;
+    o.places = BR_CHAMP_PLACES;
+  } else {
+    o.topWinnerY = 171; o.topPick = "9th pick"; o.topLabel = "17th place";
+    o.champSlots = [[448, 324, 100, 110, "PFA", PFA_MARK]];
+    o.ladderH = 730;
+    o.places = BR_CONSO_PLACES;
+    o.footer = [336, 680, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"];
+  }
+  return brChampHalf(o);
+}
+
+// scores: {week: {rosterId: points}} for this ONE tier, from
+// liveBracketScores[tierKey] -- same source every other scored bracket in
+// this file reads.
+function buildNFLLiveScored(tierKey, bracket, scores) {
+  if (!LIVE_BRACKET_SCORED_TIERS.includes(tierKey)) return null;
+  const cfg = BR_LIVE[tierKey];
+  if (!cfg || !bracket || !scores || !bracket.playoffGroup) return null;
+  const { east, west } = bracket.playoffGroup;
+  if (!((east && east.length) || (west && west.length))) return null;
+  return {
+    playoffs: nflLiveScoredHalf(cfg, bracket.playoffGroup, scores, "playoffs"),
+    consolation: nflLiveScoredHalf(cfg, bracket.consolationGroup || { east: [], west: [] }, scores, "consolation"),
   };
 }
 
@@ -13804,22 +13933,22 @@ export default function App() {
   }, [view, tourneySeeds, nflState, leagueMap, getWeeklyResultCached]);
 
   // Playoff bracket live scores — piloted on SEC alone 2026-08-20, now
-  // covers every tier in LIVE_BRACKET_SCORED_TIERS (the four top8-cascade
-  // tiers, the five conference-top4 tiers, FLHS, and USFL/XFL as of
-  // 2026-08-29). Same "fetch each playoff week once it's worth fetching,
-  // cache-first via getWeeklyResultCached" pattern as the Tournament effect
-  // just above — no new Sleeper calls, just a new caller.
+  // covers every tier in LIVE_BRACKET_SCORED_TIERS — as of 2026-08-29 that's
+  // all 13: the four top8-cascade tiers, the five conference-top4 tiers,
+  // FLHS, USFL/XFL, and NFL. Same "fetch each playoff week once it's worth
+  // fetching, cache-first via getWeeklyResultCached" pattern as the
+  // Tournament effect just above — no new Sleeper calls, just a new caller.
   //
   // Generalized 2026-08-29 to loop from playoffStartWeekFor(tierKey)
-  // instead of a hardcoded 15 — USFL/XFL start their play-in a week earlier
-  // (week 14, see PLAYOFF_START_WEEK) and everything else in this list
-  // still defaults to 15, so this one loop covers both without a second
-  // effect. Fetches every playoff week that's fully passed, PLUS whichever
-  // one is currently in progress (so live/partial scores show up mid-week,
-  // matching what the old Week Matchups list used to do before it was
-  // removed) — never fetches before the tier's own playoffs start, or past
-  // week 17 (the season's last real week; week 18 is a separate novelty-
-  // bowl week no bracket here uses).
+  // instead of a hardcoded 15 — NFL/USFL/XFL start their first playoff round
+  // a week earlier (week 14, see PLAYOFF_START_WEEK) and everything else in
+  // this list still defaults to 15, so this one loop covers all of them
+  // without a second effect. Fetches every playoff week that's fully
+  // passed, PLUS whichever one is currently in progress (so live/partial
+  // scores show up mid-week, matching what the old Week Matchups list used
+  // to do before it was removed) — never fetches before the tier's own
+  // playoffs start, or past week 17 (the season's last real week; week 18
+  // is a separate novelty-bowl week no bracket here uses).
   useEffect(() => {
     if (view !== "standings" || standingsSeason !== CURRENT_SEASON || !nflState) return;
     if (!LIVE_BRACKET_SCORED_TIERS.includes(tierKey)) return;
@@ -14454,6 +14583,7 @@ export default function App() {
   const liveGrid =
     buildR3LiveScored(tierKey, bracket, liveBracketScores[tierKey]) ||
     buildUSFLXFLLiveScored(tierKey, bracket, liveBracketScores[tierKey]) ||
+    buildNFLLiveScored(tierKey, bracket, liveBracketScores[tierKey]) ||
     buildR3Live(tierKey, bracket) ||
     buildBRLive(tierKey, bracket) ||
     buildUSFLXFLLive(tierKey, bracket);
