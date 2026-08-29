@@ -9647,12 +9647,21 @@ const R3_LIVE = {
 // 2026-08-29: extended to the five conference-top4 tiers (SUN/SOCO/IVY/
 // SWAC/GLIAC) -- same r3ChampHalf/r3ConsoHalf visual shape as the four
 // tiers above, just seeded from two 4-team conference groups instead of a
-// merged 1-8 list (see resolveR3LiveBracketConf below). FLHS/NFL/USFL/XFL
-// still return null here -- different bracket shapes, each gets its own
-// resolver in a later pass.
+// merged 1-8 list (see resolveR3LiveBracketConf below). Same day, added
+// FLHS too -- confirmed its "division-only" format (computeBracket, format
+// === "division-only") returns the exact same flat playoffSeeds/
+// consolationSeeds shape top8-cascade does (4 division winners + 4
+// wildcards, sorted, same as top8-cascade's top-8-by-record — see the
+// "FLHS is division-only (same flat playoffSeeds shape...)" comment on its
+// R3_LIVE entry above), so it needed no new resolver at all, just this one
+// line -- buildR3LiveScored's existing flat-seed branch (r3LiveScoredHalf)
+// already handles it generically. NFL/USFL/XFL still return null here --
+// genuinely different bracket shapes, each gets its own resolver in a
+// later pass.
 const LIVE_BRACKET_SCORED_TIERS = [
   "SEC", "BIG XII", "ACC", "TEN",
   "SUN", "SOCO", "IVY", "SWAC", "GLIAC",
+  "FLHS",
 ];
 
 // One resolved game -> the [name,score,name,score] tuple r3ChampHalf/
