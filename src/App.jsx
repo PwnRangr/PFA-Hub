@@ -9655,13 +9655,16 @@ const R3_LIVE = {
 // "FLHS is division-only (same flat playoffSeeds shape...)" comment on its
 // R3_LIVE entry above), so it needed no new resolver at all, just this one
 // line -- buildR3LiveScored's existing flat-seed branch (r3LiveScoredHalf)
-// already handles it generically. NFL/USFL/XFL still return null here --
-// genuinely different bracket shapes, each gets its own resolver in a
-// later pass.
+// already handles it generically. This list only gates buildR3LiveScored's
+// tiers (the R3_LIVE-shaped ones) -- USFL/XFL get their OWN gate inside
+// buildUSFLXFLLiveScored below (same list, different resolver/cfg lookup,
+// since USFL/XFL live in USFLXFL_LIVE not R3_LIVE), and NFL isn't in this
+// list at all yet -- its bracket shape is next.
 const LIVE_BRACKET_SCORED_TIERS = [
   "SEC", "BIG XII", "ACC", "TEN",
   "SUN", "SOCO", "IVY", "SWAC", "GLIAC",
   "FLHS",
+  "USFL", "XFL",
 ];
 
 // One resolved game -> the [name,score,name,score] tuple r3ChampHalf/
@@ -10019,24 +10022,50 @@ const USFLXFL_PLACE_PATHS_LIVE = [
 // blank until Sleeper results arrive — none of it is knowable at round 1 —
 // but keeps the real 2025 geometry (paths, slot positions) so the empty
 // bracket still shows its true shape rather than a placeholder box.
-function usflXflPlaceSection(half) {
+// `o` (new 2026-08-29, optional) carries real place-game results once
+// they're known: { third, fifth: {leftQual, rightQual, final}, seventh },
+// each a [name,score,name,score] tuple exactly like usflXflMainBoxes' own
+// fields. Every existing caller (usflXflLiveHalf, the unscored seeding-only
+// live version) doesn't pass these, so `o.third` etc. are all `undefined`
+// and every field below falls back to the same hardcoded blank tuples this
+// function always rendered -- zero behavior change for that path. The 9th/
+// 19th three-week series (the `series` field/box below) still isn't wired
+// either way -- a different data shape (cumulative points across 3 weeks),
+// deliberately deferred, tracked as its own open item.
+// `o.ninthBoxes`/`ninthSeries`/`ninthWinner` (new 2026-08-29, all optional)
+// carry the 9th/19th three-week series once it's resolvable -- see
+// usflXflSeriesFields below for how they're built. Every existing caller
+// that doesn't pass them (still true of nothing today, since
+// usflXflLiveScoredHalf now always does) falls back to the exact same
+// hardcoded blanks this section always rendered.
+function usflXflPlaceSection(half, o) {
   const blank = ["", "", "", ""];
+  const third = (o && o.third) || blank;
+  const fifth = (o && o.fifth) || { leftQual: blank, rightQual: blank, final: blank };
+  const seventh = (o && o.seventh) || blank;
+  const ninthBoxes = (o && o.ninthBoxes) || [
+    [112, 360, "", ""], [784, 360, "", ""],
+  ];
+  const ninthSeries = (o && o.ninthSeries) || [
+    [224, 341, "", "", ""], [336, 341, "", "", "", 0, true],
+    [560, 341, "", "", "", 0, true], [672, 341, "", "", ""],
+  ];
+  const ninthWinner = (o && o.ninthWinner) || "";
   const s = {
     h: half === "playoffs" ? 420 : 470,
     paths: USFLXFL_PLACE_PATHS_LIVE,
     boxes: [
-      ...r3Split(336, 33, 560, 33, blank),
-      ...r3Stack(224, 95, blank),
-      ...r3Stack(672, 95, blank),
-      ...r3Split(336, 114, 560, 114, blank),
-      ...r3Split(336, 209, 560, 209, blank),
-      ...r3Split(112, 360, 784, 360, blank),
+      ...r3Split(336, 33, 560, 33, third),
+      ...r3Stack(224, 95, fifth.leftQual),
+      ...r3Stack(672, 95, fifth.rightQual),
+      ...r3Split(336, 114, 560, 114, fifth.final),
+      ...r3Split(336, 209, 560, 209, seventh),
+      ...ninthBoxes,
     ],
-    series: [
-      [224, 341, "", "", ""], [336, 341, "", "", "", 0, true],
-      [560, 341, "", "", "", 0, true], [672, 341, "", "", ""],
+    series: ninthSeries,
+    winners: [
+      [448, 14, r3Winner(third)], [448, 95, r3Winner(fifth.final)], [448, 190, r3Winner(seventh)], [448, 341, ninthWinner],
     ],
-    winners: [[448, 14, ""], [448, 95, ""], [448, 190, ""], [448, 341, ""]],
     places: half === "playoffs" ? USFLXFL_CHAMP_PLACES : USFLXFL_CONSO_PLACES,
   };
   if (half !== "playoffs") s.footer = [112, 420, 772, "Relegation Bowl", "LAST PLACE COACH IS FIRED"];
@@ -10053,7 +10082,7 @@ function usflXflChampHalf(o) {
         champion: { y: 114, label: "Champion", team: r3Winner(o.final), sub: "1st place" },
         boxes: usflXflMainBoxes(o),
       },
-      usflXflPlaceSection("playoffs"),
+      usflXflPlaceSection("playoffs", o),
     ],
   };
 }
@@ -10069,7 +10098,7 @@ function usflXflConsHalf(o) {
         places: [[448, 114, "3rd pick", "11th place"]],
         boxes: usflXflMainBoxes(o),
       },
-      usflXflPlaceSection("consolation"),
+      usflXflPlaceSection("consolation", o),
     ],
   };
 }
@@ -10848,6 +10877,167 @@ function buildUSFLXFLLive(tierKey, bracket) {
   return {
     playoffs: usflXflLiveHalf(cfg, bracket.seeds, "playoffs"),
     consolation: usflXflLiveHalf(cfg, bracket.consolation || [], "consolation"),
+  };
+}
+
+// ── USFL/XFL, scored (2026-08-29) ──────────────────────────────────────────
+// `seeds` = bracket.seeds or .consolation, 10 entries (index 0 = that
+// half's own #1 seed) -- same shape usflXflLiveHalf already consumes for
+// the unscored version. Week-by-week routing confirmed game-by-game
+// against the real USFL_2024_PLAYOFFS/CONSOLATION static data before
+// writing this (every one of the 9 named games below reproduces that
+// season's real advancing/eliminated team from its real scores) -- not
+// guessed at from the geometry alone:
+//   Week 14 (PLAYOFF_START_WEEK for USFL/XFL, one week before every other
+//     scored tier): the two play-ins, seed8 v seed9 (left) and seed7 v
+//     seed10 (right).
+//   Week 15: seed1 meets the LEFT play-in winner (unknown until week 14
+//     resolves -- tourneyPlay's own null-safety leaves this a blank second
+//     slot until then, same "seeded, not yet known" reveal every live
+//     bracket in this file already uses); seed4 v seed5 outright. Mirrored
+//     seed2-v-right-play-in-winner and seed3-v-seed6 on the right.
+//   Week 16: the winners' semifinal on each side (semiLeft/semiRight) AND,
+//     simultaneously, the two week-15 LOSERS per side play each other
+//     (lqual/rqual) -- both rounds use week-15 losers who are free that
+//     week, exactly the same "qualifying round runs the same week as the
+//     semis" shape resolveR3LiveBracket already established.
+//   Week 17: final; 3rd (losers of the two semis); 5th (winners of lqual/
+//     rqual); 7th (losers of lqual/rqual).
+// The two week-14 play-in LOSERS instead enter the 9th/19th three-week
+// points series (usflXflPlaceSection's `series` field) -- a different data
+// shape (GSeries, cumulative totals across 3 weeks), deliberately NOT
+// wired here, same as the unscored live version -- still its own open item.
+function resolveUsflXflLiveBracket(cfg, seeds, scores) {
+  const bySeed = (n) => {
+    const row = seeds[n - 1];
+    return row ? { rosterId: row.rosterId, team: r3ShortName(row.team, cfg.colors, cfg.aliases) } : null;
+  };
+  const games = {};
+  games.playInLeft = tourneyPlay(bySeed(8), bySeed(9), 14, scores, false);
+  games.playInRight = tourneyPlay(bySeed(7), bySeed(10), 14, scores, false);
+  const plw = (g) => (games[g] || {}).winner || null;
+  games.byeTop = tourneyPlay(bySeed(1), plw("playInLeft"), 15, scores, false);
+  games.byeBot = tourneyPlay(bySeed(4), bySeed(5), 15, scores, false);
+  games.byeTopR = tourneyPlay(bySeed(2), plw("playInRight"), 15, scores, false);
+  games.byeBotR = tourneyPlay(bySeed(3), bySeed(6), 15, scores, false);
+  const w = (g) => (games[g] || {}).winner || null;
+  const l = (g) => (games[g] || {}).loser || null;
+  games.semiLeft = tourneyPlay(w("byeTop"), w("byeBot"), 16, scores, false);
+  games.semiRight = tourneyPlay(w("byeTopR"), w("byeBotR"), 16, scores, false);
+  games.lqual = tourneyPlay(l("byeTop"), l("byeBot"), 16, scores, false);
+  games.rqual = tourneyPlay(l("byeTopR"), l("byeBotR"), 16, scores, false);
+  const sw = (g) => (games[g] || {}).winner || null;
+  const sl = (g) => (games[g] || {}).loser || null;
+  games.final = tourneyPlay(sw("semiLeft"), sw("semiRight"), 17, scores, false);
+  games.third = tourneyPlay(sl("semiLeft"), sl("semiRight"), 17, scores, false);
+  games.fifth = tourneyPlay(sw("lqual"), sw("rqual"), 17, scores, false);
+  games.seventh = tourneyPlay(sl("lqual"), sl("rqual"), 17, scores, false);
+  return games;
+}
+
+// The two week-14 play-in LOSERS aren't eliminated -- they instead play a
+// separate 3-week POINTS RACE (not a tourneyPlay head-to-head) across weeks
+// 15-17, the same three weeks the rest of the bracket plays through after
+// the play-in. Confirmed the series starts week 15, not week 14 -- the
+// play-in score and the series' own "week 1" score are two different games
+// for the same roster (a roster can play a real Sleeper matchup in week 14
+// AND a different one in week 15; the play-in result decides bracket
+// placement, the week-15-17 scores decide the series). Whoever's 3-week
+// TOTAL is higher once week 17 is in wins 9th (or 19th, consolation half)
+// place. Field-by-field shape reverse-engineered against the real
+// USFL_2024_PLAYOFFS/_CONSOLATION `series` data already shipped in this
+// file (both fully hand-verified: Washington/Houston and Michigan/
+// Jacksonville's real cumulative totals and week-by-week scores all add up
+// exactly) before writing this -- not guessed at from the geometry alone:
+// week 1 is a plain [name,score] box, no win flag (no opponent to compare
+// against in week 1 alone -- each side plays their own separate real
+// matchup that week); week 2 is [cum,name,score], still no win flag; only
+// week 3 (final) carries [cum,name,score,win,cumBold], cumBold always true
+// that week, win decided by comparing the two sides' week-17 cumulative
+// totals (a tie -- vanishingly unlikely across 3 weeks of real scores, but
+// possible in principle -- is treated as "not yet decided" rather than
+// guessed, same tie-safety every other resolver in this file already uses).
+function resolveUsflXflSeries(left, right, scores) {
+  const weekScore = (team, week) => {
+    if (!team) return null;
+    const wk = scores[week] || {};
+    const v = wk[team.rosterId];
+    return typeof v === "number" ? v : null;
+  };
+  const side = (team) => {
+    const w15 = weekScore(team, 15), w16 = weekScore(team, 16), w17 = weekScore(team, 17);
+    const cum2 = w15 !== null && w16 !== null ? w15 + w16 : null;
+    const cum3 = cum2 !== null && w17 !== null ? cum2 + w17 : null;
+    return { team, w15, w16, w17, cum2, cum3 };
+  };
+  const L = side(left), R = side(right);
+  const decided = L.cum3 !== null && R.cum3 !== null && L.cum3 !== R.cum3;
+  const leftWon = decided && L.cum3 > R.cum3;
+  return { L, R, decided, leftWon };
+}
+
+// Turns resolveUsflXflSeries' output into the exact tuple shapes
+// usflXflPlaceSection expects. Blank inputs (team not yet known -- the
+// play-in hasn't resolved) fall through to the same hardcoded blanks
+// usflXflPlaceSection always defaulted to -- no behavior change when
+// nothing is knowable yet.
+function usflXflSeriesFields(series) {
+  const { L, R, decided, leftWon } = series;
+  const name = (side) => (side.team && side.team.team) || "";
+  const sc = (v) => (v !== null ? fmt(v) : "");
+  return {
+    ninthBoxes: [
+      [112, 360, name(L), sc(L.w15)],
+      [784, 360, name(R), sc(R.w15)],
+    ],
+    ninthSeries: [
+      [224, 341, sc(L.cum2), name(L), sc(L.w16)],
+      [336, 341, sc(L.cum3), name(L), sc(L.w17), decided ? (leftWon ? 1 : 0) : 0, true],
+      [560, 341, sc(R.cum3), name(R), sc(R.w17), decided ? (leftWon ? 0 : 1) : 0, true],
+      [672, 341, sc(R.cum2), name(R), sc(R.w16)],
+    ],
+    ninthWinner: decided ? (leftWon ? name(L) : name(R)) : "",
+  };
+}
+
+function usflXflLiveScoredHalf(cfg, seeds, scores, half) {
+  const games = resolveUsflXflLiveBracket(cfg, seeds, scores);
+  const series = resolveUsflXflSeries(games.playInLeft.loser, games.playInRight.loser, scores);
+  const { ninthBoxes, ninthSeries, ninthWinner } = usflXflSeriesFields(series);
+  const o = {
+    colors: cfg.colors, logoSrc: cfg.logoSrc, logo: cfg.logo, trophy: cfg.trophy,
+    banners: half === "playoffs" ? cfg.banners : cfg.consoBanners,
+    playInLeft: r3LiveTuple(games.playInLeft),
+    byeTop: r3LiveTuple(games.byeTop),
+    byeBot: r3LiveTuple(games.byeBot),
+    semiLeft: r3LiveTuple(games.semiLeft),
+    final: r3LiveTuple(games.final),
+    semiRight: r3LiveTuple(games.semiRight),
+    byeTopR: r3LiveTuple(games.byeTopR),
+    byeBotR: r3LiveTuple(games.byeBotR),
+    playInRight: r3LiveTuple(games.playInRight),
+    third: r3LiveTuple(games.third),
+    fifth: {
+      leftQual: r3LiveTuple(games.lqual),
+      rightQual: r3LiveTuple(games.rqual),
+      final: r3LiveTuple(games.fifth),
+    },
+    seventh: r3LiveTuple(games.seventh),
+    ninthBoxes, ninthSeries, ninthWinner,
+  };
+  return half === "playoffs" ? usflXflChampHalf(o) : usflXflConsHalf(o);
+}
+
+// scores: {week: {rosterId: points}} for this ONE tier, from
+// liveBracketScores[tierKey] -- same source every other scored bracket in
+// this file reads.
+function buildUSFLXFLLiveScored(tierKey, bracket, scores) {
+  if (!LIVE_BRACKET_SCORED_TIERS.includes(tierKey)) return null;
+  const cfg = USFLXFL_LIVE[tierKey];
+  if (!cfg || !bracket || !scores || !bracket.seeds || !bracket.seeds.length) return null;
+  return {
+    playoffs: usflXflLiveScoredHalf(cfg, bracket.seeds, scores, "playoffs"),
+    consolation: usflXflLiveScoredHalf(cfg, bracket.consolation || [], scores, "consolation"),
   };
 }
 
@@ -13615,17 +13805,21 @@ export default function App() {
 
   // Playoff bracket live scores — piloted on SEC alone 2026-08-20, now
   // covers every tier in LIVE_BRACKET_SCORED_TIERS (the four top8-cascade
-  // tiers plus the five conference-top4 tiers as of 2026-08-29). Same
-  // "fetch each playoff week once it's worth fetching, cache-first via
-  // getWeeklyResultCached" pattern as the Tournament effect just above —
-  // no new Sleeper calls, just a new caller. Fetches weeks 15/16/17
-  // progressively as they pass, PLUS whichever of those weeks is currently
-  // in progress (so live/partial scores show up mid-week, matching what
-  // the old Week Matchups list used to do before it was removed) — never
-  // fetches before week 15 (playoffs haven't started) or once week 17 is
-  // done and cached (nothing left to refresh). Weeks 15-17 are correct for
-  // every tier in this list — NFL/USFL/XFL start a week earlier (see
-  // PLAYOFF_START_WEEK) but neither is in this list yet.
+  // tiers, the five conference-top4 tiers, FLHS, and USFL/XFL as of
+  // 2026-08-29). Same "fetch each playoff week once it's worth fetching,
+  // cache-first via getWeeklyResultCached" pattern as the Tournament effect
+  // just above — no new Sleeper calls, just a new caller.
+  //
+  // Generalized 2026-08-29 to loop from playoffStartWeekFor(tierKey)
+  // instead of a hardcoded 15 — USFL/XFL start their play-in a week earlier
+  // (week 14, see PLAYOFF_START_WEEK) and everything else in this list
+  // still defaults to 15, so this one loop covers both without a second
+  // effect. Fetches every playoff week that's fully passed, PLUS whichever
+  // one is currently in progress (so live/partial scores show up mid-week,
+  // matching what the old Week Matchups list used to do before it was
+  // removed) — never fetches before the tier's own playoffs start, or past
+  // week 17 (the season's last real week; week 18 is a separate novelty-
+  // bowl week no bracket here uses).
   useEffect(() => {
     if (view !== "standings" || standingsSeason !== CURRENT_SEASON || !nflState) return;
     if (!LIVE_BRACKET_SCORED_TIERS.includes(tierKey)) return;
@@ -13641,14 +13835,11 @@ export default function App() {
         result.pairs.forEach(({ a, b }) => { m[a.rosterId] = a.points; m[b.rosterId] = b.points; });
         weekMap[week] = m;
       };
-      if (nflState.week > 15) await fetchWeek(15);
-      if (cancelled) return;
-      if (nflState.week > 16) await fetchWeek(16);
-      if (cancelled) return;
-      if (nflState.week > 17) await fetchWeek(17);
-      if (cancelled) return;
-      if (nflState.week >= 15 && nflState.week <= 17 && !weekMap[nflState.week]) {
-        await fetchWeek(nflState.week);
+      const startWeek = playoffStartWeekFor(tierKey);
+      const lastKnowableWeek = Math.min(nflState.week, X_SEASON_WEEKS);
+      for (let wk = startWeek; wk <= lastKnowableWeek; wk++) {
+        await fetchWeek(wk);
+        if (cancelled) return;
       }
       if (!cancelled) setLiveBracketScores((c) => ({ ...c, [tierKey]: weekMap }));
     })();
@@ -14260,7 +14451,12 @@ export default function App() {
   const bracket = mode === "live" ? computeBracket(tierKey) : null;
   // Declared AFTER `bracket` on purpose — it reads it. (See the TDZ note: a
   // const that reads another const must sit below it.)
-  const liveGrid = buildR3LiveScored(tierKey, bracket, liveBracketScores[tierKey]) || buildR3Live(tierKey, bracket) || buildBRLive(tierKey, bracket) || buildUSFLXFLLive(tierKey, bracket);
+  const liveGrid =
+    buildR3LiveScored(tierKey, bracket, liveBracketScores[tierKey]) ||
+    buildUSFLXFLLiveScored(tierKey, bracket, liveBracketScores[tierKey]) ||
+    buildR3Live(tierKey, bracket) ||
+    buildBRLive(tierKey, bracket) ||
+    buildUSFLXFLLive(tierKey, bracket);
 
   // One reference panel for the whole tier, computed here and rendered in the
   // left column under the tier ladder. Only the ten 16-team leagues have a CP
