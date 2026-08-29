@@ -9690,16 +9690,16 @@ function r3LiveTuple(g) {
 // {week: {rosterId: points}}, built only from weeks actually fetched -- a
 // missing week/roster means "not known yet", never a false zero (same
 // r3Played-style safety as every other bracket in this file).
-function resolveR3LiveBracket(cfg, seeds, scores) {
-  if (!seeds || seeds.length < 8) return {};
-  const bySeed = (n) => {
-    const row = seeds[n - 1];
-    return row ? { rosterId: row.rosterId, team: r3ShortName(row.team, cfg.colors, cfg.aliases) } : null;
-  };
-  const games = {};
-  R3_SEED_SLOTS.forEach(([hi, lo], i) => {
-    games[`wk15_${i}`] = tourneyPlay(bySeed(hi), bySeed(lo), 15, scores, false);
-  });
+// Shared tail for both resolvers below: once wk15's four games are known,
+// everything from the semifinals down (semis/lqual/rqual/final/third/fifth/
+// seventh) is IDENTICAL regardless of whether those four games came from a
+// merged 1-8 seed list or two separate conference brackets -- extracted
+// 2026-08-29 after a code-quality pass found resolveR3LiveBracket and
+// resolveR3LiveBracketConf were byte-for-byte identical from this point on.
+// Confirmed behavior-preserving with a standalone equivalence test (old vs.
+// new, 4 score-progression scenarios x both halves x both seed shapes, plus
+// empty/null-group edge cases) before this replaced the duplicated code.
+function resolveR3PostWk15(games, scores) {
   const w = (i) => (games[`wk15_${i}`] || {}).winner || null;
   const l = (i) => (games[`wk15_${i}`] || {}).loser || null;
   games.semis0 = tourneyPlay(w(0), w(1), 16, scores, false);
@@ -9715,13 +9715,31 @@ function resolveR3LiveBracket(cfg, seeds, scores) {
   return games;
 }
 
-function r3LiveScoredHalf(cfg, seeds, scores, half) {
-  const games = resolveR3LiveBracket(cfg, seeds, scores);
+function resolveR3LiveBracket(cfg, seeds, scores) {
+  if (!seeds || seeds.length < 8) return {};
+  const bySeed = (n) => {
+    const row = seeds[n - 1];
+    return row ? { rosterId: row.rosterId, team: r3ShortName(row.team, cfg.colors, cfg.aliases) } : null;
+  };
+  const games = {};
+  R3_SEED_SLOTS.forEach(([hi, lo], i) => {
+    games[`wk15_${i}`] = tourneyPlay(bySeed(hi), bySeed(lo), 15, scores, false);
+  });
+  return resolveR3PostWk15(games, scores);
+}
+
+// Shared: turns a resolved `games` map (from either resolveR3LiveBracket or
+// resolveR3LiveBracketConf below -- same six downstream keys either way,
+// via resolveR3PostWk15 above) into the r3ChampHalf/r3ConsoHalf props
+// object. wk15Tuples is the one piece that still differs between the two
+// callers (a merged 1-8 seed list vs. two conference groups), so it's built
+// by each caller and passed in rather than recomputed here.
+function r3ScoredHalfFromGames(cfg, games, wk15Tuples, half) {
   const o = {
     colors: cfg.colors, logoSrc: cfg.logoSrc, logo: cfg.logo,
     banners: half === "playoffs" ? cfg.banners : cfg.consoBanners,
     trophy: cfg.trophy,
-    wk15: R3_SEED_SLOTS.map((_, i) => r3LiveTuple(games[`wk15_${i}`])),
+    wk15: wk15Tuples,
     semis: [r3LiveTuple(games.semis0), r3LiveTuple(games.semis1)],
     final: r3LiveTuple(games.final),
     fifth: {
@@ -9741,6 +9759,12 @@ function r3LiveScoredHalf(cfg, seeds, scores, half) {
   o.fifteenth = r3LiveTuple(games.seventh);
   o.footer = [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"];
   return r3ConsoHalf(o);
+}
+
+function r3LiveScoredHalf(cfg, seeds, scores, half) {
+  const games = resolveR3LiveBracket(cfg, seeds, scores);
+  const wk15 = R3_SEED_SLOTS.map((_, i) => r3LiveTuple(games[`wk15_${i}`]));
+  return r3ScoredHalfFromGames(cfg, games, wk15, half);
 }
 
 // ── conference-top4 tiers, scored (SUN/SOCO/IVY/SWAC/GLIAC) ───────────────
@@ -9766,47 +9790,13 @@ function resolveR3LiveBracketConf(cfg, group, scores) {
   games.wk15_1 = tourneyPlay(bySeed(east, 2), bySeed(east, 3), 15, scores, false);
   games.wk15_2 = tourneyPlay(bySeed(west, 1), bySeed(west, 4), 15, scores, false);
   games.wk15_3 = tourneyPlay(bySeed(west, 2), bySeed(west, 3), 15, scores, false);
-  const w = (i) => (games[`wk15_${i}`] || {}).winner || null;
-  const l = (i) => (games[`wk15_${i}`] || {}).loser || null;
-  games.semis0 = tourneyPlay(w(0), w(1), 16, scores, false);
-  games.semis1 = tourneyPlay(w(2), w(3), 16, scores, false);
-  games.lqual = tourneyPlay(l(0), l(1), 16, scores, false);
-  games.rqual = tourneyPlay(l(2), l(3), 16, scores, false);
-  const sw = (k) => (games[k] || {}).winner || null;
-  const sl = (k) => (games[k] || {}).loser || null;
-  games.final = tourneyPlay(sw("semis0"), sw("semis1"), 17, scores, false);
-  games.third = tourneyPlay(sl("semis0"), sl("semis1"), 17, scores, false);
-  games.fifth = tourneyPlay(sw("lqual"), sw("rqual"), 17, scores, false);
-  games.seventh = tourneyPlay(sl("lqual"), sl("rqual"), 17, scores, false);
-  return games;
+  return resolveR3PostWk15(games, scores);
 }
 
 function r3LiveScoredHalfConf(cfg, group, scores, half) {
   const games = resolveR3LiveBracketConf(cfg, group, scores);
-  const o = {
-    colors: cfg.colors, logoSrc: cfg.logoSrc, logo: cfg.logo,
-    banners: half === "playoffs" ? cfg.banners : cfg.consoBanners,
-    trophy: cfg.trophy,
-    wk15: [0, 1, 2, 3].map((i) => r3LiveTuple(games[`wk15_${i}`])),
-    semis: [r3LiveTuple(games.semis0), r3LiveTuple(games.semis1)],
-    final: r3LiveTuple(games.final),
-    fifth: {
-      leftQual: r3LiveTuple(games.lqual),
-      rightQual: r3LiveTuple(games.rqual),
-      final: r3LiveTuple(games.fifth),
-    },
-  };
-  if (half === "playoffs") {
-    o.third = r3LiveTuple(games.third);
-    o.seventh = r3LiveTuple(games.seventh);
-    return r3ChampHalf(o);
-  }
-  o.eleventh = r3LiveTuple(games.third);
-  o.thirteenth = o.fifth;
-  delete o.fifth;
-  o.fifteenth = r3LiveTuple(games.seventh);
-  o.footer = [336, 258, 324, "Relegation Bowl", "LAST PLACE COACH IS FIRED"];
-  return r3ConsoHalf(o);
+  const wk15 = [0, 1, 2, 3].map((i) => r3LiveTuple(games[`wk15_${i}`]));
+  return r3ScoredHalfFromGames(cfg, games, wk15, half);
 }
 
 // scores: {week: {rosterId: points}} for this ONE tier, from the component's
@@ -14577,16 +14567,33 @@ export default function App() {
   const liveRows = leagueId ? standingsCache[leagueId] : null;
   const demoRows = tierKey === "NFL" ? DEMO_NFL.map((r) => ({ ...r, maxPts: null })) : null;
   const rows = mode === "live" ? liveRows : demoRows;
-  const bracket = mode === "live" ? computeBracket(tierKey) : null;
+  // Memoized 2026-08-29: bracket/liveGrid used to be plain consts, recomputed
+  // on every render of App -- including renders triggered by any of the
+  // ~15 unrelated Firestore onSnapshot listeners this component holds (chat,
+  // news, applications, X Points, etc.), not just Standings activity. liveGrid
+  // in particular now tries up to six resolver functions (added the NFL and
+  // USFL/XFL live scorers this session), so that was real, avoidable work on
+  // every one of those renders. Same class of issue as the 2026-08-28 render-
+  // loop bug (mistakes20260828.md, entries A/B), smaller scale -- fixed the
+  // same way: skip recomputation when nothing these actually read has changed.
+  // Pure code motion, no logic touched -- computeBracket/buildR3LiveScored/etc.
+  // are unchanged, just no longer called on every render.
+  const bracket = useMemo(
+    () => (mode === "live" ? computeBracket(tierKey) : null),
+    [mode, tierKey, standingsSeason, leagueMap, standingsCache]
+  );
   // Declared AFTER `bracket` on purpose — it reads it. (See the TDZ note: a
   // const that reads another const must sit below it.)
-  const liveGrid =
-    buildR3LiveScored(tierKey, bracket, liveBracketScores[tierKey]) ||
-    buildUSFLXFLLiveScored(tierKey, bracket, liveBracketScores[tierKey]) ||
-    buildNFLLiveScored(tierKey, bracket, liveBracketScores[tierKey]) ||
-    buildR3Live(tierKey, bracket) ||
-    buildBRLive(tierKey, bracket) ||
-    buildUSFLXFLLive(tierKey, bracket);
+  const liveGrid = useMemo(
+    () =>
+      buildR3LiveScored(tierKey, bracket, liveBracketScores[tierKey]) ||
+      buildUSFLXFLLiveScored(tierKey, bracket, liveBracketScores[tierKey]) ||
+      buildNFLLiveScored(tierKey, bracket, liveBracketScores[tierKey]) ||
+      buildR3Live(tierKey, bracket) ||
+      buildBRLive(tierKey, bracket) ||
+      buildUSFLXFLLive(tierKey, bracket),
+    [tierKey, bracket, liveBracketScores[tierKey]]
+  );
 
   // One reference panel for the whole tier, computed here and rendered in the
   // left column under the tier ladder. Only the ten 16-team leagues have a CP
