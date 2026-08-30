@@ -2027,7 +2027,7 @@ const RULES_SECTIONS = [
     id: "team-management",
     title: "Team Management",
     items: [
-      "FAAB is based on the actual NFL salary cap and matches that number each season. It resets at the start of the Sleeper/league season in March, and unused FAAB does not carry over.",
+      "FAAB is based on the actual NFL salary cap and matches that number each season. It resets at the start of the Sleeper/league season in January, and unused FAAB does not carry over.",
       "Waivers are active for the entire offseason except during the fantasy draft, and begin again the first available Wednesday after the draft ends.",
       "Only rookies may be placed on the Taxi squad, and players can't return to Taxi once activated to the roster or IR. The Taxi squad locks at the start of the NFL season's first game.",
       "Roster management is your responsibility — mismanaging a transaction (drafting, dropping, or trading the wrong player) carries heavy penalties if a correction is even allowed.",
@@ -2048,7 +2048,6 @@ const RULES_SECTIONS = [
     id: "special",
     title: "High School & Week 18",
     items: [
-      "The winner of the High School league may change their team's name and mascot to their high school of choice.",
       "Relegated coaches in High School's lowest conference can be fired and replaced by a new player, but may go to the back of the waiting list for another team.",
       "Week 18 is rivalry week — arrange a matchup with a buddy if you want. Week 18 stats do NOT count toward your coaching score.",
     ],
