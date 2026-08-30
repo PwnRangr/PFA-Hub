@@ -12,7 +12,15 @@ const C = {
   gold: "#E8A33D",
 };
 
-const ALLOWED_COUNTRIES = ["US", "CA", "MX"]; // United States, Canada, Mexico
+const ALLOWED_COUNTRIES = [
+  "US", "CA", "MX",                                          // North America
+  "AU", "NZ",                                                // Australia, New Zealand
+  "GB",                                                      // United Kingdom
+  "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI",      // EU 27
+  "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU",
+  "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE",
+  "NO", "IS", "LI", "CH",                                    // EEA + Switzerland
+];
 
 const wrapStyle = {
   minHeight: "100vh",
@@ -60,8 +68,7 @@ export default function AgeGate({ onPass }) {
             Not Available in Your Region
           </h2>
           <p style={{ color: C.slate, fontSize: 14, lineHeight: 1.7, fontFamily: "'Barlow', sans-serif" }}>
-            PFA Hub is currently only available to residents of the United States, Canada, and Mexico. We're sorry
-            for the inconvenience.
+            PFA Hub is not currently available in your region. We're sorry for the inconvenience.
           </p>
         </div>
       </div>
