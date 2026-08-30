@@ -2015,7 +2015,7 @@ const RULES_SECTIONS = [
     id: "penalties-playoffs",
     title: "Playoffs",
     items: [
-      "Playoffs are run via spreadsheet (see the pinned link in your league chat). Tiebreakers: W-L, then Points For, then Pts/Max.",
+      "Playoffs are run via this website. Tiebreakers: W-L, then Points For, then Pts/Max.",
       "NFL: each conference sends its four division winners and four wildcard teams from any division in that conference — one division could send every team.",
       "Leagues without conferences (SEC, Big 12, ACC, Big Ten) send their top 8 teams.",
       "Leagues with two conferences (Sun Belt, SoCo, Ivy, SWAC, GLIAC) send an equal number of teams per conference.",
