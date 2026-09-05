@@ -1607,8 +1607,17 @@ function computeAllianceXPoints(tiers, year) {
   });
 
   // ── Most/least points: per league (±5) and Alliance-wide (±15) ──
+  // Gated on week 17 actually having happened — Troy, 2026-09-05: "'Most
+  // points in the league' is the highest total points scored at the end of
+  // week 17," not a running leaderboard. Before this gate, `totalPts[tKey]`
+  // was whatever weeks had real data so far, so this crowned an early
+  // leader the same way the winner-group bug above did. Since every tier is
+  // swept with the same `lastWeek` in one `sweepXPointsAwards` call, once
+  // any tier has week 17 they all do — so this per-tier check is already
+  // effectively an all-tiers check for the Alliance-wide half below.
   let aBest = null, aWorst = null;
   tierKeys.forEach((tKey) => {
+    if (!scores[tKey][X_SEASON_WEEKS]) return;
     const vals = Object.values(totalPts[tKey]);
     if (!vals.length) return;
     const hi = Math.max(...vals), lo = Math.min(...vals);
@@ -1621,6 +1630,7 @@ function computeAllianceXPoints(tiers, year) {
   });
   if (aBest != null) {
     tierKeys.forEach((tKey) => {
+      if (!scores[tKey][X_SEASON_WEEKS]) return;
       Object.entries(totalPts[tKey]).forEach(([rid, v]) => {
         if (v === aBest) push(tKey, rid, "allianceMostPts", "Most points in the Alliance", 0);
         if (v === aWorst) push(tKey, rid, "allianceLeastPts", "Fewest points in the Alliance", 0);
@@ -1629,8 +1639,18 @@ function computeAllianceXPoints(tiers, year) {
   }
 
   // ── Division / conference winners, by REGULAR-SEASON record only ──
+  // Gated on the cutoff week actually having happened — Troy, 2026-09-05,
+  // after Aziv49 was found already holding both a division AND conference
+  // winner bonus in week 1 of the season. Before this gate, the loop below
+  // just summed whatever weeks had real data so far and crowned "whoever's
+  // ahead right now" as the permanent, final winner — contradicting the
+  // rule this file already documents ("Winner" = first at the END of the
+  // regular season). `scores[tKey][cutoff]` only exists once that week has
+  // actually been fetched with real games, so this is a genuine
+  // season-complete check, not a guess based on the current date.
   tierKeys.forEach((tKey) => {
     const cutoff = playoffStartWeekFor(tKey) - 1;
+    if (!scores[tKey][cutoff]) return;
     const rw = {}, rl = {}, rp = {};
     for (let wk = 1; wk <= cutoff; wk++) {
       const s = scores[tKey][wk] || {}, r = results[tKey][wk] || {};
