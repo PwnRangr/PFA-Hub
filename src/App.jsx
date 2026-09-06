@@ -16419,12 +16419,12 @@ export default function App() {
             <Tab id="home">Home</Tab>
             <Tab id="standings">Standings</Tab>
             <Tab id="coaches">Coaches</Tab>
-            <Tab id="availableteams">Available Teams</Tab>
             <Tab id="weeklyawards">Weekly Awards</Tab>
             <Tab id="300club">300 Club</Tab>
             <Tab id="4000club">4000 Club</Tab>
             <Tab id="tournament">Tournament</Tab>
             <Tab id="directory">Directory</Tab>
+            <Tab id="availableteams">Available Teams</Tab>
             <Tab id="pyramid">Rules</Tab>
             {isAdmin && <Tab id="admin">Admin</Tab>}
             <div className="flex-1" style={{ borderBottom: `1px solid ${C.line}` }} />
@@ -17545,9 +17545,6 @@ export default function App() {
               </h2>
               <span className="text-xs uppercase tracking-widest" style={{ color: C.slate }}>{availableTeamsList.length} available</span>
             </div>
-            <p className="text-sm mb-4" style={{ color: C.slate }}>
-              Vacant teams, interim-run teams, teams that just lost a Relegation Bowl, and anything else Troy's flagged open right now.
-            </p>
             {isAdmin && (
               <button
                 type="button"
