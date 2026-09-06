@@ -1123,3 +1123,43 @@ export async function setUflProBowlSeeds(year, seeds) {
   if (existing.exists()) return;
   await fs.setDoc(ref, { seeds, frozenAt: fs.serverTimestamp() });
 }
+
+// ── Available Teams: manual on/off overrides (2026-09-06) ──
+// Deterministic key, same reasoning as streakBonusKey above — re-toggling a
+// team just overwrites its one doc rather than creating duplicates.
+// Scoped per season (tierKey_year_team) since a team's real coach situation
+// is a per-season question, not an evergreen one. Entry shape: { tierKey,
+// year, team, available } — `available: true` forces a team onto the tab
+// even if nothing auto-detects it (a "good"-status coach Troy knows wants
+// out); `available: false` forces one off even if it WOULD auto-qualify
+// (an interim-tagged team he doesn't want listed for some reason). Absence
+// of a doc means "no override — go with whatever auto-detection says."
+function availableTeamOverrideKey(tierKey, year, team) {
+  return `${tierKey}_${year}_${team}`;
+}
+
+export async function setAvailableTeamOverride(tierKey, year, team, available) {
+  const key = availableTeamOverrideKey(tierKey, year, team);
+  const entry = { tierKey, year, team, available };
+  if (!firebaseReady) {
+    const all = localGet("pfa-available-teams-overrides") || {};
+    all[key] = entry;
+    localSet("pfa-available-teams-overrides", all);
+    return Object.values(all);
+  }
+  await ensureDb();
+  await fs.setDoc(fs.doc(db, "availableTeamsOverrides", key), entry);
+  return null;
+}
+
+export function watchAvailableTeamsOverrides(cb) {
+  if (!firebaseReady) {
+    cb(Object.values(localGet("pfa-available-teams-overrides") || {}));
+    return () => {};
+  }
+  let unsub = () => {};
+  ensureDb().then(() => {
+    unsub = fs.onSnapshot(fs.collection(db, "availableTeamsOverrides"), (snap) => cb(snap.docs.map((d) => d.data())));
+  });
+  return () => unsub();
+}

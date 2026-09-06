@@ -53,6 +53,8 @@ import {
   setTournamentSeeds,
   getUflProBowlSeeds,
   setUflProBowlSeeds,
+  watchAvailableTeamsOverrides,
+  setAvailableTeamOverride,
 } from "./storage.js";
 import { onAuthChange, logoutUser } from "./auth.js";
 import LandingPage from "./LandingPage.jsx";
@@ -711,12 +713,25 @@ function parseCSVRows(text) {
 // 300-Club/export data) own different abbreviations.
 const SHEET_TIER_ALIASES = { BIG10: "TEN", BIG12: "BIG XII", "Sun Belt": "SUN" };
 
+// Interim-assignment detector, 2026-09-06 (Available Teams tab): confirmed
+// against a real column A/I export that her sheet tags an interim coach by
+// appending "int" — optionally followed by digits, e.g. "int1", "int23" — to
+// the coach's own name in THIS column, not as a value in column I itself.
+// Column I's own "status" text never contains the literal word "INT" (real
+// values seen: good/rookie/promoted/demoted/legacy/inactive/available/
+// commissioner/a contract-year label) — every interim-tagged row happened to
+// also carry a contract-year status, which is a correlation, not the signal
+// itself. Same naming convention CAREER_STATS already uses for its own
+// "name int" keys, just without the trailing digits there.
+const isInterimTag = (coachName) => /\bint\d*$/i.test((coachName || "").trim());
+
 function parseSheetLookups(csvText) {
   const rows = parseCSVRows(csvText);
   const tagByRosterKey = {};
   const rosterLinkByTeamName = {};
   const liveStatsByName = {};
   const teamNameByRosterKey = {};
+  const statusByRosterKey = {};
   const tierKeySet = new Set(TIERS.map((t) => t.key));
   let currentTier = null;
   for (const row of rows) {
@@ -745,8 +760,16 @@ function parseSheetLookups(csvText) {
         currentCP: Number.isFinite(currentCP) ? currentCP : null,
       };
     }
+    // Column I -- her "current status" column. Confirmed 2026-09-06 against
+    // a real column A/I export: good/rookie/promoted/demoted/legacy/
+    // inactive/available/commissioner, plus a contract-year label ("2026
+    // contract", "PLAYOFF contract"). Stored raw (trimmed only) -- Available
+    // Teams does its own tolerant matching rather than expecting an exact
+    // string here, since these are hand-typed and have had typos before.
+    const status = (row[8] || "").trim();
+    if (status) statusByRosterKey[key] = status;
   }
-  return { tagByRosterKey, rosterLinkByTeamName, liveStatsByName, teamNameByRosterKey };
+  return { tagByRosterKey, rosterLinkByTeamName, liveStatsByName, teamNameByRosterKey, statusByRosterKey };
 }
 
 // Career stats from the Admin tab (columns AM:BA), keyed by coach name
@@ -11194,6 +11217,61 @@ function buildUSFLXFLLiveScored(tierKey, bracket, scores) {
   };
 }
 
+// ── Relegation Bowl loser (2026-09-06, Available Teams tab) ────────────────
+// Finds whoever just lost -- or has already lost -- this tier's true bottom
+// placement game for the CURRENT season, reusing the exact same resolver
+// functions the live bracket display itself calls, so there's no separate
+// logic to keep in sync as those change. Returns null until that specific
+// game is genuinely decided (tourneyPlay's own real-score gate already
+// handles that) or for a tier/bracket shape with nothing resolvable yet.
+//
+// Four bracket shapes, confirmed against computeBracket's own format
+// branches rather than assumed from the resolver names alone:
+//  - top8-cascade (SEC/BIG XII/ACC/TEN) AND division-only (FLHS) produce the
+//    identical flat playoffSeeds/consolationSeeds shape and share one
+//    resolver+tail (resolveR3LiveBracket -> resolveR3PostWk15) -- confirmed
+//    2026-08-29 in this file's own comments, "all 13 tiers... every playoff
+//    bracket on the site now live-scores." `games.seventh` is that shared
+//    tail's bottom game (shown as "fifteenth" in the consolation half).
+//  - conference-top4 (SUN/SOCO/IVY/SWAC/GLIAC) produces east/west groups
+//    instead, resolved by resolveR3LiveBracketConf -- same shared tail,
+//    same `games.seventh`.
+//  - NFL's conference-division shape has its own cross-conference resolver;
+//    the bottom game is `cross.fifteenth`.
+//  - USFL/XFL (division-playin) is the true odd one out: the bottom
+//    placement isn't a single game, it's a 3-week cumulative-points SERIES
+//    between the two week-14 play-in losers (resolveUsflXflSeries) --
+//    `seventh` in that resolver's own game map determines 17th/18th, not
+//    19th/20th, so it's deliberately not used here.
+function relegationLoserFor(tierKey, bracket, scores) {
+  if (!bracket || !scores) return null;
+  if (R3_LIVE[tierKey] && bracket.consolationSeeds && bracket.consolationSeeds.length) {
+    const games = resolveR3LiveBracket(R3_LIVE[tierKey], bracket.consolationSeeds, scores);
+    return (games.seventh && games.seventh.loser) || null;
+  }
+  if (
+    R3_LIVE[tierKey] &&
+    bracket.consolationGroup &&
+    ((bracket.consolationGroup.east && bracket.consolationGroup.east.length) ||
+      (bracket.consolationGroup.west && bracket.consolationGroup.west.length))
+  ) {
+    const games = resolveR3LiveBracketConf(R3_LIVE[tierKey], bracket.consolationGroup, scores);
+    return (games.seventh && games.seventh.loser) || null;
+  }
+  if (tierKey === "NFL" && BR_LIVE.NFL && bracket.consolationGroup) {
+    const resolved = resolveNFLLiveBracket(BR_LIVE.NFL, bracket.consolationGroup, scores);
+    return (resolved.cross.fifteenth && resolved.cross.fifteenth.loser) || null;
+  }
+  if (USFLXFL_LIVE[tierKey] && bracket.consolation && bracket.consolation.length) {
+    const games = resolveUsflXflLiveBracket(USFLXFL_LIVE[tierKey], bracket.consolation, scores);
+    if (!games.playInLeft.loser || !games.playInRight.loser) return null;
+    const series = resolveUsflXflSeries(games.playInLeft.loser, games.playInRight.loser, scores);
+    if (!series.decided) return null;
+    return series.leftWon ? series.R.team : series.L.team;
+  }
+  return null;
+}
+
 // ===========================================================================
 // TOURNAMENT — cross-tier 16-team single-elimination bracket (this year's
 // theme: "Fall-iday Madness", see TOURNAMENT_THEME above). Unlike every
@@ -12722,8 +12800,11 @@ export default function App() {
   // {tierKey: {week: {rosterId: points}}} -- see the fetch effect below and
   // buildR3LiveScored above. Only populated for LIVE_BRACKET_SCORED_TIERS.
   const [liveBracketScores, setLiveBracketScores] = useState({});
+  const [availableTeamsBracketScores, setAvailableTeamsBracketScores] = useState({}); // 2026-09-06: same shape as liveBracketScores, but ALL 13 tiers at once — the Standings tab's version only ever fetches the one currently-selected tierKey, Available Teams needs every tier's Relegation Bowl status simultaneously
   const [dirQuery, setDirQuery] = useState("");
   const [club300Query, setClub300Query] = useState("");
+  const [availableTeamsQuery, setAvailableTeamsQuery] = useState("");
+  const [showAvailableTeamsManager, setShowAvailableTeamsManager] = useState(false); // admin-only: reveals every team + toggle, not just currently-available ones
   const [club4000Query, setClub4000Query] = useState("");
   const [openRuleSections, setOpenRuleSections] = useState({ general: true });
   const [selectedCoach, setSelectedCoach] = useState(null);
@@ -12764,6 +12845,7 @@ export default function App() {
   // Historical League Strength" action; runSeasonCPFinalLock reads from
   // this to fill leagueStrengthCP instead of always leaving it null.
   const [conferenceStrengthHistorical, setConferenceStrengthHistorical] = useState([]);
+  const [availableTeamsOverrides, setAvailableTeamsOverrides] = useState([]); // 2026-09-06, Available Teams tab: manual on/off overrides
   const [weeklyAwardsSeason, setWeeklyAwardsSeason] = useState(CURRENT_SEASON);
   const [weeklyAwardsWeek, setWeeklyAwardsWeek] = useState(null);
   const [weeklyAwardsLoading, setWeeklyAwardsLoading] = useState(false);
@@ -12811,6 +12893,7 @@ export default function App() {
   const chatEndRef = useRef(null);
   const bulkLoadedRef = useRef(false);
   const [coachTagsByRosterKey, setCoachTagsByRosterKey] = useState({});
+  const [sheetStatusByRosterKey, setSheetStatusByRosterKey] = useState({}); // 2026-09-06, Available Teams: column I ("current status") per roster
   const [sheetRosterLinks, setSheetRosterLinks] = useState({});
   const [liveCoachStats, setLiveCoachStats] = useState({});
   const [sheetTeamNames, setSheetTeamNames] = useState({});
@@ -12950,11 +13033,12 @@ export default function App() {
         }
         const text = await res.text();
         if (cancelled) return;
-        const { tagByRosterKey, rosterLinkByTeamName, liveStatsByName, teamNameByRosterKey } = parseSheetLookups(text);
+        const { tagByRosterKey, rosterLinkByTeamName, liveStatsByName, teamNameByRosterKey, statusByRosterKey } = parseSheetLookups(text);
         setCoachTagsByRosterKey(tagByRosterKey);
         setSheetRosterLinks(rosterLinkByTeamName);
         setLiveCoachStats(liveStatsByName);
         setSheetTeamNames(teamNameByRosterKey);
+        setSheetStatusByRosterKey(statusByRosterKey);
       } catch (e) {
         // Sheet unreachable — Directory/Coaches/roster links proceed on
         // their non-sheet fallbacks, same as before this feed existed.
@@ -13816,6 +13900,7 @@ export default function App() {
     const unsubManualPenalties = watchManualPenalties((entries) => setManualPenalties(entries));
     const unsubSeasonCPFinal = watchSeasonCPFinal((entries) => setSeasonCPFinal(entries));
     const unsubConferenceStrengthHistorical = watchConferenceStrengthHistorical((entries) => setConferenceStrengthHistorical(entries));
+    const unsubAvailableTeamsOverrides = watchAvailableTeamsOverrides((entries) => setAvailableTeamsOverrides(entries));
     return () => {
       unsubNews();
       unsubPromo();
@@ -13829,6 +13914,7 @@ export default function App() {
       unsubManualPenalties();
       unsubSeasonCPFinal();
       unsubConferenceStrengthHistorical();
+      unsubAvailableTeamsOverrides();
     };
   }, []);
 
@@ -14016,6 +14102,42 @@ export default function App() {
     })();
     return () => { cancelled = true; };
   }, [view, tierKey, standingsSeason, nflState, leagueMap, getWeeklyResultCached]);
+
+  // Available Teams — Relegation Bowl auto-detection, 2026-09-06. Same
+  // "fetch each playoff week once it's worth fetching" pattern as the
+  // Standings effect just above, but looped across all 13 tiers at once
+  // instead of just the one currently-selected tierKey — this tab needs
+  // every tier's relegation status simultaneously, not one at a time.
+  // Gated on the tab actually being open (not on every page load) and, like
+  // every bracket fetch in this file, on the tier's own playoffs having
+  // actually started — during the regular season this loop's body never
+  // executes for any tier, so the cost only shows up once it's real.
+  useEffect(() => {
+    if (view !== "availableteams" || !nflState) return;
+    let cancelled = false;
+    (async () => {
+      await Promise.all(LIVE_BRACKET_SCORED_TIERS.map(async (tKey) => {
+        const leagueId = leagueMap[tKey];
+        if (!leagueId) return;
+        const weekMap = {};
+        const fetchWeek = async (week) => {
+          const result = await getWeeklyResultCached(tKey, leagueId, CURRENT_SEASON, week).catch(() => null);
+          if (!result) return;
+          const m = {};
+          result.pairs.forEach(({ a, b }) => { m[a.rosterId] = a.points; m[b.rosterId] = b.points; });
+          weekMap[week] = m;
+        };
+        const startWeek = playoffStartWeekFor(tKey);
+        const lastKnowableWeek = Math.min(nflState.week, X_SEASON_WEEKS);
+        for (let wk = startWeek; wk <= lastKnowableWeek; wk++) {
+          await fetchWeek(wk);
+          if (cancelled) return;
+        }
+        if (!cancelled) setAvailableTeamsBracketScores((c) => ({ ...c, [tKey]: weekMap }));
+      }));
+    })();
+    return () => { cancelled = true; };
+  }, [view, nflState, leagueMap, getWeeklyResultCached]);
 
   // UFL PRO BOWL — seeds lock in ONCE at the Week9->Week10 rollover (one
   // week before its own Week10 QF round starts), mirroring the main
@@ -14338,10 +14460,14 @@ export default function App() {
   // Rules doc's format for each tier. Returns null for tiers whose format
   // isn't confirmed yet (see PLAYOFF_FORMAT above) — the bracket section
   // just doesn't render for those rather than guessing.
-  const computeBracket = (tKey) => {
+  // `seasonArg` added 2026-09-06 for Available Teams, which always needs
+  // CURRENT_SEASON's bracket regardless of whatever season the Standings
+  // tab itself currently has selected (`standingsSeason`) -- defaults to
+  // that existing behavior so every other caller is unaffected.
+  const computeBracket = (tKey, seasonArg = standingsSeason) => {
     const format = PLAYOFF_FORMAT[tKey];
     if (!format) return null;
-    const seasonMap = standingsSeason === CURRENT_SEASON ? leagueMap : LEAGUE_HISTORY[standingsSeason] || {};
+    const seasonMap = seasonArg === CURRENT_SEASON ? leagueMap : LEAGUE_HISTORY[seasonArg] || {};
     const id = seasonMap[tKey];
     const rows = id ? standingsCache[id] : null;
     if (!rows || !rows.length) return null;
@@ -14478,6 +14604,18 @@ export default function App() {
     const next = !promotionWindowOpen;
     setPromotionWindowOpen(next); // optimistic; live mode reconciles via onSnapshot moments later
     await setPromotionWindow(next);
+  };
+
+  // Admin-only: force a team on or off the Available Teams list regardless
+  // of what auto-detection says. Optimistic like togglePromotionWindow
+  // above -- the onSnapshot listener reconciles moments later either way.
+  const toggleTeamAvailability = async (tierKey, team, nextAvailable) => {
+    setAvailableTeamsOverrides((prev) => {
+      const key = `${tierKey}:${team}`;
+      const withoutThis = prev.filter((o) => !(o.tierKey === tierKey && o.year === CURRENT_SEASON && o.team === team));
+      return [...withoutThis, { tierKey, year: CURRENT_SEASON, team, available: nextAvailable }];
+    });
+    await setAvailableTeamOverride(tierKey, CURRENT_SEASON, team, nextAvailable);
   };
 
   // ── Hiring (Admin tab → Open Applications) ──
@@ -14886,6 +15024,73 @@ export default function App() {
     PF: fmt(seat.pts),
     "Max PF": fmt(seat.maxPts),
   });
+
+  // ── Available Teams (2026-09-06) ──────────────────────────────────────
+  // Four independent ways a roster ends up on this list, any one is enough:
+  // no coach at all (the same "—" placeholder every other tab already
+  // uses), the sheet's own coach-name tag ends in "int"/"int#" (an interim
+  // assignment -- see isInterimTag's own comment for why this isn't a
+  // column I value), column I's status is "inactive", or the roster just
+  // lost its tier's Relegation Bowl this season (relegationLoserFor, all 13
+  // tiers). A manual override in availableTeamsOverrides always wins over
+  // all four, in either direction -- Troy forcing a team on that wouldn't
+  // otherwise qualify (a "good"/contract-year coach he knows wants out), or
+  // off despite qualifying (an interim team he doesn't want listed yet).
+  //
+  // Always CURRENT_SEASON regardless of whatever season Standings itself
+  // has selected (computeBracket's seasonArg, leagueMap is always-current)
+  // -- availability is inherently a "right now" question.
+  const allAvailabilityRows = useMemo(() => {
+    if (mode !== "live") return [];
+    const overrideByKey = {};
+    availableTeamsOverrides.forEach((o) => {
+      if (o.year === CURRENT_SEASON) overrideByKey[`${o.tierKey}:${o.team}`] = o.available;
+    });
+    const out = [];
+    TIERS.forEach((tier) => {
+      const tierKey = tier.key;
+      const leagueId = leagueMap[tierKey];
+      const rows = leagueId ? standingsCache[leagueId] : null;
+      if (!rows || !rows.length) return;
+      const confAvgMaxPts = average(rows.map((r) => r.maxPts || 0));
+      const bracket = computeBracket(tierKey, CURRENT_SEASON);
+      const scores = availableTeamsBracketScores[tierKey];
+      const relegationLoser = relegationLoserFor(tierKey, bracket, scores);
+      rows.forEach((r) => {
+        const noCoach = r.coach === "—";
+        const interim = isInterimTag(r.coach);
+        const statusVal = sheetStatusByRosterKey[`${tierKey}:${r.rosterId}`] || "";
+        const inactive = /inactive/i.test(statusVal);
+        const isRelegationLoser = Boolean(relegationLoser && relegationLoser.rosterId === r.rosterId);
+        const auto = noCoach || interim || inactive || isRelegationLoser;
+        const overrideKey = `${tierKey}:${r.team}`;
+        const hasOverride = overrideKey in overrideByKey;
+        const available = hasOverride ? overrideByKey[overrideKey] : auto;
+        let reason = "No coach";
+        if (!noCoach && interim) reason = "Interim coach";
+        else if (!noCoach && !interim && isRelegationLoser) reason = "Lost Relegation Bowl";
+        else if (!noCoach && !interim && !isRelegationLoser && inactive) reason = "Inactive coach";
+        else if (!auto) reason = available ? "Manually added" : "—";
+        out.push({
+          tierKey, tierName: tier.name,
+          team: r.team, coach: r.coach, rosterId: r.rosterId,
+          record: `${r.w}-${r.l}`, place: r.place, totalTeams: rows.length,
+          maxPts: r.maxPts, confAvgMaxPts,
+          draftPick: (DRAFT_PICKS_BY_SIZE[tier.size] || [])[r.place - 1] || null,
+          status: statusVal,
+          auto, available, reason,
+          manuallyOverridden: hasOverride,
+        });
+      });
+    });
+    return out;
+  }, [mode, availableTeamsOverrides, availableTeamsBracketScores, leagueMap, standingsCache, sheetStatusByRosterKey]);
+
+  // Public-facing list: just the teams actually on the board right now.
+  const availableTeamsList = useMemo(
+    () => allAvailabilityRows.filter((r) => r.available),
+    [allAvailabilityRows]
+  );
 
   // ── Coach directory: every coach currently rostered across all connected
   // leagues, built entirely from data already fetched for standings — no
@@ -16214,6 +16419,7 @@ export default function App() {
             <Tab id="home">Home</Tab>
             <Tab id="standings">Standings</Tab>
             <Tab id="coaches">Coaches</Tab>
+            <Tab id="availableteams">Available Teams</Tab>
             <Tab id="weeklyawards">Weekly Awards</Tab>
             <Tab id="300club">300 Club</Tab>
             <Tab id="4000club">4000 Club</Tab>
@@ -17329,6 +17535,164 @@ export default function App() {
 
         {view === "pyramid" && (
           <RulesAndSettingsContent openRuleSections={openRuleSections} setOpenRuleSections={setOpenRuleSections} />
+        )}
+
+        {view === "availableteams" && (
+          <section>
+            <div className="flex items-baseline justify-between mb-1 gap-2 flex-wrap">
+              <h2 className="text-3xl uppercase leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
+                Available Teams
+              </h2>
+              <span className="text-xs uppercase tracking-widest" style={{ color: C.slate }}>{availableTeamsList.length} available</span>
+            </div>
+            <p className="text-sm mb-4" style={{ color: C.slate }}>
+              Vacant teams, interim-run teams, teams that just lost a Relegation Bowl, and anything else Troy's flagged open right now.
+            </p>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowAvailableTeamsManager((v) => !v)}
+                className="mb-4 px-3 py-1.5 text-xs uppercase tracking-wider rounded-sm"
+                style={{ background: showAvailableTeamsManager ? C.gold : "transparent", color: showAvailableTeamsManager ? C.ink : C.slate, border: `1px solid ${showAvailableTeamsManager ? C.gold : C.line}`, fontWeight: 600, cursor: "pointer" }}
+              >
+                {showAvailableTeamsManager ? "Close availability manager" : "Manage availability"}
+              </button>
+            )}
+
+            {isAdmin && showAvailableTeamsManager && (
+              <div className="mb-6 p-3 rounded-sm" style={{ background: C.panel, border: `1px solid ${C.goldDim}` }}>
+                <div className="text-xs uppercase tracking-widest mb-2" style={{ color: C.gold, letterSpacing: "0.2em" }}>
+                  Every team — toggle any of them on or off
+                </div>
+                <input
+                  value={availableTeamsQuery}
+                  onChange={(e) => setAvailableTeamsQuery(e.target.value)}
+                  placeholder="Search by coach, team, or tier…"
+                  className="w-full px-3 py-2 text-sm rounded-sm outline-none mb-3"
+                  style={{ background: C.ink, border: `1px solid ${C.line}`, color: C.chalk }}
+                />
+                <div className="space-y-1 overflow-y-auto" style={{ maxHeight: "28rem" }}>
+                  {allAvailabilityRows
+                    .filter((r) => {
+                      const q = availableTeamsQuery.trim().toLowerCase();
+                      if (!q) return true;
+                      return r.team.toLowerCase().includes(q) || r.coach.toLowerCase().includes(q) || r.tierName.toLowerCase().includes(q);
+                    })
+                    .map((r) => (
+                      <div key={`${r.tierKey}:${r.rosterId}`} className="flex items-center gap-3 px-2.5 py-1.5 rounded-sm text-sm" style={{ background: C.panelHi || C.ink, border: `1px solid ${C.line}` }}>
+                        <TeamMark team={r.team} tierKey={r.tierKey} size={24} />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-semibold">{r.team}</div>
+                          <div className="text-xs truncate" style={{ color: C.slate }}>
+                            {r.tierName} · {r.coach} · {r.auto ? r.reason : "not auto-flagged"}
+                            {r.manuallyOverridden && <span style={{ color: C.gold }}> · manual override</span>}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => toggleTeamAvailability(r.tierKey, r.team, !r.available)}
+                          className="px-2.5 py-1 text-xs uppercase tracking-wider rounded-sm shrink-0"
+                          style={{
+                            background: r.available ? C.turf : "transparent",
+                            color: r.available ? C.ink : C.slate,
+                            border: `1px solid ${r.available ? C.turf : C.line}`,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {r.available ? "Available" : "Not listed"}
+                        </button>
+                        {r.manuallyOverridden && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setAvailableTeamsOverrides((prev) => prev.filter((o) => !(o.tierKey === r.tierKey && o.year === CURRENT_SEASON && o.team === r.team)));
+                              await setAvailableTeamOverride(r.tierKey, CURRENT_SEASON, r.team, null);
+                            }}
+                            className="px-2 py-1 text-xs uppercase tracking-wider rounded-sm shrink-0"
+                            style={{ background: "transparent", color: C.ember, border: `1px solid ${C.line}`, cursor: "pointer" }}
+                            title="Clear the manual override — go back to whatever auto-detection says"
+                          >
+                            Reset
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            <input
+              value={availableTeamsQuery}
+              onChange={(e) => setAvailableTeamsQuery(e.target.value)}
+              placeholder="Search by coach, team, or tier…"
+              className="w-full px-3 py-2 text-sm rounded-sm outline-none mb-3"
+              style={{ background: C.panel, border: `1px solid ${C.line}`, color: C.chalk }}
+            />
+            <div className="space-y-1.5">
+              {availableTeamsList
+                .filter((r) => {
+                  const q = availableTeamsQuery.trim().toLowerCase();
+                  if (!q) return true;
+                  return r.team.toLowerCase().includes(q) || r.coach.toLowerCase().includes(q) || r.tierName.toLowerCase().includes(q);
+                })
+                .map((r) => (
+                  <div key={`${r.tierKey}:${r.rosterId}`} className="flex items-center gap-3 px-3 py-2.5 rounded-sm" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
+                    <TeamMark team={r.team} tierKey={r.tierKey} size={44} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <button type="button" onClick={() => openTeamProfile(r, r.tierKey)} className="text-sm font-semibold" style={{ color: "inherit" }}>
+                          {r.team}
+                        </button>
+                        <span
+                          className="text-xs uppercase tracking-wider px-1.5 py-0.5 rounded-sm"
+                          style={{ color: C.gold, background: "rgba(232,163,61,0.12)", border: `1px solid ${C.goldDim}` }}
+                        >
+                          {r.reason}
+                        </span>
+                      </div>
+                      <div className="text-xs truncate" style={{ color: C.slate }}>
+                        {r.tierName} · {r.coach === "—" ? "No coach on file" : r.coach}
+                      </div>
+                    </div>
+                    <div
+                      className="hidden sm:grid shrink-0 text-right text-xs"
+                      style={{ gridTemplateColumns: "repeat(4, minmax(72px, auto))", gap: "4px 14px", fontFamily: "'IBM Plex Mono', monospace", color: C.chalk }}
+                    >
+                      <div>
+                        <div style={{ color: C.slate, fontFamily: "'Barlow', sans-serif" }}>Record</div>
+                        {r.record}
+                      </div>
+                      <div>
+                        <div style={{ color: C.slate, fontFamily: "'Barlow', sans-serif" }}>Place</div>
+                        {ordinal(r.place)} of {r.totalTeams}
+                      </div>
+                      <div>
+                        <div style={{ color: C.slate, fontFamily: "'Barlow', sans-serif" }}>Max Pts</div>
+                        {fmt(r.maxPts)}
+                      </div>
+                      <div>
+                        <div style={{ color: C.slate, fontFamily: "'Barlow', sans-serif" }}>Conf Avg Max</div>
+                        {fmt(r.confAvgMaxPts)}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openTeamProfile(r, r.tierKey)}
+                      className="shrink-0 px-2.5 py-1 text-xs uppercase tracking-wider rounded-sm"
+                      style={{ background: "transparent", color: C.gold, border: `1px solid ${C.goldDim}`, cursor: "pointer" }}
+                      title="Roster link and draft picks"
+                    >
+                      {r.draftPick ? `${ordinal(r.draftPick)} pick` : "Details"}
+                    </button>
+                  </div>
+                ))}
+              {availableTeamsList.length === 0 && (
+                <div className="py-10 text-center text-sm rounded-sm" style={{ border: `1px dashed ${C.line}`, color: C.slate }}>
+                  No available teams right now.
+                </div>
+              )}
+            </div>
+          </section>
         )}
 
         {view === "300club" && (
