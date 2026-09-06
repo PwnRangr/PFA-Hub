@@ -17076,17 +17076,11 @@ export default function App() {
                                   {r.careerBonus >= 0 ? "+" : ""}{fmt(r.careerBonus)}
                                 </span>
                               </div>
-                              <div className="text-xs mb-1 pl-2" style={{ color: C.slate }}>
-                                (Career Avg CP {r.careerAvgCp === -Infinity ? "—" : fmt(r.careerAvgCp)} ÷ 10) + (Career CP {r.cp === -Infinity ? "—" : fmt(r.cp)} ÷ 100)
+                              <div className="text-xs mb-0.5 pl-2" style={{ color: C.slate }}>
+                                (Career Avg CP {r.careerAvgCp === -Infinity ? "—" : fmt(r.careerAvgCp)})
                               </div>
-                              <div
-                                className="text-xs mt-1.5 pt-1.5 flex justify-between gap-3"
-                                style={{ color: C.slate, borderTop: `1px solid ${C.line}` }}
-                              >
-                                <span>Sheet's own PS</span>
-                                <span style={{ fontWeight: 600 }}>
-                                  {r.promotionScoreSheet === null ? "not on sheet" : `${r.promotionScoreSheet >= 0 ? "+" : ""}${fmt(r.promotionScoreSheet)}`}
-                                </span>
+                              <div className="text-xs mb-1 pl-2" style={{ color: C.slate }}>
+                                (Career CP Tot {r.cp === -Infinity ? "—" : fmt(r.cp)})
                               </div>
                             </span>
                           </span>
