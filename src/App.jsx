@@ -15590,9 +15590,25 @@ export default function App() {
   // started this. Reuses openTeamsDirectory (unfiltered — this isn't tied
   // to Directory's search box) so there's no second Sleeper fetch, just a
   // different grouping.
+  // Admin → Applications needs to see every team someone COULD have applied
+  // to via either Apply button — Open Teams (vacant only) AND Available
+  // Teams (vacant + interim + inactive + Relegation Bowl + manual). Built
+  // separately from openTeamsDirectory on purpose: that one feeds the
+  // Directory tab's coach-lookup search, which should still only show a
+  // team as "open" when it's actually vacant, not merely available to a
+  // new applicant while someone's still interim-running it.
+  const applicationEligibleTeams = useMemo(() => {
+    const byKey = new Map();
+    openTeamsDirectory.forEach((t) => byKey.set(`${t.tierKey}:${t.team}`, t));
+    availableTeamsList.forEach((r) => {
+      byKey.set(`${r.tierKey}:${r.team}`, { coach: r.coach, team: r.team, tierKey: r.tierKey, tierName: r.tierName, maxPts: r.maxPts, rosterId: r.rosterId });
+    });
+    return [...byKey.values()];
+  }, [openTeamsDirectory, availableTeamsList]);
+
   const openApplicationsByTier = useMemo(() => {
     const byTier = new Map();
-    openTeamsDirectory.forEach((t) => {
+    applicationEligibleTeams.forEach((t) => {
       if (!byTier.has(t.tierKey)) byTier.set(t.tierKey, []);
       byTier.get(t.tierKey).push(t);
     });
@@ -15600,7 +15616,7 @@ export default function App() {
       tier: t,
       openTeams: (byTier.get(t.key) || []).sort((a, b) => a.team.localeCompare(b.team)),
     }));
-  }, [openTeamsDirectory]);
+  }, [applicationEligibleTeams]);
 
   // ── Conference Strength — our JS port of her "League Difficulty" sheet
   // formula (confirmed cell-by-cell against the sheet's real formulas and a
@@ -17142,25 +17158,12 @@ export default function App() {
                     <div className="text-xs uppercase tracking-widest" style={{ color: C.slate, letterSpacing: "0.2em" }}>
                       Open Teams
                     </div>
-                    {isAdmin && (
-                      <button
-                        onClick={togglePromotionWindow}
-                        className="px-2.5 py-1 text-xs uppercase tracking-wider rounded-sm"
-                        style={{
-                          color: promotionWindowOpen ? C.ink : C.slate,
-                          background: promotionWindowOpen ? C.turf : "transparent",
-                          border: `1px solid ${promotionWindowOpen ? C.turf : C.line}`,
-                        }}
-                      >
-                        Promotion window: {promotionWindowOpen ? "open" : "closed"}
-                      </button>
-                    )}
                   </div>
                   {!promotionWindowOpen && (
                     <div className="mb-2 text-xs" style={{ color: C.slate }}>
                       {isAdmin
-                        ? "Applications are hidden from coaches until you open the promotion window."
-                        : "Applications aren't open yet — check back once the promotion window opens."}
+                        ? 'Applications are hidden from coaches — turn them on under Admin → Applications.'
+                        : "Applications aren't open yet — check back soon."}
                     </div>
                   )}
                   <div className="space-y-2">
@@ -17618,6 +17621,13 @@ export default function App() {
               </div>
             )}
 
+            {!promotionWindowOpen && (
+              <div className="mb-3 text-xs" style={{ color: C.slate }}>
+                {isAdmin
+                  ? 'Applications are hidden from coaches — turn them on under Admin → Applications.'
+                  : "Applications aren't open yet — check back soon."}
+              </div>
+            )}
             <input
               value={availableTeamsQuery}
               onChange={(e) => setAvailableTeamsQuery(e.target.value)}
@@ -17632,7 +17642,12 @@ export default function App() {
                   if (!q) return true;
                   return r.team.toLowerCase().includes(q) || r.coach.toLowerCase().includes(q) || r.tierName.toLowerCase().includes(q);
                 })
-                .map((r) => (
+                .map((r) => {
+                  const teamApps = applicantsForTeam(r.tierKey, r.team);
+                  const alreadyApplied =
+                    currentUser?.displayName &&
+                    teamApps.some((a) => a.coachName.toLowerCase() === currentUser.displayName.toLowerCase());
+                  return (
                   <div key={`${r.tierKey}:${r.rosterId}`} className="flex items-center gap-3 px-3 py-2.5 rounded-sm" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
                     <TeamMark team={r.team} tierKey={r.tierKey} size={44} />
                     <div className="min-w-0 flex-1">
@@ -17681,8 +17696,25 @@ export default function App() {
                     >
                       {r.draftPick ? `${ordinal(r.draftPick)} pick` : "Details"}
                     </button>
+                    {promotionWindowOpen && (
+                      <button
+                        type="button"
+                        disabled={alreadyApplied}
+                        onClick={() => applyToTeam(r.tierKey, r.team)}
+                        className="shrink-0 px-3 py-1 text-xs uppercase tracking-wider rounded-sm"
+                        style={{
+                          background: alreadyApplied ? "transparent" : C.gold,
+                          color: alreadyApplied ? C.turf : C.ink,
+                          border: `1px solid ${alreadyApplied ? C.turf : C.gold}`,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {alreadyApplied ? "Applied ✓" : "Apply"}
+                      </button>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               {availableTeamsList.length === 0 && (
                 <div className="py-10 text-center text-sm rounded-sm" style={{ border: `1px dashed ${C.line}`, color: C.slate }}>
                   No available teams right now.
@@ -18356,13 +18388,30 @@ export default function App() {
             </div>
             {adminSubTab === "applications" && (
             <section className="mb-8">
-              <h2 className="text-3xl uppercase leading-none mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
-                Applications
-              </h2>
+              <div className="flex items-start justify-between gap-3 flex-wrap mb-1">
+                <h2 className="text-3xl uppercase leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
+                  Applications
+                </h2>
+                <button
+                  onClick={togglePromotionWindow}
+                  className="px-3 py-1.5 text-xs uppercase tracking-wider rounded-sm shrink-0"
+                  style={{
+                    color: promotionWindowOpen ? C.ink : C.slate,
+                    background: promotionWindowOpen ? C.turf : "transparent",
+                    border: `1px solid ${promotionWindowOpen ? C.turf : C.line}`,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                  title="Controls the Apply button everywhere it appears — Open Teams and Available Teams both"
+                >
+                  Applications: {promotionWindowOpen ? "ON" : "OFF"}
+                </button>
+              </div>
               <p className="text-sm mb-4" style={{ color: C.slate }}>
                 Every open team across all 13 leagues, ranked applicants underneath. Hiring here records the Alliance's
                 decision and posts the Coaching Carousel news item — Sleeper still needs the roster reassigned by hand
-                afterward.
+                afterward. The toggle above controls whether anyone sees an Apply button at all, here or on the
+                Available Teams tab — off by default so a coach can't apply the moment a team goes vacant mid-week.
               </p>
               {adminHireError && (
                 <div className="mb-3 px-3 py-2 text-xs rounded-sm" style={{ background: "rgba(212,96,76,0.12)", border: `1px solid ${C.ember}`, color: C.ember }}>
