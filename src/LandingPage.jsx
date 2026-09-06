@@ -44,7 +44,7 @@ const ghostBtnStyle = {
   color: C.slate,
 };
 
-export default function LandingPage({ onAuth }) {
+export default function LandingPage({ onAuth, onCancel }) {
   const [screen, setScreen] = useState("auth"); // "auth" | "forgot" | "forgot_sent"
   const [mode, setMode] = useState("login"); // "login" | "register"
   const [email, setEmail] = useState("");
@@ -91,6 +91,17 @@ export default function LandingPage({ onAuth }) {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap');
       `}</style>
+
+      {onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="mb-4 text-xs uppercase tracking-wider"
+          style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", alignSelf: "flex-start", marginLeft: "max(4vw, calc(50% - 200px))" }}
+        >
+          ← Back to site
+        </button>
+      )}
 
       {logoOk && (
         <img

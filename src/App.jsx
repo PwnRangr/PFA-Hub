@@ -12818,6 +12818,7 @@ export default function App() {
   // Auth — undefined currentUser means "still checking", not "logged out",
   // so the loading screen and the landing page never flash into each other.
   const [currentUser, setCurrentUser] = useState(undefined);
+  const [showSignIn, setShowSignIn] = useState(false); // 2026-09-05: anonymous browsing is now allowed; this opens LandingPage on demand (chat, applying to a team) instead of it being the unavoidable entry point
   const [authReady, setAuthReady] = useState(false);
   const authInitializedRef = useRef(false);
   const wasLoggedInRef = useRef(false);
@@ -13796,14 +13797,14 @@ export default function App() {
     };
   }, [loadLeague]);
 
-  // real-time chat + news + applications + promotion window subscriptions
+  // Public-safe subscriptions, 2026-09-05: these collections' Firestore read
+  // rules were widened to `if true` alongside this change, so they're safe
+  // to fetch for anonymous visitors too — this is most of what Standings,
+  // Coaches, Brackets, and Home actually render.
   useEffect(() => {
-    const unsubChat = watchChat((msgs) => setChat(msgs));
     const unsubNews = watchNews((items) => {
       if (items && items.length) setNews(items);
     });
-    const unsubApps = watchApplications((apps) => setApplications(apps));
-    const unsubPendingApprovals = watchPendingApprovalCount((count) => setPendingApprovalCount(count));
     const unsubPromo = watchPromotionWindow((open) => setPromotionWindowOpen(open));
     const unsubClub300 = watchClub300Live((entries) => setClub300Live(entries));
     const unsubClub300Historical = watchClub300Historical((entries) => setClub300Historical(entries));
@@ -13815,12 +13816,8 @@ export default function App() {
     const unsubManualPenalties = watchManualPenalties((entries) => setManualPenalties(entries));
     const unsubSeasonCPFinal = watchSeasonCPFinal((entries) => setSeasonCPFinal(entries));
     const unsubConferenceStrengthHistorical = watchConferenceStrengthHistorical((entries) => setConferenceStrengthHistorical(entries));
-    const unsubHireTimers = watchHireTimers((timers) => setHireTimers(timers));
     return () => {
-      unsubChat();
       unsubNews();
-      unsubApps();
-      unsubPendingApprovals();
       unsubPromo();
       unsubClub300();
       unsubClub300Historical();
@@ -13832,9 +13829,30 @@ export default function App() {
       unsubManualPenalties();
       unsubSeasonCPFinal();
       unsubConferenceStrengthHistorical();
-      unsubHireTimers();
     };
   }, []);
+
+  // Account-gated subscriptions, 2026-09-05: chat/applications/hireTimers
+  // read rules stayed exactly as they were (isUser()/isMod()) — these would
+  // just fail permission-denied for an anonymous visitor, so don't even
+  // attempt them until someone's actually signed in. Chat in particular
+  // needs to stay fully empty while logged out, not just un-postable.
+  useEffect(() => {
+    if (!currentUser) {
+      setChat([]);
+      return;
+    }
+    const unsubChat = watchChat((msgs) => setChat(msgs));
+    const unsubApps = watchApplications((apps) => setApplications(apps));
+    const unsubPendingApprovals = watchPendingApprovalCount((count) => setPendingApprovalCount(count));
+    const unsubHireTimers = watchHireTimers((timers) => setHireTimers(timers));
+    return () => {
+      unsubChat();
+      unsubApps();
+      unsubPendingApprovals();
+      unsubHireTimers();
+    };
+  }, [currentUser]);
 
   useEffect(() => {
     if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -14442,6 +14460,10 @@ export default function App() {
       });
 
   const applyToTeam = async (tKey, team) => {
+    if (!currentUser) {
+      setShowSignIn(true);
+      return;
+    }
     const name = currentUser.displayName;
     const already = applications.some(
       (a) => a.tierKey === tKey && a.team === team && a.coachName.toLowerCase() === name.toLowerCase()
@@ -16019,105 +16041,117 @@ export default function App() {
   }
 
   if (!currentUser) {
-    return <LandingPage onAuth={setCurrentUser} />;
-  }
-
-  if (!currentUser.approved) {
-    let gateMsg, gateColor;
-    if (currentUser.rejected) {
-      gateMsg = "Your application was not approved. Contact an admin if you believe this is a mistake.";
-      gateColor = C.ember;
-    } else if (currentUser.everApproved) {
-      // Was approved before, isn't now — this is a ban, not new-user onboarding.
-      gateMsg = "Your account has been suspended. Contact an admin.";
-      gateColor = C.ember;
-    } else if (currentUser.pendingApproval) {
-      gateMsg = "Your email has been verified. Your account is pending review by an admin — you'll get access once it's approved.";
-      gateColor = C.gold;
-    } else {
-      gateMsg = `We've sent a verification link to ${currentUser.email}. Click it, then sign back in to continue.`;
-      gateColor = C.gold;
+    // Public browsing, 2026-09-05: no longer a hard wall. Anyone can view the
+    // whole app now — Standings, Coaches, Brackets, Career Stats, Rules,
+    // Home — without an account. LandingPage only appears when something
+    // that genuinely needs an identity (chat, applying to an open team)
+    // explicitly asks for it via setShowSignIn(true), and `onCancel` lets
+    // someone back out to plain browsing instead of being stuck signing in.
+    // Firestore rules were widened to match (`read: if true`) for every
+    // collection this renders with — chat/applications/users/hireTimers
+    // stay exactly as gated as they were, since those are the actions that
+    // still require an account.
+    if (showSignIn) {
+      return <LandingPage onAuth={(profile) => { setCurrentUser(profile); setShowSignIn(false); }} onCancel={() => setShowSignIn(false)} />;
     }
-    return (
-      <div
-        className="min-h-screen w-full flex items-center justify-center text-center px-6"
-        style={{ background: C.ink, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18 }}
-      >
-        <div style={{ maxWidth: 440 }}>
-          <div style={{ color: gateColor, marginBottom: 20 }}>{gateMsg}</div>
-          <button
-            onClick={logoutUser}
-            className="px-3 py-1.5 text-xs font-bold uppercase rounded-sm"
-            style={{ background: "transparent", border: `1px solid ${C.line}`, color: C.slate, cursor: "pointer" }}
-          >
-            Sign Out
-          </button>
+  } else {
+    if (!currentUser.approved) {
+      let gateMsg, gateColor;
+      if (currentUser.rejected) {
+        gateMsg = "Your application was not approved. Contact an admin if you believe this is a mistake.";
+        gateColor = C.ember;
+      } else if (currentUser.everApproved) {
+        // Was approved before, isn't now — this is a ban, not new-user onboarding.
+        gateMsg = "Your account has been suspended. Contact an admin.";
+        gateColor = C.ember;
+      } else if (currentUser.pendingApproval) {
+        gateMsg = "Your email has been verified. Your account is pending review by an admin — you'll get access once it's approved.";
+        gateColor = C.gold;
+      } else {
+        gateMsg = `We've sent a verification link to ${currentUser.email}. Click it, then sign back in to continue.`;
+        gateColor = C.gold;
+      }
+      return (
+        <div
+          className="min-h-screen w-full flex items-center justify-center text-center px-6"
+          style={{ background: C.ink, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18 }}
+        >
+          <div style={{ maxWidth: 440 }}>
+            <div style={{ color: gateColor, marginBottom: 20 }}>{gateMsg}</div>
+            <button
+              onClick={logoutUser}
+              className="px-3 py-1.5 text-xs font-bold uppercase rounded-sm"
+              style={{ background: "transparent", border: `1px solid ${C.line}`, color: C.slate, cursor: "pointer" }}
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (currentUser.twoFAEnabled && !twoFAVerified) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center px-6" style={{ background: C.ink, fontFamily: "'Barlow', sans-serif" }}>
-        <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 8, padding: "32px 36px", maxWidth: 380, width: "100%" }}>
-          <h2
-            className="text-lg uppercase text-center"
-            style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: "0.06em", color: C.gold, margin: "0 0 16px" }}
-          >
-            Two-Factor Code
-          </h2>
-          <p className="text-xs text-center" style={{ color: C.slate, lineHeight: 1.6, marginBottom: 18 }}>
-            Enter the 6-digit code from your authenticator app.
-          </p>
-          <input
-            value={twoFACode}
-            onChange={(e) => setTwoFACode(e.target.value)}
-            placeholder="000 000"
-            maxLength={6}
-            style={{
-              width: "100%",
-              padding: "12px 14px",
-              background: C.ink,
-              border: `1px solid ${C.gold}`,
-              borderRadius: 4,
-              color: C.gold,
-              fontSize: 24,
-              fontWeight: 700,
-              letterSpacing: "0.2em",
-              textAlign: "center",
-              outline: "none",
-              boxSizing: "border-box",
-              marginBottom: 12,
-            }}
-          />
-          {twoFAGateError && <div className="text-xs text-center mb-3" style={{ color: C.ember }}>{twoFAGateError}</div>}
-          <button
-            onClick={verifyTwoFAGate}
-            disabled={twoFACode.replace(/\s/g, "").length < 6}
-            className="w-full py-2.5 text-sm font-bold uppercase tracking-wider"
-            style={{
-              background: C.gold,
-              color: C.ink,
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer",
-              opacity: twoFACode.replace(/\s/g, "").length < 6 ? 0.5 : 1,
-              marginBottom: 10,
-            }}
-          >
-            Verify
-          </button>
-          <button
-            onClick={logoutUser}
-            className="w-full py-2 text-xs font-bold uppercase"
-            style={{ background: "transparent", border: `1px solid ${C.line}`, color: C.slate, borderRadius: 4, cursor: "pointer" }}
-          >
-            Sign Out
-          </button>
+    if (currentUser.twoFAEnabled && !twoFAVerified) {
+      return (
+        <div className="min-h-screen w-full flex items-center justify-center px-6" style={{ background: C.ink, fontFamily: "'Barlow', sans-serif" }}>
+          <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 8, padding: "32px 36px", maxWidth: 380, width: "100%" }}>
+            <h2
+              className="text-lg uppercase text-center"
+              style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: "0.06em", color: C.gold, margin: "0 0 16px" }}
+            >
+              Two-Factor Code
+            </h2>
+            <p className="text-xs text-center" style={{ color: C.slate, lineHeight: 1.6, marginBottom: 18 }}>
+              Enter the 6-digit code from your authenticator app.
+            </p>
+            <input
+              value={twoFACode}
+              onChange={(e) => setTwoFACode(e.target.value)}
+              placeholder="000 000"
+              maxLength={6}
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                background: C.ink,
+                border: `1px solid ${C.gold}`,
+                borderRadius: 4,
+                color: C.gold,
+                fontSize: 24,
+                fontWeight: 700,
+                letterSpacing: "0.2em",
+                textAlign: "center",
+                outline: "none",
+                boxSizing: "border-box",
+                marginBottom: 12,
+              }}
+            />
+            {twoFAGateError && <div className="text-xs text-center mb-3" style={{ color: C.ember }}>{twoFAGateError}</div>}
+            <button
+              onClick={verifyTwoFAGate}
+              disabled={twoFACode.replace(/\s/g, "").length < 6}
+              className="w-full py-2.5 text-sm font-bold uppercase tracking-wider"
+              style={{
+                background: C.gold,
+                color: C.ink,
+                border: "none",
+                borderRadius: 4,
+                cursor: "pointer",
+                opacity: twoFACode.replace(/\s/g, "").length < 6 ? 0.5 : 1,
+                marginBottom: 10,
+              }}
+            >
+              Verify
+            </button>
+            <button
+              onClick={logoutUser}
+              className="w-full py-2 text-xs font-bold uppercase"
+              style={{ background: "transparent", border: `1px solid ${C.line}`, color: C.slate, borderRadius: 4, cursor: "pointer" }}
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   return (
@@ -16163,7 +16197,17 @@ export default function App() {
                   ? `● Live · ${nflState ? `${nflState.season} Wk ${nflState.week}` : ""}`
                   : "Offline · sample data"}
               </span>
-              <UserMenu currentUser={currentUser} onOpenSettings={() => setView("settings")} />
+              {currentUser ? (
+                <UserMenu currentUser={currentUser} onOpenSettings={() => setView("settings")} />
+              ) : (
+                <button
+                  onClick={() => setShowSignIn(true)}
+                  className="px-3 py-1.5 text-xs uppercase tracking-wider rounded-sm"
+                  style={{ background: C.gold, color: C.ink, fontWeight: 600, border: "none", cursor: "pointer" }}
+                >
+                  Sign In
+                </button>
+              )}
             </div>
           </div>
           <nav className="mt-4 flex overflow-x-auto">
@@ -16367,64 +16411,84 @@ export default function App() {
                   <span className="text-xs uppercase tracking-widest" style={{ color: C.slate }}>all 13 leagues</span>
                 </div>
                 <div className="flex flex-col rounded-sm overflow-hidden" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
-                  <div className="overflow-y-auto p-3 space-y-2.5" style={{ maxHeight: "37.5rem", minHeight: "24rem" }}>
-                    {chat.length === 0 && (
-                      <div className="h-full flex items-center justify-center text-sm text-center px-6" style={{ color: C.slate }}>
-                        Nobody's talking yet. Someone in FLHS probably thinks they could hang in the NFL — discuss.
-                      </div>
-                    )}
-                    {chat.map((m, i) => (
-                      <div key={m.id || i} className="flex items-start gap-2">
-                        <Avatar name={m.name} avatar={findCoachAvatar(m.name)} size={24} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline gap-2 text-xs">
-                            {m.pinned && <span title="Pinned">📌</span>}
-                            <button
-                              type="button"
-                              onClick={() => openCoachProfile(m.name)}
-                              className="font-semibold"
-                              style={{ color: m.name === currentUser?.displayName ? C.gold : C.chalk }}
-                            >
-                              {m.name}
-                              <TrophyBadges name={m.name} size={11} trophies={coachTrophiesHistorical} />
-                            </button>
-                            <span style={{ color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>{ago(m.ts)}</span>
-                            {isMod && (
-                              <span className="ml-auto flex items-center gap-2 text-xs">
-                                <button onClick={() => pinChatMsg(m.id, !m.pinned)} style={{ color: C.gold }}>
-                                  {m.pinned ? "unpin" : "pin"}
-                                </button>
-                                <button onClick={() => deleteChatMsg(m.id)} style={{ color: C.ember }}>
-                                  delete
-                                </button>
-                              </span>
-                            )}
+                  {currentUser ? (
+                    <>
+                      <div className="overflow-y-auto p-3 space-y-2.5" style={{ maxHeight: "37.5rem", minHeight: "24rem" }}>
+                        {chat.length === 0 && (
+                          <div className="h-full flex items-center justify-center text-sm text-center px-6" style={{ color: C.slate }}>
+                            Nobody's talking yet. Someone in FLHS probably thinks they could hang in the NFL — discuss.
                           </div>
-                          <div className="text-sm leading-snug mt-0.5">{m.text}</div>
+                        )}
+                        {chat.map((m, i) => (
+                          <div key={m.id || i} className="flex items-start gap-2">
+                            <Avatar name={m.name} avatar={findCoachAvatar(m.name)} size={24} />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-baseline gap-2 text-xs">
+                                {m.pinned && <span title="Pinned">📌</span>}
+                                <button
+                                  type="button"
+                                  onClick={() => openCoachProfile(m.name)}
+                                  className="font-semibold"
+                                  style={{ color: m.name === currentUser?.displayName ? C.gold : C.chalk }}
+                                >
+                                  {m.name}
+                                  <TrophyBadges name={m.name} size={11} trophies={coachTrophiesHistorical} />
+                                </button>
+                                <span style={{ color: C.slate, fontFamily: "'IBM Plex Mono', monospace" }}>{ago(m.ts)}</span>
+                                {isMod && (
+                                  <span className="ml-auto flex items-center gap-2 text-xs">
+                                    <button onClick={() => pinChatMsg(m.id, !m.pinned)} style={{ color: C.gold }}>
+                                      {m.pinned ? "unpin" : "pin"}
+                                    </button>
+                                    <button onClick={() => deleteChatMsg(m.id)} style={{ color: C.ember }}>
+                                      delete
+                                    </button>
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm leading-snug mt-0.5">{m.text}</div>
+                            </div>
+                          </div>
+                        ))}
+                        <div ref={chatEndRef} />
+                      </div>
+                      <div className="p-2.5" style={{ borderTop: `1px solid ${C.line}` }}>
+                        <div className="flex gap-2">
+                          <input
+                            value={msgInput}
+                            onChange={(e) => setMsgInput(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && sendMsg()}
+                            placeholder={`Talk your talk, ${currentUser.displayName}`}
+                            className="flex-1 px-3 py-2 text-sm rounded-sm outline-none min-w-0"
+                            style={{ background: C.ink, border: `1px solid ${C.line}`, color: C.chalk }}
+                          />
+                          <button
+                            onClick={sendMsg}
+                            className="px-3.5 py-2 text-sm uppercase tracking-wider rounded-sm shrink-0"
+                            style={{ background: C.gold, color: C.ink, fontWeight: 600 }}
+                          >
+                            Send
+                          </button>
                         </div>
                       </div>
-                    ))}
-                    <div ref={chatEndRef} />
-                  </div>
-                  <div className="p-2.5" style={{ borderTop: `1px solid ${C.line}` }}>
-                    <div className="flex gap-2">
-                      <input
-                        value={msgInput}
-                        onChange={(e) => setMsgInput(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && sendMsg()}
-                        placeholder={`Talk your talk, ${currentUser.displayName}`}
-                        className="flex-1 px-3 py-2 text-sm rounded-sm outline-none min-w-0"
-                        style={{ background: C.ink, border: `1px solid ${C.line}`, color: C.chalk }}
-                      />
+                    </>
+                  ) : (
+                    <div
+                      className="flex flex-col items-center justify-center text-center px-6 gap-4"
+                      style={{ minHeight: "24rem" }}
+                    >
+                      <div className="text-sm" style={{ color: C.slate, lineHeight: 1.6 }}>
+                        Sign in to read and join the conversation across all 13 leagues.
+                      </div>
                       <button
-                        onClick={sendMsg}
-                        className="px-3.5 py-2 text-sm uppercase tracking-wider rounded-sm shrink-0"
-                        style={{ background: C.gold, color: C.ink, fontWeight: 600 }}
+                        onClick={() => setShowSignIn(true)}
+                        className="px-4 py-2 text-xs uppercase tracking-wider rounded-sm"
+                        style={{ background: C.gold, color: C.ink, fontWeight: 600, border: "none", cursor: "pointer" }}
                       >
-                        Send
+                        Sign In / Register
                       </button>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="mt-6">
@@ -17874,7 +17938,7 @@ export default function App() {
           </div>
         )}
 
-        {view === "settings" && (
+        {view === "settings" && currentUser && (
           <SettingsPanel currentUser={currentUser} onUpdate={handleProfileUpdate} onAccountDeleted={handleAccountDeleted} />
         )}
 
