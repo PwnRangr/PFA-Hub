@@ -17630,7 +17630,14 @@ export default function App() {
                         className="px-2.5 py-1 text-xs uppercase tracking-widest sticky top-0"
                         style={{ color: C.gold, background: C.ink, letterSpacing: "0.18em", fontWeight: 700, borderBottom: `1px solid ${C.goldDim}` }}
                       >
-                        {group.tierName} <span style={{ color: C.slate, fontWeight: 400, letterSpacing: "normal", textTransform: "none" }}>· {tierHeaderStats(group)}</span>
+                        <button
+                          type="button"
+                          onClick={() => { setTierKey(group.tierKey); setView("standings"); }}
+                          style={{ color: "inherit", background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit", letterSpacing: "inherit", textTransform: "inherit" }}
+                        >
+                          {group.tierName}
+                        </button>
+                        <span style={{ color: C.slate, fontWeight: 400, letterSpacing: "normal", textTransform: "none" }}> · {tierHeaderStats(group)}</span>
                       </div>
                       {group.rows.map((r) => (
                       <div key={`${r.tierKey}:${r.rosterId}`} className="flex items-center gap-3 px-2.5 py-1.5 rounded-sm text-sm" style={{ background: C.panelHi || C.ink, border: `1px solid ${C.line}` }}>
@@ -17704,7 +17711,15 @@ export default function App() {
                     className="px-3 py-1.5 text-sm uppercase tracking-widest mt-3 first:mt-0"
                     style={{ color: C.gold, background: "rgba(232,163,61,0.1)", letterSpacing: "0.18em", fontWeight: 700, border: `1px solid ${C.goldDim}`, borderRadius: 3 }}
                   >
-                    {group.tierName} <span style={{ color: C.slate, fontWeight: 400 }}>· {tierHeaderStats(group)}</span>
+                    <button
+                      type="button"
+                      onClick={() => { setTierKey(group.tierKey); setView("standings"); }}
+                      style={{ color: "inherit", background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit", letterSpacing: "inherit", textTransform: "inherit" }}
+                      title={`Go to ${group.tierName} standings`}
+                    >
+                      {group.tierName}
+                    </button>
+                    <span style={{ color: C.slate, fontWeight: 400 }}> · {tierHeaderStats(group)}</span>
                   </div>
                   {group.rows.map((r) => {
                   const teamApps = applicantsForTeam(r.tierKey, r.team);
