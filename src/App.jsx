@@ -15112,6 +15112,32 @@ export default function App() {
     return groups;
   };
 
+  // Tier #, Conference Strength, and Conference Avg Max Points for a tier
+  // header bar — 2026-09-06, replacing a plain team count once Troy pointed
+  // out the count wasn't useful navigation context on its own. Tier # reuses
+  // TIERS' own `.tier` field (the same number shown on the Standings tab's
+  // nav pills, not re-derived). Strength reuses the exact same
+  // conferenceStrength score and +/-1-decimal formatting already shown
+  // there too — NFL has no strength score by design (no pool it's compared
+  // within), so that piece just doesn't render for NFL's header rather than
+  // showing a misleading zero. Avg Max Points comes straight off any row in
+  // the group, since every row in a tier already carries the same
+  // confAvgMaxPts value.
+  const tierHeaderStats = (group) => {
+    const tierNum = TIERS.find((t) => t.key === group.tierKey)?.tier;
+    const strength = conferenceStrength[group.tierKey];
+    const avgMax = group.rows[0]?.confAvgMaxPts;
+    return (
+      <>
+        {tierNum != null && <>Tier #{tierNum}</>}
+        {strength && (
+          <> · Strength {strength.score >= 0 ? "+" : ""}{strength.score.toFixed(1)}</>
+        )}
+        {avgMax != null && <> · Avg Max {fmt(avgMax)}</>}
+      </>
+    );
+  };
+
   // ── Coach directory: every coach currently rostered across all connected
   // leagues, built entirely from data already fetched for standings — no
   // separate roster of "232 coaches" needs to be maintained by hand.
@@ -17604,7 +17630,7 @@ export default function App() {
                         className="px-2.5 py-1 text-xs uppercase tracking-widest sticky top-0"
                         style={{ color: C.gold, background: C.ink, letterSpacing: "0.18em", fontWeight: 700, borderBottom: `1px solid ${C.goldDim}` }}
                       >
-                        {group.tierName}
+                        {group.tierName} <span style={{ color: C.slate, fontWeight: 400, letterSpacing: "normal", textTransform: "none" }}>· {tierHeaderStats(group)}</span>
                       </div>
                       {group.rows.map((r) => (
                       <div key={`${r.tierKey}:${r.rosterId}`} className="flex items-center gap-3 px-2.5 py-1.5 rounded-sm text-sm" style={{ background: C.panelHi || C.ink, border: `1px solid ${C.line}` }}>
@@ -17678,7 +17704,7 @@ export default function App() {
                     className="px-3 py-1.5 text-sm uppercase tracking-widest mt-3 first:mt-0"
                     style={{ color: C.gold, background: "rgba(232,163,61,0.1)", letterSpacing: "0.18em", fontWeight: 700, border: `1px solid ${C.goldDim}`, borderRadius: 3 }}
                   >
-                    {group.tierName} <span style={{ color: C.slate, fontWeight: 400 }}>· {group.rows.length}</span>
+                    {group.tierName} <span style={{ color: C.slate, fontWeight: 400 }}>· {tierHeaderStats(group)}</span>
                   </div>
                   {group.rows.map((r) => {
                   const teamApps = applicantsForTeam(r.tierKey, r.team);
