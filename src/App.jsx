@@ -17732,7 +17732,7 @@ export default function App() {
                     </div>
                     <div
                       className="hidden sm:grid shrink-0 text-right text-xs"
-                      style={{ gridTemplateColumns: "repeat(4, minmax(72px, auto))", gap: "4px 14px", fontFamily: "'IBM Plex Mono', monospace", color: C.chalk }}
+                      style={{ gridTemplateColumns: "repeat(3, minmax(72px, auto))", gap: "4px 14px", fontFamily: "'IBM Plex Mono', monospace", color: C.chalk }}
                     >
                       <div>
                         <div style={{ color: C.slate, fontFamily: "'Barlow', sans-serif" }}>Record</div>
@@ -17745,10 +17745,6 @@ export default function App() {
                       <div>
                         <div style={{ color: C.slate, fontFamily: "'Barlow', sans-serif" }}>Max Pts</div>
                         {fmt(r.maxPts)}
-                      </div>
-                      <div>
-                        <div style={{ color: C.slate, fontFamily: "'Barlow', sans-serif" }}>Conf Avg Max</div>
-                        {fmt(r.confAvgMaxPts)}
                       </div>
                     </div>
                     <button
