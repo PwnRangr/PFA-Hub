@@ -15092,6 +15092,26 @@ export default function App() {
     [allAvailabilityRows]
   );
 
+  // Groups a rows array into per-tier chunks for the Available Teams tab's
+  // headers -- 2026-09-06, added once the season progresses and teams start
+  // shuffling between tiers, since a long flat list gets hard to navigate.
+  // Safe to assume same-tier rows are already contiguous: both
+  // allAvailabilityRows and availableTeamsList are built by iterating TIERS
+  // in order and pushing a whole tier's rows before moving to the next one,
+  // and .filter() never reorders, so this never needs an explicit re-sort.
+  const groupRowsByTier = (rows) => {
+    const groups = [];
+    let current = null;
+    rows.forEach((r) => {
+      if (!current || current.tierKey !== r.tierKey) {
+        current = { tierKey: r.tierKey, tierName: r.tierName, rows: [] };
+        groups.push(current);
+      }
+      current.rows.push(r);
+    });
+    return groups;
+  };
+
   // ── Coach directory: every coach currently rostered across all connected
   // leagues, built entirely from data already fetched for standings — no
   // separate roster of "232 coaches" needs to be maintained by hand.
@@ -17572,13 +17592,21 @@ export default function App() {
                   style={{ background: C.ink, border: `1px solid ${C.line}`, color: C.chalk }}
                 />
                 <div className="space-y-1 overflow-y-auto" style={{ maxHeight: "28rem" }}>
-                  {allAvailabilityRows
-                    .filter((r) => {
+                  {groupRowsByTier(
+                    allAvailabilityRows.filter((r) => {
                       const q = availableTeamsQuery.trim().toLowerCase();
                       if (!q) return true;
                       return r.team.toLowerCase().includes(q) || r.coach.toLowerCase().includes(q) || r.tierName.toLowerCase().includes(q);
                     })
-                    .map((r) => (
+                  ).map((group) => (
+                    <Fragment key={group.tierKey}>
+                      <div
+                        className="px-2.5 py-1 text-xs uppercase tracking-widest sticky top-0"
+                        style={{ color: C.gold, background: C.ink, letterSpacing: "0.18em", fontWeight: 700, borderBottom: `1px solid ${C.goldDim}` }}
+                      >
+                        {group.tierName}
+                      </div>
+                      {group.rows.map((r) => (
                       <div key={`${r.tierKey}:${r.rosterId}`} className="flex items-center gap-3 px-2.5 py-1.5 rounded-sm text-sm" style={{ background: C.panelHi || C.ink, border: `1px solid ${C.line}` }}>
                         <TeamMark team={r.team} tierKey={r.tierKey} size={24} />
                         <div className="min-w-0 flex-1">
@@ -17616,7 +17644,9 @@ export default function App() {
                           </button>
                         )}
                       </div>
-                    ))}
+                      ))}
+                    </Fragment>
+                  ))}
                 </div>
               </div>
             )}
@@ -17636,13 +17666,21 @@ export default function App() {
               style={{ background: C.panel, border: `1px solid ${C.line}`, color: C.chalk }}
             />
             <div className="space-y-1.5">
-              {availableTeamsList
-                .filter((r) => {
+              {groupRowsByTier(
+                availableTeamsList.filter((r) => {
                   const q = availableTeamsQuery.trim().toLowerCase();
                   if (!q) return true;
                   return r.team.toLowerCase().includes(q) || r.coach.toLowerCase().includes(q) || r.tierName.toLowerCase().includes(q);
                 })
-                .map((r) => {
+              ).map((group) => (
+                <Fragment key={group.tierKey}>
+                  <div
+                    className="px-3 py-1.5 text-sm uppercase tracking-widest mt-3 first:mt-0"
+                    style={{ color: C.gold, background: "rgba(232,163,61,0.1)", letterSpacing: "0.18em", fontWeight: 700, border: `1px solid ${C.goldDim}`, borderRadius: 3 }}
+                  >
+                    {group.tierName} <span style={{ color: C.slate, fontWeight: 400 }}>· {group.rows.length}</span>
+                  </div>
+                  {group.rows.map((r) => {
                   const teamApps = applicantsForTeam(r.tierKey, r.team);
                   const alreadyApplied =
                     currentUser?.displayName &&
@@ -17714,7 +17752,9 @@ export default function App() {
                     )}
                   </div>
                   );
-                })}
+                  })}
+                </Fragment>
+              ))}
               {availableTeamsList.length === 0 && (
                 <div className="py-10 text-center text-sm rounded-sm" style={{ border: `1px dashed ${C.line}`, color: C.slate }}>
                   No available teams right now.
