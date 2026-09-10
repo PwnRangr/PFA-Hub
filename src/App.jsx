@@ -13103,6 +13103,14 @@ export default function App() {
   // correctly that season's own — exactly what she caught in the Weekly
   // Awards screenshots. For any non-current season, skip the tag and fall
   // straight to Sleeper's own `display_name` for that historical roster.
+  // Shared W-L/PF ranking + place-numbering, pulled out 2026-09-10 so the
+  // live-PF blend below (loadLeague) can re-rank after adding in-progress
+  // points without re-deriving a second copy of this comparator that could
+  // drift from buildStandings' own — same "fix the property, not the
+  // instance" rule as computeCurrentCPFor's extraction.
+  const rankStandingsRows = (rows) =>
+    [...rows].sort((a, b) => b.w - a.w || b.pts - a.pts).map((r, i) => ({ ...r, place: i + 1 }));
+
   const buildStandings = (users, rosters, leagueId, tierKeyArg, isCurrentSeason = true) => {
     const byOwner = {};
     users.forEach((u) => (byOwner[u.user_id] = u));
@@ -13153,8 +13161,7 @@ export default function App() {
         division: (r.settings && r.settings.division) || null,
       };
     });
-    rows.sort((a, b) => b.w - a.w || b.pts - a.pts);
-    return rows.map((r, i) => ({ ...r, place: i + 1 }));
+    return rankStandingsRows(rows);
   };
 
   // Pure pairs-builder, factored out of loadLeague so the Weekly Awards lazy
@@ -13228,11 +13235,35 @@ export default function App() {
       j(`${SLEEPER}/league/${leagueId}/users`),
       j(`${SLEEPER}/league/${leagueId}/rosters`),
     ]);
-    const rows = buildStandings(users, rosters, leagueId, tKey, isCurrentSeason);
-    setStandingsCache((c) => ({ ...c, [leagueId]: rows }));
+    let rows = buildStandings(users, rosters, leagueId, tKey, isCurrentSeason);
     if (week) {
       try {
         const m = await j(`${SLEEPER}/league/${leagueId}/matchups/${week}`);
+        // Live PF blend (2026-09-10, mistakes.md #40): Sleeper's
+        // settings.fpts/fpts_decimal — buildStandings' `pts` — only
+        // reflects weeks Sleeper has fully GRADED. The current,
+        // still-in-progress week is excluded until then, which is why
+        // every roster read pts=0 in week 1 despite real players having
+        // already scored (confirmed live: a Hi-Tides roster read fpts=0 on
+        // /rosters but points=28.3 for the same roster/week on
+        // /matchups/{week}). Adding this week's live matchup points on top
+        // of fpts is safe and never double-counted: by construction, the
+        // week this fetch is for is exactly the one week NOT yet folded
+        // into fpts — once Sleeper grades it, nflState.week rolls forward
+        // and this fetch moves on to the new current week. Current-season
+        // only; a past season's standings are already final, nothing to
+        // blend. Max PF (ppts) is deliberately NOT blended here — Troy's
+        // call: Max PF is Sleeper's own data, not something this site
+        // should approximate.
+        if (isCurrentSeason) {
+          const livePtsByRoster = {};
+          m.forEach((t) => {
+            if (t.roster_id != null) livePtsByRoster[t.roster_id] = t.points || 0;
+          });
+          rows = rankStandingsRows(
+            rows.map((r) => ({ ...r, pts: r.pts + (livePtsByRoster[r.rosterId] || 0) }))
+          );
+        }
         const pairs = buildPairsWithBench(m, rows);
         setMatchupsCache((c) => ({ ...c, [leagueId]: pairs }));
         // Current-week scores are still moving, so this never writes to the
@@ -13242,6 +13273,7 @@ export default function App() {
         detect300(pairs, tKey, CURRENT_SEASON, week);
       } catch (e) {}
     }
+    setStandingsCache((c) => ({ ...c, [leagueId]: rows }));
   }, []);
 
   // ── 4000 Club season-end sweep ──
@@ -13959,15 +13991,22 @@ export default function App() {
 
   // once discovery has filled in leagueMap, fetch standings for every connected
   // league (not just the one being viewed) so the homepage Hot Seat report can
-  // show a last-place coach from all 13 tiers, not just whichever is selected
+  // show a last-place coach from all 13 tiers, not just whichever is selected.
+  // Passes the current week (2026-09-10, Troy's call) so loadLeague's live-PF
+  // blend runs for all 13 tiers on this pass too, not just whichever tier the
+  // per-tier Standings effect happens to be viewing — nflState is already set
+  // by the time leagueMap fills in (the discovery chain sets nflState first,
+  // then awaits the NFL loadLeague call, then discovers the other 12 leagues),
+  // but this still falls back to `undefined` defensively if that ever changes.
   useEffect(() => {
     if (mode !== "live" || bulkLoadedRef.current) return;
     if (Object.keys(leagueMap).length <= 1) return;
     bulkLoadedRef.current = true;
+    const week = nflState ? nflState.week : undefined;
     Object.entries(leagueMap).forEach(([tKey, id]) => {
-      if (id && !standingsCache[id]) loadLeague(id, undefined, tKey);
+      if (id && !standingsCache[id]) loadLeague(id, week, tKey);
     });
-  }, [mode, leagueMap, standingsCache, loadLeague]);
+  }, [mode, leagueMap, standingsCache, loadLeague, nflState]);
 
   // TOURNAMENT — seeds lock in ONCE at the Week7->Week8 rollover, so this
   // reads any existing frozen snapshot from Firestore first; only if none
@@ -15092,52 +15131,6 @@ export default function App() {
     [allAvailabilityRows]
   );
 
-  // Groups a rows array into per-tier chunks for the Available Teams tab's
-  // headers -- 2026-09-06, added once the season progresses and teams start
-  // shuffling between tiers, since a long flat list gets hard to navigate.
-  // Safe to assume same-tier rows are already contiguous: both
-  // allAvailabilityRows and availableTeamsList are built by iterating TIERS
-  // in order and pushing a whole tier's rows before moving to the next one,
-  // and .filter() never reorders, so this never needs an explicit re-sort.
-  const groupRowsByTier = (rows) => {
-    const groups = [];
-    let current = null;
-    rows.forEach((r) => {
-      if (!current || current.tierKey !== r.tierKey) {
-        current = { tierKey: r.tierKey, tierName: r.tierName, rows: [] };
-        groups.push(current);
-      }
-      current.rows.push(r);
-    });
-    return groups;
-  };
-
-  // Tier #, Conference Strength, and Conference Avg Max Points for a tier
-  // header bar — 2026-09-06, replacing a plain team count once Troy pointed
-  // out the count wasn't useful navigation context on its own. Tier # reuses
-  // TIERS' own `.tier` field (the same number shown on the Standings tab's
-  // nav pills, not re-derived). Strength reuses the exact same
-  // conferenceStrength score and +/-1-decimal formatting already shown
-  // there too — NFL has no strength score by design (no pool it's compared
-  // within), so that piece just doesn't render for NFL's header rather than
-  // showing a misleading zero. Avg Max Points comes straight off any row in
-  // the group, since every row in a tier already carries the same
-  // confAvgMaxPts value.
-  const tierHeaderStats = (group) => {
-    const tierNum = TIERS.find((t) => t.key === group.tierKey)?.tier;
-    const strength = conferenceStrength[group.tierKey];
-    const avgMax = group.rows[0]?.confAvgMaxPts;
-    return (
-      <>
-        {tierNum != null && <>Tier #{tierNum}</>}
-        {strength && (
-          <> · Strength {strength.score >= 0 ? "+" : ""}{strength.score.toFixed(1)}</>
-        )}
-        {avgMax != null && <> · Avg Max {fmt(avgMax)}</>}
-      </>
-    );
-  };
-
   // ── Coach directory: every coach currently rostered across all connected
   // leagues, built entirely from data already fetched for standings — no
   // separate roster of "232 coaches" needs to be maintained by hand.
@@ -15636,25 +15629,9 @@ export default function App() {
   // started this. Reuses openTeamsDirectory (unfiltered — this isn't tied
   // to Directory's search box) so there's no second Sleeper fetch, just a
   // different grouping.
-  // Admin → Applications needs to see every team someone COULD have applied
-  // to via either Apply button — Open Teams (vacant only) AND Available
-  // Teams (vacant + interim + inactive + Relegation Bowl + manual). Built
-  // separately from openTeamsDirectory on purpose: that one feeds the
-  // Directory tab's coach-lookup search, which should still only show a
-  // team as "open" when it's actually vacant, not merely available to a
-  // new applicant while someone's still interim-running it.
-  const applicationEligibleTeams = useMemo(() => {
-    const byKey = new Map();
-    openTeamsDirectory.forEach((t) => byKey.set(`${t.tierKey}:${t.team}`, t));
-    availableTeamsList.forEach((r) => {
-      byKey.set(`${r.tierKey}:${r.team}`, { coach: r.coach, team: r.team, tierKey: r.tierKey, tierName: r.tierName, maxPts: r.maxPts, rosterId: r.rosterId });
-    });
-    return [...byKey.values()];
-  }, [openTeamsDirectory, availableTeamsList]);
-
   const openApplicationsByTier = useMemo(() => {
     const byTier = new Map();
-    applicationEligibleTeams.forEach((t) => {
+    openTeamsDirectory.forEach((t) => {
       if (!byTier.has(t.tierKey)) byTier.set(t.tierKey, []);
       byTier.get(t.tierKey).push(t);
     });
@@ -15662,7 +15639,7 @@ export default function App() {
       tier: t,
       openTeams: (byTier.get(t.key) || []).sort((a, b) => a.team.localeCompare(b.team)),
     }));
-  }, [applicationEligibleTeams]);
+  }, [openTeamsDirectory]);
 
   // ── Conference Strength — our JS port of her "League Difficulty" sheet
   // formula (confirmed cell-by-cell against the sheet's real formulas and a
@@ -17204,12 +17181,25 @@ export default function App() {
                     <div className="text-xs uppercase tracking-widest" style={{ color: C.slate, letterSpacing: "0.2em" }}>
                       Open Teams
                     </div>
+                    {isAdmin && (
+                      <button
+                        onClick={togglePromotionWindow}
+                        className="px-2.5 py-1 text-xs uppercase tracking-wider rounded-sm"
+                        style={{
+                          color: promotionWindowOpen ? C.ink : C.slate,
+                          background: promotionWindowOpen ? C.turf : "transparent",
+                          border: `1px solid ${promotionWindowOpen ? C.turf : C.line}`,
+                        }}
+                      >
+                        Promotion window: {promotionWindowOpen ? "open" : "closed"}
+                      </button>
+                    )}
                   </div>
                   {!promotionWindowOpen && (
                     <div className="mb-2 text-xs" style={{ color: C.slate }}>
                       {isAdmin
-                        ? 'Applications are hidden from coaches — turn them on under Admin → Applications.'
-                        : "Applications aren't open yet — check back soon."}
+                        ? "Applications are hidden from coaches until you open the promotion window."
+                        : "Applications aren't open yet — check back once the promotion window opens."}
                     </div>
                   )}
                   <div className="space-y-2">
@@ -17618,28 +17608,13 @@ export default function App() {
                   style={{ background: C.ink, border: `1px solid ${C.line}`, color: C.chalk }}
                 />
                 <div className="space-y-1 overflow-y-auto" style={{ maxHeight: "28rem" }}>
-                  {groupRowsByTier(
-                    allAvailabilityRows.filter((r) => {
+                  {allAvailabilityRows
+                    .filter((r) => {
                       const q = availableTeamsQuery.trim().toLowerCase();
                       if (!q) return true;
                       return r.team.toLowerCase().includes(q) || r.coach.toLowerCase().includes(q) || r.tierName.toLowerCase().includes(q);
                     })
-                  ).map((group) => (
-                    <Fragment key={group.tierKey}>
-                      <div
-                        className="px-2.5 py-1 text-xs uppercase tracking-widest sticky top-0"
-                        style={{ color: C.gold, background: C.ink, letterSpacing: "0.18em", fontWeight: 700, borderBottom: `1px solid ${C.goldDim}` }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => { setTierKey(group.tierKey); setView("standings"); }}
-                          style={{ color: "inherit", background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit", letterSpacing: "inherit", textTransform: "inherit" }}
-                        >
-                          {group.tierName}
-                        </button>
-                        <span style={{ color: C.slate, fontWeight: 400, letterSpacing: "normal", textTransform: "none" }}> · {tierHeaderStats(group)}</span>
-                      </div>
-                      {group.rows.map((r) => (
+                    .map((r) => (
                       <div key={`${r.tierKey}:${r.rosterId}`} className="flex items-center gap-3 px-2.5 py-1.5 rounded-sm text-sm" style={{ background: C.panelHi || C.ink, border: `1px solid ${C.line}` }}>
                         <TeamMark team={r.team} tierKey={r.tierKey} size={24} />
                         <div className="min-w-0 flex-1">
@@ -17677,20 +17652,11 @@ export default function App() {
                           </button>
                         )}
                       </div>
-                      ))}
-                    </Fragment>
-                  ))}
+                    ))}
                 </div>
               </div>
             )}
 
-            {!promotionWindowOpen && (
-              <div className="mb-3 text-xs" style={{ color: C.slate }}>
-                {isAdmin
-                  ? 'Applications are hidden from coaches — turn them on under Admin → Applications.'
-                  : "Applications aren't open yet — check back soon."}
-              </div>
-            )}
             <input
               value={availableTeamsQuery}
               onChange={(e) => setAvailableTeamsQuery(e.target.value)}
@@ -17699,34 +17665,13 @@ export default function App() {
               style={{ background: C.panel, border: `1px solid ${C.line}`, color: C.chalk }}
             />
             <div className="space-y-1.5">
-              {groupRowsByTier(
-                availableTeamsList.filter((r) => {
+              {availableTeamsList
+                .filter((r) => {
                   const q = availableTeamsQuery.trim().toLowerCase();
                   if (!q) return true;
                   return r.team.toLowerCase().includes(q) || r.coach.toLowerCase().includes(q) || r.tierName.toLowerCase().includes(q);
                 })
-              ).map((group) => (
-                <Fragment key={group.tierKey}>
-                  <div
-                    className="px-3 py-1.5 text-sm uppercase tracking-widest mt-3 first:mt-0"
-                    style={{ color: C.gold, background: "rgba(232,163,61,0.1)", letterSpacing: "0.18em", fontWeight: 700, border: `1px solid ${C.goldDim}`, borderRadius: 3 }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => { setTierKey(group.tierKey); setView("standings"); }}
-                      style={{ color: "inherit", background: "none", border: "none", padding: 0, cursor: "pointer", font: "inherit", letterSpacing: "inherit", textTransform: "inherit" }}
-                      title={`Go to ${group.tierName} standings`}
-                    >
-                      {group.tierName}
-                    </button>
-                    <span style={{ color: C.slate, fontWeight: 400 }}> · {tierHeaderStats(group)}</span>
-                  </div>
-                  {group.rows.map((r) => {
-                  const teamApps = applicantsForTeam(r.tierKey, r.team);
-                  const alreadyApplied =
-                    currentUser?.displayName &&
-                    teamApps.some((a) => a.coachName.toLowerCase() === currentUser.displayName.toLowerCase());
-                  return (
+                .map((r) => (
                   <div key={`${r.tierKey}:${r.rosterId}`} className="flex items-center gap-3 px-3 py-2.5 rounded-sm" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
                     <TeamMark team={r.team} tierKey={r.tierKey} size={44} />
                     <div className="min-w-0 flex-1">
@@ -17747,7 +17692,7 @@ export default function App() {
                     </div>
                     <div
                       className="hidden sm:grid shrink-0 text-right text-xs"
-                      style={{ gridTemplateColumns: "repeat(3, minmax(72px, auto))", gap: "4px 14px", fontFamily: "'IBM Plex Mono', monospace", color: C.chalk }}
+                      style={{ gridTemplateColumns: "repeat(4, minmax(72px, auto))", gap: "4px 14px", fontFamily: "'IBM Plex Mono', monospace", color: C.chalk }}
                     >
                       <div>
                         <div style={{ color: C.slate, fontFamily: "'Barlow', sans-serif" }}>Record</div>
@@ -17761,6 +17706,10 @@ export default function App() {
                         <div style={{ color: C.slate, fontFamily: "'Barlow', sans-serif" }}>Max Pts</div>
                         {fmt(r.maxPts)}
                       </div>
+                      <div>
+                        <div style={{ color: C.slate, fontFamily: "'Barlow', sans-serif" }}>Conf Avg Max</div>
+                        {fmt(r.confAvgMaxPts)}
+                      </div>
                     </div>
                     <button
                       type="button"
@@ -17771,27 +17720,8 @@ export default function App() {
                     >
                       {r.draftPick ? `${ordinal(r.draftPick)} pick` : "Details"}
                     </button>
-                    {promotionWindowOpen && (
-                      <button
-                        type="button"
-                        disabled={alreadyApplied}
-                        onClick={() => applyToTeam(r.tierKey, r.team)}
-                        className="shrink-0 px-3 py-1 text-xs uppercase tracking-wider rounded-sm"
-                        style={{
-                          background: alreadyApplied ? "transparent" : C.gold,
-                          color: alreadyApplied ? C.turf : C.ink,
-                          border: `1px solid ${alreadyApplied ? C.turf : C.gold}`,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {alreadyApplied ? "Applied ✓" : "Apply"}
-                      </button>
-                    )}
                   </div>
-                  );
-                  })}
-                </Fragment>
-              ))}
+                ))}
               {availableTeamsList.length === 0 && (
                 <div className="py-10 text-center text-sm rounded-sm" style={{ border: `1px dashed ${C.line}`, color: C.slate }}>
                   No available teams right now.
@@ -18465,30 +18395,13 @@ export default function App() {
             </div>
             {adminSubTab === "applications" && (
             <section className="mb-8">
-              <div className="flex items-start justify-between gap-3 flex-wrap mb-1">
-                <h2 className="text-3xl uppercase leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
-                  Applications
-                </h2>
-                <button
-                  onClick={togglePromotionWindow}
-                  className="px-3 py-1.5 text-xs uppercase tracking-wider rounded-sm shrink-0"
-                  style={{
-                    color: promotionWindowOpen ? C.ink : C.slate,
-                    background: promotionWindowOpen ? C.turf : "transparent",
-                    border: `1px solid ${promotionWindowOpen ? C.turf : C.line}`,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                  title="Controls the Apply button everywhere it appears — Open Teams and Available Teams both"
-                >
-                  Applications: {promotionWindowOpen ? "ON" : "OFF"}
-                </button>
-              </div>
+              <h2 className="text-3xl uppercase leading-none mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>
+                Applications
+              </h2>
               <p className="text-sm mb-4" style={{ color: C.slate }}>
                 Every open team across all 13 leagues, ranked applicants underneath. Hiring here records the Alliance's
                 decision and posts the Coaching Carousel news item — Sleeper still needs the roster reassigned by hand
-                afterward. The toggle above controls whether anyone sees an Apply button at all, here or on the
-                Available Teams tab — off by default so a coach can't apply the moment a team goes vacant mid-week.
+                afterward.
               </p>
               {adminHireError && (
                 <div className="mb-3 px-3 py-2 text-xs rounded-sm" style={{ background: "rgba(212,96,76,0.12)", border: `1px solid ${C.ember}`, color: C.ember }}>
