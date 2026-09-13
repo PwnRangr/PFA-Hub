@@ -15177,7 +15177,7 @@ export default function App() {
     return list;
   }, [mode, leagueMap, standingsCache]);
 
-  const [coachSort, setCoachSort] = useState({ key: "cp", dir: "desc" });
+  const [coachSort, setCoachSort] = useState({ key: "promotionScore", dir: "desc" });
 
   // {tierKey_year_rosterId -> total} — summed once here rather than
   // re-scanning streakBonusesLive/manualPenalties inside allCoachesTable's
