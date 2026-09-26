@@ -13259,7 +13259,11 @@ export default function App() {
             if (t.roster_id != null) livePtsByRoster[t.roster_id] = t.points || 0;
           });
           rows = rankStandingsRows(
-            rows.map((r) => ({ ...r, pts: r.pts + (livePtsByRoster[r.rosterId] || 0) }))
+            // ptsGraded keeps the pre-blend, graded-weeks-only total
+            // (2026-09-26): CP's Av Pts and Pts/Max must divide graded points
+            // by graded games / graded Max PF, or the in-progress week lands
+            // in the numerator with nothing matching it in the denominator.
+            rows.map((r) => ({ ...r, ptsGraded: r.pts, pts: r.pts + (livePtsByRoster[r.rosterId] || 0) }))
           );
         }
         const pairs = buildPairsWithBench(m, rows);
@@ -15186,6 +15190,9 @@ export default function App() {
             w: r.w,
             l: r.l,
             pts: r.pts,
+            // Graded weeks only — see loadLeague's live-PF blend. Falls back
+            // to pts when no blend happened (fetch failed, non-live week).
+            ptsGraded: r.ptsGraded ?? r.pts,
             faabUsed: r.faabUsed,
             maxPts: r.maxPts,
             playerIds: r.playerIds,
@@ -15280,7 +15287,14 @@ export default function App() {
     // is 0 rather than NaN/Infinity, same "starts at 0, not undefined"
     // rule as everything else in this running total.
     const gamesPlayed = dirEntry ? (dirEntry.w || 0) + (dirEntry.l || 0) : 0;
-    const avgPPG = dirEntry && gamesPlayed > 0 ? dirEntry.pts / gamesPlayed : 0;
+    // FINISHED weeks only (Troy, 2026-09-26). dirEntry.pts carries the live
+    // in-progress week (mistakes.md #40's PF blend) but w+l doesn't count
+    // that week until Sleeper grades it, so dividing blended pts by w+l
+    // inflated Av Pts all week — by close to a whole extra week of points
+    // by Sunday night. ptsGraded is the same Sleeper fpts that w/l and
+    // maxPts are graded alongside, so all three move together.
+    const ptsFinished = dirEntry ? (dirEntry.ptsGraded ?? dirEntry.pts) : 0;
+    const avgPPG = dirEntry && gamesPlayed > 0 ? ptsFinished / gamesPlayed : 0;
     const pointsComponent = avgPPG / 4;
     // (starting FAAB budget − used) / 50, confirmed 2026-08-19. If
     // FAAB_STARTING_BUDGET has no entry for CURRENT_SEASON (missed
@@ -15317,7 +15331,9 @@ export default function App() {
     // that genuinely doesn't exist yet. ASSUMPTION, not confirmed with
     // Troy — flagging in case he wants pre-season CP to show as 0 or "—"
     // instead until maxPts is real.
-    const ptsMaxRatio = dirEntry && dirEntry.maxPts > 0 ? dirEntry.pts / dirEntry.maxPts : 1;
+    // Same finished-weeks-only numerator as Av Pts: maxPts (Sleeper ppts) is
+    // never blended, so live pts over graded maxPts overstated the ratio.
+    const ptsMaxRatio = dirEntry && dirEntry.maxPts > 0 ? ptsFinished / dirEntry.maxPts : 1;
     const currentCP = dirEntry ? subtotal * ptsMaxRatio : -Infinity;
     return { rosterKey, winPoints, avgPPG, pointsComponent, faabRemaining, faabComponent, confirmedPlace, placeComponent, subtotal, ptsMaxRatio, currentCP };
   };
