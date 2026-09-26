@@ -15218,6 +15218,7 @@ export default function App() {
   }, [mode, leagueMap, standingsCache]);
 
   const [coachSort, setCoachSort] = useState({ key: "promotionScore", dir: "desc" });
+  const [coachSearch, setCoachSearch] = useState("");
 
   // {tierKey_year_rosterId -> total} — summed once here rather than
   // re-scanning streakBonusesLive/manualPenalties inside allCoachesTable's
@@ -15462,6 +15463,17 @@ export default function App() {
     });
     return arr;
   }, [allCoachesTable, coachSort]);
+
+  // Search highlights matches in place rather than filtering the list out —
+  // Troy's ask was specifically to highlight, not hide, so the row order and
+  // full roster stay visible while typing. Matches on coach name or team.
+  const coachSearchLower = coachSearch.trim().toLowerCase();
+  const coachSearchMatchCount = useMemo(() => {
+    if (!coachSearchLower) return 0;
+    return sortedCoachesTable.filter(
+      (r) => r.name.toLowerCase().includes(coachSearchLower) || r.team.toLowerCase().includes(coachSearchLower)
+    ).length;
+  }, [sortedCoachesTable, coachSearchLower]);
 
   const toggleCoachSort = (key) => {
     setCoachSort((prev) => (prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" }));
@@ -17340,43 +17352,115 @@ export default function App() {
               Every coach with career data on file, resolved to their current team. Coaching points are earned by team
               performance, weighted by tier, and accrue season over season — never spent, only built on. Click any column to sort.
               Season CP is a live running total for {CURRENT_SEASON}, starting at 0 — hover a value with a dotted underline
-              to see what's behind it.
+              to see what's behind it. A grayed-out name with a RET tag means no live team resolved for that coach this
+              season — career data is on file, but Season CP and Promotion Score can't be computed without a current team.
             </p>
-            <div className="overflow-x-auto rounded-sm" style={{ border: `1px solid ${C.line}` }}>
-              <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <input
+                type="text"
+                value={coachSearch}
+                onChange={(e) => setCoachSearch(e.target.value)}
+                placeholder="Search coach or team…"
+                className="px-3 py-1.5 text-sm rounded-sm"
+                style={{ background: C.panel, border: `1px solid ${C.line}`, color: "inherit", minWidth: 220 }}
+              />
+              {coachSearchLower && (
+                <span className="text-xs uppercase tracking-wider" style={{ color: coachSearchMatchCount ? C.gold : C.slate }}>
+                  {coachSearchMatchCount} found
+                </span>
+              )}
+            </div>
+            <div className="flex items-start">
+              <table style={{ borderCollapse: "collapse" }}>
                 <thead>
-                  <tr style={{ background: C.panel, color: C.slate }}>
-                    {[
-                      { key: "name", label: "Coach", right: false },
-                      { key: "team", label: "Team", right: false },
-                      { key: "tierKey", label: "Tier", right: false },
-                      { key: "promotionScore", label: "Promotion Score", right: true },
-                      { key: "currentCP", label: "Season CP", right: true },
-                      { key: "cp", label: "Career CP", right: true },
-                      { key: "wins", label: "W–L", right: true },
-                      { key: "winPct", label: "Win %", right: true },
-                      { key: "totalPts", label: "Career PF", right: true },
-                    ].map((col) => (
-                      <th
-                        key={col.key}
-                        onClick={() => toggleCoachSort(col.key)}
-                        className="px-3 py-2 text-xs uppercase tracking-wider whitespace-nowrap cursor-pointer select-none text-center"
-                        style={{ fontWeight: 500, color: coachSort.key === col.key ? C.gold : C.slate }}
-                      >
-                        {col.label}{coachSort.key === col.key ? (coachSort.dir === "asc" ? " ▲" : " ▼") : ""}
-                      </th>
-                    ))}
+                  <tr style={{ background: C.panel }}>
+                    <th
+                      className="px-2 py-2 text-xs uppercase tracking-wider whitespace-nowrap text-right"
+                      style={{ fontWeight: 500, color: C.slate }}
+                    >
+                      #
+                    </th>
                   </tr>
                 </thead>
                 <tbody style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
                   {sortedCoachesTable.map((r, i) => (
-                    <tr key={r.name + i} style={{ background: i % 2 ? "rgba(255,255,255,0.02)" : "transparent", borderTop: `1px solid ${C.line}` }}>
-                      <td className="px-3 py-2 whitespace-nowrap text-center" style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>
-                        <button type="button" onClick={() => openCoachProfile(r.name)} style={{ color: "inherit" }}>
-                          {r.name}
-                          <TrophyBadges name={r.name} size={12} trophies={coachTrophiesHistorical} />
-                        </button>
+                    <tr key={r.name + i + "_num"} style={{ borderTop: "1px solid transparent" }}>
+                      <td className="px-2 py-2 text-right text-xs" style={{ color: C.slate }}>
+                        {i + 1}
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="overflow-x-auto rounded-sm flex-1" style={{ border: `1px solid ${C.line}` }}>
+                <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: C.panel, color: C.slate }}>
+                      {[
+                        { key: "name", label: "Coach", right: false },
+                        { key: "team", label: "Team", right: false },
+                        { key: "tierKey", label: "Tier", right: false },
+                        { key: "promotionScore", label: "Promotion Score", right: true },
+                        { key: "currentCP", label: "Season CP", right: true },
+                        { key: "cp", label: "Career CP", right: true },
+                        { key: "wins", label: "W–L", right: true },
+                        { key: "winPct", label: "Win %", right: true },
+                        { key: "totalPts", label: "Career PF", right: true },
+                      ].map((col) => (
+                        <th
+                          key={col.key}
+                          onClick={() => toggleCoachSort(col.key)}
+                          className="px-3 py-2 text-xs uppercase tracking-wider whitespace-nowrap cursor-pointer select-none text-center"
+                          style={{ fontWeight: 500, color: coachSort.key === col.key ? C.gold : C.slate }}
+                        >
+                          {col.label}{coachSort.key === col.key ? (coachSort.dir === "asc" ? " ▲" : " ▼") : ""}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                    {sortedCoachesTable.map((r, i) => {
+                      // Retired = no live team resolved (promotionScore stuck at
+                      // -Infinity, same signal the "—" display already used) AND
+                      // real, nonzero career history on file — this excludes
+                      // synthetic placeholder rows like "available" (an open
+                      // roster slot, not a person) which share the -Infinity
+                      // signal but carry all-zero stats. See mistakes.md #41's
+                      // follow-up note on the "available"/"justin_white" shape.
+                      const isRetired = r.promotionScore === -Infinity && r.cp > 0;
+                      const isMatch =
+                        coachSearchLower &&
+                        (r.name.toLowerCase().includes(coachSearchLower) || r.team.toLowerCase().includes(coachSearchLower));
+                      return (
+                        <tr
+                          key={r.name + i}
+                          style={{
+                            background: isMatch
+                              ? "rgba(212,175,55,0.18)"
+                              : i % 2
+                              ? "rgba(255,255,255,0.02)"
+                              : "transparent",
+                            borderTop: `1px solid ${C.line}`,
+                          }}
+                        >
+                          <td className="px-3 py-2 whitespace-nowrap text-center" style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>
+                            <button
+                              type="button"
+                              onClick={() => openCoachProfile(r.name)}
+                              style={{ color: isRetired ? C.slate : "inherit" }}
+                            >
+                              {r.name}
+                              {isRetired && (
+                                <span
+                                  className="ml-1.5 px-1 py-0.5 text-[10px] uppercase tracking-wider rounded-sm align-middle"
+                                  style={{ background: "rgba(148,163,184,0.15)", color: C.slate, fontFamily: "'Barlow', sans-serif" }}
+                                >
+                                  RET
+                                </span>
+                              )}
+                              <TrophyBadges name={r.name} size={12} trophies={coachTrophiesHistorical} />
+                            </button>
+                          </td>
                       <td className="px-3 py-2 whitespace-nowrap text-center" style={{ fontFamily: "'Barlow', sans-serif", color: C.slate }}>
                         <button type="button" onClick={() => openTeamProfile(r, r.tierKey)} style={{ color: "inherit" }}>
                           {r.team}
@@ -17520,10 +17604,12 @@ export default function App() {
                       </td>
                       <td className="px-3 py-2 text-center">{r.winPct === -Infinity ? "—" : winPctLabel(r.winPct)}</td>
                       <td className="px-3 py-2 text-center">{r.totalPts === -Infinity ? "—" : fmt(r.totalPts)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
             <p className="mt-3 text-xs" style={{ color: C.slate }}>
               Static snapshot from the Admin tab export — refreshes whenever a new export is provided, not automatically.
