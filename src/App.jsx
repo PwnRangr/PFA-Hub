@@ -17463,32 +17463,38 @@ export default function App() {
                 </span>
               )}
             </div>
-            <div className="flex items-start">
-              <table style={{ borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: C.panel }}>
-                    <th
-                      className="px-2 py-2 text-xs uppercase tracking-wider whitespace-nowrap text-right"
-                      style={{ fontWeight: 500, color: C.slate }}
-                    >
-                      #
-                    </th>
-                  </tr>
-                </thead>
-                <tbody style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                  {sortedCoachesTable.map((r, i) => (
-                    <tr key={r.name + i + "_num"} style={{ borderTop: "1px solid transparent" }}>
-                      <td className="px-2 py-2 text-right text-xs" style={{ color: C.slate }}>
-                        {i + 1}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="overflow-x-auto rounded-sm flex-1" style={{ border: `1px solid ${C.line}` }}>
-                <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+            {/* Row numbers live INSIDE each row as their own first cell
+                (2026-09-26). They used to be a separate gutter <table> beside
+                this one, which could only line up if every row in both tables
+                happened to render at identical heights — they didn't (text-xs
+                vs text-sm, badges, hover markup), so the numbers drifted
+                further out of sync the further down the list you read. The
+                "outside the frame" look is now drawn per cell: the frame
+                border goes on every cell except .cg-num, and row backgrounds
+                go through --rowbg onto the data cells only, so the number
+                column stays bare. */}
+            <style>{`
+              .cg td:not(.cg-num), .cg th:not(.cg-num) { background: var(--rowbg, transparent); border-top: 1px solid ${C.line}; }
+              .cg tr > :nth-child(2) { border-left: 1px solid ${C.line}; }
+              .cg tr > :last-child { border-right: 1px solid ${C.line}; }
+              .cg tbody tr:last-child > :not(.cg-num) { border-bottom: 1px solid ${C.line}; }
+              .cg thead tr > :nth-child(2) { border-top-left-radius: 2px; }
+              .cg thead tr > :last-child { border-top-right-radius: 2px; }
+              .cg tbody tr:last-child > :nth-child(2) { border-bottom-left-radius: 2px; }
+              .cg tbody tr:last-child > :last-child { border-bottom-right-radius: 2px; }
+              .cg .cg-num { width: 1%; white-space: nowrap; }
+            `}</style>
+            <div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm cg" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
                   <thead>
-                    <tr style={{ background: C.panel, color: C.slate }}>
+                    <tr style={{ "--rowbg": C.panel, color: C.slate }}>
+                      <th
+                        className="cg-num px-2 py-2 text-xs uppercase tracking-wider whitespace-nowrap text-right"
+                        style={{ fontWeight: 500, color: C.slate }}
+                      >
+                        #
+                      </th>
                       {[
                         { key: "name", label: "Coach", right: false },
                         { key: "team", label: "Team", right: false },
@@ -17528,14 +17534,16 @@ export default function App() {
                         <tr
                           key={r.name + i}
                           style={{
-                            background: isMatch
+                            "--rowbg": isMatch
                               ? "rgba(212,175,55,0.18)"
                               : i % 2
                               ? "rgba(255,255,255,0.02)"
                               : "transparent",
-                            borderTop: `1px solid ${C.line}`,
                           }}
                         >
+                          <td className="cg-num px-2 py-2 text-right text-xs" style={{ color: C.slate }}>
+                            {i + 1}
+                          </td>
                           <td className="px-3 py-2 whitespace-nowrap text-center" style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 600 }}>
                             <button
                               type="button"
