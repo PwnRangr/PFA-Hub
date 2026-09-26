@@ -15342,9 +15342,44 @@ export default function App() {
   // team (no coachDirectory entry) — "no data to rank them on," same as
   // the old sheet-null case, and every caller already treats null as
   // "sorts last."
+  // Resolves a CAREER_STATS key to its live coachDirectory entry.
+  // Team identity first, NOT the exact tagged name text — the int#/L#
+  // number is an alliance-wide SHARED counter that renumbers constantly as
+  // OTHER coaches' interim assignments open and close anywhere in the
+  // league, completely unrelated to this specific coach (see mistakes.md
+  // #41 — this is exactly the drift-will-recur risk flagged there,
+  // recurring). A frozen CAREER_STATS snapshot's tag number can never be
+  // trusted to still equal today's live tag, and even a live-matching tag
+  // number is still just plain string text — a single invisible whitespace
+  // difference between however the sheet stores it and however the
+  // snapshot was typed (confirmed 2026-09-26: a coach's tagged team showed
+  // correctly on Standings yet still failed the old exact-name match here)
+  // silently breaks an exact-text comparison with no visible symptom at
+  // all. Team names don't have either problem — they're what this matches
+  // on first. tierKey-only and then the old exact-name comparison are kept
+  // as fallbacks, for a plain no-suffix coach (most of the roster) and as a
+  // last resort respectively; neither on its own would have caught this.
+  const stripCoachTagSuffix = (name) => (name || "").trim().replace(/\s+(?:int\d*|l\d*)$/i, "").toLowerCase();
+  const normCoachTeam = (t) => (t || "").replace(/\s+/g, " ").trim().toLowerCase();
+  const resolveDirEntryForCareerKey = (lowerName) => {
+    const entries = CAREER_STATS[lowerName];
+    // No career data at all for this name (a brand-new coach, zero history)
+    // — nothing to team-match against, so fall straight back to the plain
+    // live-name lookup that's always been correct for this case.
+    if (!entries) return coachDirectory.find((c) => c.name.toLowerCase() === lowerName) || null;
+    const baseName = stripCoachTagSuffix(lowerName);
+    const candidates = coachDirectory.filter((c) => stripCoachTagSuffix(c.name) === baseName);
+    return (
+      candidates.find((c) => entries.some((e) => e.team !== "—" && normCoachTeam(e.team) === normCoachTeam(c.team))) ||
+      candidates.find((c) => entries.some((e) => e.tierKey === c.tierKey)) ||
+      coachDirectory.find((c) => c.name.toLowerCase() === lowerName) ||
+      null
+    );
+  };
+
   const promotionScoreComputedFor = (name) => {
     const lowerName = (name || "").toLowerCase();
-    const dirEntry = coachDirectory.find((c) => c.name.toLowerCase() === lowerName);
+    const dirEntry = resolveDirEntryForCareerKey(lowerName);
     if (!dirEntry) return null;
     const { currentCP } = computeCurrentCPFor(dirEntry);
     const entries = CAREER_STATS[lowerName];
@@ -15368,7 +15403,7 @@ export default function App() {
   // of a different league's numbers.
   const allCoachesTable = useMemo(() => {
     return Object.entries(CAREER_STATS).map(([lowerName, entries]) => {
-      const dirEntry = coachDirectory.find((c) => c.name.toLowerCase() === lowerName);
+      const dirEntry = resolveDirEntryForCareerKey(lowerName);
       const match = dirEntry ? entries.find((e) => e.tierKey === dirEntry.tierKey) : null;
       const chosen = match || entries[0];
       const s = chosen.stats;
