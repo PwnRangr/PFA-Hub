@@ -12832,6 +12832,13 @@ export default function App() {
   // collection from streakBonusesLive above, summed together with it
   // everywhere X Points are shown or locked.
   const [xPointsLive, setXPointsLive] = useState([]);
+  // True once watchXPointsLive has delivered its first snapshot, so the live
+  // award sweep can tell "no 2026 award docs exist" from "not loaded yet".
+  const [xPointsLoaded, setXPointsLoaded] = useState(false);
+  // One automatic award sweep at a time per browser tab — see the live
+  // X Points effect below for why this is a ref and not the effect's own
+  // `cancelled` flag.
+  const xPointsSweepInFlightRef = useRef(false);
   const [manualPenalties, setManualPenalties] = useState([]);
   // The permanent, locked Season CP record for completed tier/years — see
   // storage.js's seasonCPFinal comment. Empty until the Admin "Lock Final
@@ -13555,6 +13562,12 @@ export default function App() {
   // a repeat sweep of an already-written week just overwrites identically.
   useEffect(() => {
     if (mode !== "live" || !nflState || nflState.week <= 1) return;
+    // Signed-in only (2026-09-26): streakBonusesLive writes are isUser(), so
+    // since the site went public (2026-09-05) an anonymous visitor ran this
+    // whole 13-tier sweep only to be denied at the write. currentUser is
+    // undefined while auth is still restoring and null when signed out —
+    // both skip, and it's in the deps so the sweep starts once auth lands.
+    if (!currentUser) return;
     const throughWeek = nflState.week - 1;
     let cancelled = false;
     (async () => {
@@ -13570,7 +13583,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [mode, nflState, leagueMap, sweepStreakBonuses]);
+  }, [mode, nflState, leagueMap, sweepStreakBonuses, currentUser]);
 
   // ── X Points awards: live sweep, current season ──
   // Recomputes the whole current season's awards whenever the live NFL week
@@ -13581,34 +13594,67 @@ export default function App() {
   // safe — last week's leader losing the lead has their doc deleted, not
   // left behind. Deliberately runs only once per week ROLLOVER, not on
   // every render, since it's an Alliance-wide pass over 13 leagues.
+  //
+  // Hardened 2026-09-26 after the 2026 awards never appeared on the Coaches
+  // tab despite this being the automatic path (Weekly Awards computes its
+  // own badges locally, so it looked fine there):
+  //  1. Signed-in only, currentUser in the deps. xPointsLive/xPointsProcessed
+  //     writes are isUser(); anonymous visitors (public since 2026-09-05)
+  //     could only ever fail here.
+  //  2. The processed marker alone is no longer trusted. It now skips only
+  //     if the marker says the target week is done AND the target week's
+  //     league-high award docs actually exist. Every tier with a finished
+  //     week always pays a league high, so their absence means the store
+  //     and the marker disagree — e.g. 2026's docs hand-deleted after
+  //     mistakes.md #38 with the marker left behind — and it re-sweeps
+  //     instead of skipping forever.
+  //  3. An in-flight ref instead of the effect's cancel flag guards the
+  //     marker write. The sweep's own writes change xPointsLive, which
+  //     changes this effect's deps mid-sweep; the old cancel flag would then
+  //     skip the marker write for a sweep that did complete, forcing a
+  //     redundant second pass.
+  const xPointsTargetWeek = mode === "live" && nflState ? Math.min(nflState.week - 1, X_FINAL_WEEK) : 0;
+  // Weekly high/low only runs weeks 1-17 (X_SEASON_WEEKS; week 18 is the
+  // exhibition slot), so once the target reaches 18 the proof week has to
+  // stay at 17 — checking for a week-18 league high that can never exist
+  // would re-sweep on every signed-in page load all offseason.
+  const xPointsProofWeek = Math.min(xPointsTargetWeek, X_SEASON_WEEKS);
+  const xPointsTargetWeekStored = useMemo(
+    () =>
+      xPointsProofWeek >= 1 &&
+      xPointsLive.some((e) => e.year === CURRENT_SEASON && e.kind === "leagueWeeklyHigh" && e.week === xPointsProofWeek),
+    [xPointsLive, xPointsProofWeek]
+  );
   useEffect(() => {
     if (mode !== "live" || !nflState || nflState.week <= 1) return;
+    if (!currentUser || !xPointsLoaded) return;
     // Only completed weeks count, so the target is the week before the live
     // one — matching the streak sweep's own rule.
-    const target = Math.min(nflState.week - 1, X_FINAL_WEEK);
+    const target = xPointsTargetWeek;
     if (target < 1) return;
-    let cancelled = false;
+    if (xPointsSweepInFlightRef.current) return;
+    xPointsSweepInFlightRef.current = true;
     (async () => {
       try {
-        // The guard that makes this affordable. Without it this ran a full
-        // 13-tier x 18-week pass on every page load for every signed-in
-        // user; now the first visitor after a week goes final pays for it
-        // once and everyone else reads one marker doc and stops.
         const done = await getXPointsProcessedWeek(CURRENT_SEASON);
-        if (cancelled || done >= target) return;
+        if (done >= target && xPointsTargetWeekStored) return;
+        if (done >= target) {
+          console.warn(
+            `X Points: processed marker says week ${done} but no week ${target} awards are stored — re-sweeping ${CURRENT_SEASON}`
+          );
+        }
         await sweepXPointsAwards(CURRENT_SEASON, target);
-        if (!cancelled) await setXPointsProcessedWeek(CURRENT_SEASON, target);
+        await setXPointsProcessedWeek(CURRENT_SEASON, target);
       } catch (e) {
         // Deliberately does NOT advance the marker on failure, so a partial
         // or failed sweep is retried by the next visitor rather than being
         // recorded as done.
         console.error("X Points award sweep failed for the current season", e);
+      } finally {
+        xPointsSweepInFlightRef.current = false;
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [mode, nflState, sweepXPointsAwards]);
+  }, [mode, nflState, sweepXPointsAwards, currentUser, xPointsLoaded, xPointsTargetWeek, xPointsTargetWeekStored]);
 
   // ── Streak Bonuses: one-time 2023/2024/2025 backfill ──
   // Manual trigger only (see the temporary Admin button below) — not
@@ -13930,7 +13976,10 @@ export default function App() {
     const unsubClub4000Historical = watchClub4000Historical((entries) => setClub4000Historical(entries));
     const unsubCoachTrophiesHistorical = watchCoachTrophiesHistorical((obj) => setCoachTrophiesHistorical(obj));
     const unsubStreakBonuses = watchStreakBonusesLive((entries) => setStreakBonusesLive(entries));
-    const unsubXPoints = watchXPointsLive((entries) => setXPointsLive(entries));
+    const unsubXPoints = watchXPointsLive((entries) => {
+      setXPointsLive(entries);
+      setXPointsLoaded(true);
+    });
     const unsubManualPenalties = watchManualPenalties((entries) => setManualPenalties(entries));
     const unsubSeasonCPFinal = watchSeasonCPFinal((entries) => setSeasonCPFinal(entries));
     const unsubConferenceStrengthHistorical = watchConferenceStrengthHistorical((entries) => setConferenceStrengthHistorical(entries));
