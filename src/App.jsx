@@ -2027,10 +2027,10 @@ const RULES_SECTIONS = [
     id: "fired",
     title: "What Gets You Fired",
     items: [
+      "Finishing last place in a league's consolation bracket Relegation Bowl.",
       "\"Fired\" means unassigned from your team, not removed from the league — your team becomes available for other coaches to take.",
-      "A coach fired after the regular season is still in the Alliance; the team is managed by an interim coach until reassigned.",
-      "Finishing last place in a league's consolation bracket triggers this.",
-      "Fired coaches may reapply to their old team — if no one else takes it, they get it back. Fired coaches may not apply to a team in a higher tier.",
+      "Fired coaches may stay with their old team — if no one else takes it, they get it back.",
+      "Fired coaches who lose their team may only apply for teams in a lower tier.",
       "A conference representative can appeal to the Commissioner's Council on a fired coach's behalf if there are extenuating circumstances.",
     ],
   },
@@ -2624,6 +2624,40 @@ const ratio3 = (v) => {
   return `${thousandths < 0 ? "-" : ""}.${Math.abs(thousandths).toString().padStart(3, "0")}`;
 };
 
+// ── Standings: Average Pts, P/MaxP, Streak (2026-10-17, Troy) ────────────
+// Average Pts = points per game; P/MaxP = points / Max PF. Both use
+// ptsGraded (graded weeks only) when it exists, for the same reason CP's
+// Av Pts and Pts/Max do (mistakes.md #44): the live PF blend adds the
+// in-progress week's points before Sleeper counts that game or its Max PF,
+// so dividing live PF would inflate both all week. Past seasons have no
+// blend, so `pts` is already graded-only there.
+const standingsGradedPts = (r) => (typeof r.ptsGraded === "number" ? r.ptsGraded : r.pts);
+const standingsAvgPts = (r) => {
+  const games = (r.w || 0) + (r.l || 0) + (r.t || 0);
+  return games > 0 ? standingsGradedPts(r) / games : null;
+};
+const standingsPtsPerMax = (r) => (r.maxPts > 0 ? standingsGradedPts(r) / r.maxPts : null);
+// Sleeper puts the current streak on the roster as metadata.streak ("3W",
+// "2L") and the week-by-week results as metadata.record ("WWLWT").
+// Normalised to { type: "W"|"L"|"T", length }; falls back to counting the
+// tail of `record` if `streak` is missing, null if neither exists yet
+// (pre-season). UNVERIFIED against live Sleeper from the sandbox.
+const sleeperStreakOf = (meta) => {
+  if (!meta) return null;
+  const m = /^\s*(\d+)\s*([WLT])\s*$/i.exec(meta.streak || "") || /^\s*([WLT])\s*(\d+)\s*$/i.exec(meta.streak || "");
+  if (m) {
+    const [num, type] = /\d/.test(m[1]) ? [m[1], m[2]] : [m[2], m[1]];
+    const length = parseInt(num, 10);
+    return length > 0 ? { type: type.toUpperCase(), length } : null;
+  }
+  const rec = (meta.record || "").toUpperCase().replace(/[^WLT]/g, "");
+  if (!rec) return null;
+  const last = rec[rec.length - 1];
+  let length = 0;
+  for (let i = rec.length - 1; i >= 0 && rec[i] === last; i--) length++;
+  return { type: last, length };
+};
+
 // CAREER_STATS stores Win % as a display STRING off the sheet ("55.9%"), and
 // a coach with no season logged has a literal "—" there — so parse first and
 // hand back whatever was there if it isn't a number, rather than printing
@@ -3111,19 +3145,114 @@ function TrophyIcon({ award, size = 14 }) {
   );
 }
 
+// ── Mark of shame, 2026-10-03 ───────────────────────────────────────────
+// A red "F" (Troy's pick over a thumbs-down) that follows a coach around
+// exactly like trophy badges do — rendered by TrophyBadges itself, so it
+// shows everywhere a trophy would — for ever having lost a Relegation Bowl
+// ("LAST PLACE COACH IS FIRED") in any tier. One F per coach with a "×N"
+// count for repeat losses; the hover lists each loss.
+//
+// SOURCE: Troy's "fired" export (2026-10-03), cross-matched team-by-team
+// against HISTORICAL_FINAL_ORDER's confirmed last place for that tier and
+// year. Only rows whose team IS that year's last place are here — the
+// export also lists coaches fired for other reasons (2023 SBB238, Oklahoma
+// 12th of 20; 2022 Jaquise, VMI 1st; 2022 javendano585 Denver and Monty0813
+// Detroit, neither last), which are deliberately NOT marked, and six 2022
+// rows with a number or nothing in place of a team, which can't be placed.
+// Troy: most fired coaches quit, so this is incomplete — 2022 is missing
+// NFL, XFL, SEC, BIG XII, ACC, SOCO, IVY and SWAC, 2023 is missing nine
+// tiers, 2025 is missing USFL, XFL and GLIAC.
+//
+// INFERRED, not stated (`inferred: true`): the four 2024 rows the export
+// left as "#N/A". That year's list is in exact ladder order for all nine
+// named rows, and the four #N/A rows sit in exactly the four unmatched
+// ladder slots (SOCO, IVY, SWAC after SUN; FLHS after GLIAC). evanthomas536
+// is independently on record coaching Southern U (CLUB_300, 2022).
+//
+// Keyed by lowercased coach name with any int#/L# tag stripped (the export
+// itself has "db091391 L"; the tag number is an alliance-wide shared
+// counter, see mistakes.md #41), so the live, tagged display name still
+// matches. 2026 onward: append the season's losers here once decided —
+// relegationLoserFor only runs while the Available Teams tab is open and
+// its answer disappears when rosters roll over, so it can't carry a
+// permanent mark on its own.
+const SHAME_RED = "#E5484D"; // fixed, not part of the rotating accent theme
+const RELEGATION_LOSSES_HISTORICAL = [
+  { coach: "g8trb8", tierKey: "NFL", year: 2025, team: "Denver Broncos" },
+  { coach: "JohnJohn882", tierKey: "SEC", year: 2025, team: "LSU Tigers" },
+  { coach: "BiggyPoppa", tierKey: "BIG XII", year: 2025, team: "Texas Tech" },
+  { coach: "db091391", tierKey: "ACC", year: 2025, team: "Boston College Eagles" },
+  { coach: "Warboys86", tierKey: "TEN", year: 2025, team: "Rutgers Scarlet Knights" },
+  { coach: "arveatz21", tierKey: "SUN", year: 2025, team: "Carolina Chanticleers" },
+  { coach: "cozzin", tierKey: "SOCO", year: 2025, team: "Tenn Tech Eagles" },
+  { coach: "DarthTravieso", tierKey: "IVY", year: 2025, team: "Princeton University" },
+  { coach: "Recki20", tierKey: "SWAC", year: 2025, team: "Norfolk State Spartans" },
+  { coach: "MBulls", tierKey: "FLHS", year: 2025, team: "Miami Senior Stingrays" },
+  { coach: "NoahSims", tierKey: "NFL", year: 2024, team: "Atlanta Falcons" },
+  { coach: "pauly102", tierKey: "USFL", year: 2024, team: "Jacksonville Bulls" },
+  { coach: "ChicagoOnTop", tierKey: "XFL", year: 2024, team: "Los Angeles Xtreme" },
+  { coach: "kainlock", tierKey: "SEC", year: 2024, team: "Texas A&M Aggies" },
+  { coach: "skylanakins", tierKey: "BIG XII", year: 2024, team: "Denver Pioneers" },
+  { coach: "Bigpapajohn1311", tierKey: "ACC", year: 2024, team: "SMU Mustangs" },
+  { coach: "jay21177", tierKey: "TEN", year: 2024, team: "Washington Huskies" },
+  { coach: "DominatorR", tierKey: "SUN", year: 2024, team: "James Madison Dukes" },
+  { coach: "Shihomachi", tierKey: "SOCO", year: 2024, team: "Samford", inferred: true },
+  { coach: "amonraa", tierKey: "IVY", year: 2024, team: "Harvard", inferred: true },
+  { coach: "evanthomas536", tierKey: "SWAC", year: 2024, team: "Southern U", inferred: true },
+  { coach: "DJMOOREMVP", tierKey: "GLIAC", year: 2024, team: "Purdue NW Pride" },
+  { coach: "FarewellDaniel", tierKey: "FLHS", year: 2024, team: "Miami Dade", inferred: true },
+  { coach: "Abrahamcer", tierKey: "BIG XII", year: 2023, team: "UNI Panthers" },
+  { coach: "fin131313", tierKey: "TEN", year: 2023, team: "San Diego State Aztecs" },
+  { coach: "adam5590", tierKey: "SUN", year: 2023, team: "ULM Warhawks" },
+  { coach: "haybaugh", tierKey: "GLIAC", year: 2023, team: "Wilmington Quakers" },
+  { coach: "haydenshaw85", tierKey: "USFL", year: 2022, team: "Pittsburgh" },
+  { coach: "ramo5872", tierKey: "TEN", year: 2022, team: "Utah" },
+  { coach: "cryingpanda248", tierKey: "SUN", year: 2022, team: "Marshall" },
+  { coach: "SKOLLLLLL", tierKey: "GLIAC", year: 2022, team: "Lake Superior" },
+  { coach: "Ghostface36", tierKey: "FLHS", year: 2022, team: "Stoneman Douglas" },
+];
+const shameKeyFor = (name) => (name || "").trim().replace(/\s+(?:int\d*|l\d*)$/i, "").toLowerCase();
+const RELEGATION_LOSSES_BY_COACH = RELEGATION_LOSSES_HISTORICAL.reduce((acc, e) => {
+  const k = shameKeyFor(e.coach);
+  (acc[k] = acc[k] || []).push(e);
+  return acc;
+}, {});
+Object.values(RELEGATION_LOSSES_BY_COACH).forEach((list) => list.sort((a, b) => a.year - b.year));
+
+function ShameMark({ losses, size }) {
+  const n = losses.length;
+  const title = losses
+    .map((e) => `Lost the Relegation Bowl — ${e.tierKey} ${e.year} (${e.team})`)
+    .join("\n");
+  return (
+    <span className="inline-flex items-baseline" title={title} aria-label={`Lost the Relegation Bowl${n > 1 ? ` ${n} times` : ""}`}>
+      <span style={{ color: SHAME_RED, fontWeight: 900, fontSize: size, lineHeight: 1, fontFamily: "Georgia, 'Times New Roman', serif" }}>F</span>
+      {n > 1 && (
+        <span style={{ color: SHAME_RED, fontWeight: 700, fontSize: Math.max(8, Math.round(size * 0.7)), lineHeight: 1, marginLeft: 1 }}>×{n}</span>
+      )}
+    </span>
+  );
+}
+
 // `trophies` is coachTrophiesHistorical (App's Firestore-backed state),
 // keyed the same way COACH_TROPHIES always was -- passed down as a prop
 // since this is a standalone component, not something with direct access
 // to App's state. Migrated 2026-08-21; see COACH_TROPHIES_ARCHIVE's
 // comment near the top of this file.
 function TrophyBadges({ name, size = 14, trophies: allTrophies }) {
-  const trophies = (allTrophies || {})[(name || "").toLowerCase()];
-  if (!trophies || !trophies.length) return null;
+  const trophies = (allTrophies || {})[(name || "").toLowerCase()] || [];
+  const losses = RELEGATION_LOSSES_BY_COACH[shameKeyFor(name)] || [];
+  if (!trophies.length && !losses.length) return null;
   return (
-    <span className="inline-flex items-center gap-0.5 align-middle ml-1.5" title={trophies.map((t) => `${t.award} — ${t.league} ${t.year}`).join(", ")}>
-      {trophies.map((t, i) => (
-        <TrophyIcon key={i} award={t.award} size={size} />
-      ))}
+    <span className="inline-flex items-center gap-1 align-middle ml-1.5">
+      {trophies.length > 0 && (
+        <span className="inline-flex items-center gap-0.5" title={trophies.map((t) => `${t.award} — ${t.league} ${t.year}`).join(", ")}>
+          {trophies.map((t, i) => (
+            <TrophyIcon key={i} award={t.award} size={size} />
+          ))}
+        </span>
+      )}
+      {losses.length > 0 && <ShameMark losses={losses} size={size} />}
     </span>
   );
 }
@@ -13156,6 +13285,8 @@ export default function App() {
           : (u.metadata && u.metadata.team_name) || u.display_name || "—",
         w: s.wins || 0,
         l: s.losses || 0,
+        t: s.ties || 0,
+        streak: sleeperStreakOf(r.metadata),
         pts: (s.fpts || 0) + (s.fpts_decimal || 0) / 100,
         faabUsed: s.waiver_budget_used || 0,
         maxPts: (s.ppts || 0) + (s.ppts_decimal || 0) / 100,
@@ -15109,9 +15240,21 @@ export default function App() {
             <span style={{ color: C.ember }}>{r.l}</span>
           </td>
           <td className="px-3 py-2 text-right">{fmt(r.pts)}</td>
-          <td className="px-3 py-2 text-right" style={{ color: C.gold }}>
-            {mode === "live" ? fmt(r.maxPts) : fmt(r.cp)}
-          </td>
+          {mode === "live" ? (
+            <>
+              <td className="px-3 py-2 text-right">{standingsAvgPts(r) == null ? "—" : fmt(standingsAvgPts(r))}</td>
+              <td className="px-3 py-2 text-right" style={{ color: C.gold }}>{fmt(r.maxPts)}</td>
+              <td className="px-3 py-2 text-right">{standingsPtsPerMax(r) == null ? "—" : ratio3(standingsPtsPerMax(r))}</td>
+              <td
+                className="px-3 py-2 text-right whitespace-nowrap"
+                style={{ color: !r.streak ? C.slate : r.streak.type === "W" ? C.turf : r.streak.type === "L" ? C.ember : C.slate }}
+              >
+                {r.streak ? `${r.streak.type}${r.streak.length}` : "—"}
+              </td>
+            </>
+          ) : (
+            <td className="px-3 py-2 text-right" style={{ color: C.gold }}>{fmt(r.cp)}</td>
+          )}
         </tr>
       );
     });
@@ -15121,7 +15264,7 @@ export default function App() {
       <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ background: C.panel, color: C.slate }}>
-            {["#", "Coach", "Team", "W–L", "PF", mode === "live" ? "Max PF" : "CP"].map((h, i) => th(h, i))}
+            {["#", "Coach", "Team", "W–L", "PF", ...(mode === "live" ? ["Average Pts", "Max PF", "P/MaxP", "Streak"] : ["CP"])].map((h, i) => th(h, i))}
           </tr>
         </thead>
         <tbody style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{renderStandingsRows(tableRows)}</tbody>
