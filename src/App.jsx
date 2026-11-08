@@ -4695,7 +4695,7 @@ function DirBand({ tier, count, strength }) {
   );
 }
 
-function GBox({ x, y, team, score, win, colors, scoreBg, scoreBorder, nameBorder }) {
+function GBox({ x, y, team, score, win, colors, scoreBg, scoreBorder, nameBorder, scoreColor, scoreBold }) {
   const clr = (colors && colors[team]) || TEAM_CLR[team] || ["#2A3550", C.chalk];
   // Two teams of one matchup are stacked 38px apart (see r3Stack/brStack) and
   // used to render with zero gap between them -- one continuous colour block
@@ -4733,7 +4733,7 @@ function GBox({ x, y, team, score, win, colors, scoreBg, scoreBorder, nameBorder
           background: scoreBg || "rgba(255,255,255,0.03)", boxSizing: "border-box",
           border: boxOutline ? "none" : `1px solid ${scoreBorder || BR_LINE}`,
           borderTop: "none",
-          color: win ? C.turf : C.slate, fontWeight: win ? 700 : 400,
+          color: scoreColor || (win ? C.turf : C.slate), fontWeight: scoreBold != null ? (scoreBold ? 700 : 400) : win ? 700 : 400,
         }}>{score}</div>
       )}
     </div>
@@ -11506,10 +11506,16 @@ function computeTourneySeeds(standingsCache, leagueMap) {
 // not zero, so an unplayed/unfetched game correctly stays unresolved rather
 // than silently picking a false winner (same r3Played-style safety as every
 // other bracket in this file).
+// Tournament score maps are keyed "TIER:rosterId", never bare rosterId
+// (2026-11-08, mistakes.md #48). Sleeper roster ids restart at 1 in every
+// league, so a bare-id map built from ten tiers' matchups let whichever
+// tier's fetch finished last overwrite everyone else's score for that id.
+const tourneyScoreKey = (t) => `${t.tierKey}:${t.rosterId}`;
+
 function tourneyPlay(a, b, week, scores, countsAsWin = true) {
   if (!a || !b) return { a, b, winner: null, loser: null, played: false };
   const wk = scores[week] || {};
-  const sa = wk[a.rosterId], sb = wk[b.rosterId];
+  const sa = wk[tourneyScoreKey(a)], sb = wk[tourneyScoreKey(b)];
   if (typeof sa !== "number" || typeof sb !== "number" || sa === sb) {
     return { a, b, scoreA: sa, scoreB: sb, winner: null, loser: null, played: false };
   }
@@ -11620,6 +11626,52 @@ function resolveProBowlBracket(seeds, scores) {
   return games;
 }
 
+// ── Live scores, 2026-11-08 ─────────────────────────────────────────────
+// Which week each game key is played in, per bracket.
+const TOURNEY_GAME_WEEKS = () => [
+  { week: 9, keys: TOURNEY_R16.map((g) => g.key) },
+  { week: 10, keys: TOURNEY_QF.map((g) => g.key) },
+  { week: 11, keys: TOURNEY_SF.map((g) => g.key) },
+  { week: 12, keys: [TOURNEY_FINAL.key] },
+];
+const PRO_BOWL_GAME_WEEKS = () => [
+  { week: 10, keys: PRO_BOWL_QF.map((g) => g.key) },
+  { week: 11, keys: PRO_BOWL_SF.map((g) => g.key) },
+  { week: 12, keys: [PRO_BOWL_FINAL.key] },
+];
+// Copies in-progress scores onto this week's not-yet-final games as
+// liveA/liveB with live:true. Deliberately leaves played/winner/loser
+// alone, so a live lead never advances anyone or awards CP: those still
+// come only from the final, cached result once the week rolls over.
+function withLiveScores(games, weekGroups, live) {
+  if (!live || !live.scores) return games;
+  const group = weekGroups.find((w) => w.week === live.week);
+  if (!group) return games;
+  const out = { ...games };
+  group.keys.forEach((key) => {
+    const g = out[key];
+    if (!g || g.played || !g.a || !g.b) return;
+    const la = live.scores[tourneyScoreKey(g.a)], lb = live.scores[tourneyScoreKey(g.b)];
+    if (typeof la !== "number" || typeof lb !== "number") return;
+    out[key] = { ...g, live: true, liveA: la, liveB: lb };
+  });
+  return out;
+}
+// Teams in this week's still-open games, across any number of brackets --
+// what the live fetch needs to know which leagues to poll.
+function liveWeekTeams(week, bracketList) {
+  const teams = [];
+  bracketList.forEach(([games, weekGroups]) => {
+    const group = weekGroups.find((w) => w.week === week);
+    if (!group || !games) return;
+    group.keys.forEach((key) => {
+      const g = games[key];
+      if (g && !g.played && g.a && g.b) teams.push(g.a, g.b);
+    });
+  });
+  return teams;
+}
+
 // Flat CP per her exact numbers -- NOT a stacking formula like the main
 // Tournament's. Champion 20, 2nd place 10, semifinal loser 5 (confirmed
 // 2026-08-09). Quarterfinal losers get 0 CP / no entry -- confirmed same
@@ -11713,6 +11765,9 @@ function tourneyName(team) {
 // since the Fall-iday colors were always specific to that theme, not a
 // shared site convention (her correction 2026-08-08, after they leaked
 // into Pro Bowl by simply reusing this component unchanged).
+// Live score text: a dark orange that reads on both the pale Fall-iday
+// score box (#fdfcd1) and Pro Bowl's white one (#f5f5f5).
+const TOURNEY_LIVE_CLR = "#B33A00";
 function TourneyPair({ x, y, g, colors, scoreBgPlayed = "#fdfcd1", scoreBgUnplayed = "#2e0020", scoreBorder = "#eb5009", nameBorder = "#eb5009" }) {
   if (!g) return null;
   const played = g.played;
@@ -11721,6 +11776,18 @@ function TourneyPair({ x, y, g, colors, scoreBgPlayed = "#fdfcd1", scoreBgUnplay
   // "not determined yet" way as a TBD team name does (her request
   // 2026-08-08) -- only an ACTUAL score gets the real score color.
   const scoreBg = played ? scoreBgPlayed : scoreBgUnplayed;
+  if (!played && g.live) {
+    // In-progress week: real scores on the played-score background, in
+    // the live accent colour, leader bold. No win flag -- nobody has won.
+    const liveText = (n) => fmt(n);
+    const aLead = g.liveA > g.liveB, bLead = g.liveB > g.liveA;
+    return (
+      <>
+        <GBox x={x} y={y} team={tourneyName(g.a)} score={liveText(g.liveA)} win={0} colors={colors} scoreBg={scoreBgPlayed} scoreBorder={scoreBorder} nameBorder={nameBorder} scoreColor={TOURNEY_LIVE_CLR} scoreBold={aLead} />
+        <GBox x={x} y={y + 38} team={tourneyName(g.b)} score={liveText(g.liveB)} win={0} colors={colors} scoreBg={scoreBgPlayed} scoreBorder={scoreBorder} nameBorder={nameBorder} scoreColor={TOURNEY_LIVE_CLR} scoreBold={bLead} />
+      </>
+    );
+  }
   return (
     <>
       <GBox x={x} y={y} team={tourneyName(g.a)} score={played ? g.scoreA : g.a ? "" : ""} win={played && g.winner && g.a && g.winner.rosterId === g.a.rosterId ? 1 : 0} colors={colors} scoreBg={scoreBg} scoreBorder={scoreBorder} nameBorder={nameBorder} />
@@ -12996,6 +13063,10 @@ export default function App() {
   const [tourneySeeds, setTourneySeedsState] = useState(null);
   const [tourneySeedsChecked, setTourneySeedsChecked] = useState(false);
   const [tourneyScores, setTourneyScores] = useState({});
+  // { week, scores: { "TIER:rosterId": points }, at } -- in-progress scores
+  // for the current tournament week, shared by both brackets. Never cached
+  // or written anywhere; refetched every minute while the tab is open.
+  const [tourneyLive, setTourneyLive] = useState(null);
 
   // UFL PRO BOWL — same frozen/checked/scores pattern as the main
   // Tournament above, just an 8-seed companion event living in the same tab.
@@ -14283,7 +14354,10 @@ export default function App() {
           if (!leagueId) return;
           const result = await getWeeklyResultCached(tierKey, leagueId, CURRENT_SEASON, week).catch(() => null);
           if (!result) return;
-          result.pairs.forEach(({ a, b }) => { weekMap[a.rosterId] = a.points; weekMap[b.rosterId] = b.points; });
+          result.pairs.forEach(({ a, b }) => {
+            weekMap[`${tierKey}:${a.rosterId}`] = a.points;
+            weekMap[`${tierKey}:${b.rosterId}`] = b.points;
+          });
         }));
         scores[week] = weekMap;
       };
@@ -14446,7 +14520,10 @@ export default function App() {
           if (!leagueId) return;
           const result = await getWeeklyResultCached(tierKey, leagueId, CURRENT_SEASON, week).catch(() => null);
           if (!result) return;
-          result.pairs.forEach(({ a, b }) => { weekMap[a.rosterId] = a.points; weekMap[b.rosterId] = b.points; });
+          result.pairs.forEach(({ a, b }) => {
+            weekMap[`${tierKey}:${a.rosterId}`] = a.points;
+            weekMap[`${tierKey}:${b.rosterId}`] = b.points;
+          });
         }));
         scores[week] = weekMap;
       };
@@ -14494,9 +14571,13 @@ export default function App() {
   const tourneyInTheHunt = tourneyRankedPool ? tourneyRankedPool.slice(16, 32) : null;
   const tourneyIsProvisional = !tourneySeeds && Boolean(tourneySeedsLive);
   const tourneyDisplaySeeds = tourneySeeds || tourneySeedsLive;
-  const tourneyDisplayGames = useMemo(
+  const tourneyBaseGames = useMemo(
     () => resolveTourneyBracket(tourneyDisplaySeeds, tourneyIsProvisional ? {} : tourneyScores),
     [tourneyDisplaySeeds, tourneyIsProvisional, tourneyScores]
+  );
+  const tourneyDisplayGames = useMemo(
+    () => (tourneyIsProvisional ? tourneyBaseGames : withLiveScores(tourneyBaseGames, TOURNEY_GAME_WEEKS(), tourneyLive)),
+    [tourneyBaseGames, tourneyIsProvisional, tourneyLive]
   );
   const tourneyDisplayCP = useMemo(() => tourneyCPTable(tourneyDisplayGames), [tourneyDisplayGames]);
 
@@ -14521,11 +14602,56 @@ export default function App() {
   const proBowlInTheHuntXfl = proBowlXflPool ? proBowlXflPool.slice(4, 8) : null;
   const proBowlIsProvisional = !proBowlSeeds && Boolean(proBowlSeedsLive);
   const proBowlDisplaySeeds = proBowlSeeds || proBowlSeedsLive;
-  const proBowlDisplayGames = useMemo(
+  const proBowlBaseGames = useMemo(
     () => resolveProBowlBracket(proBowlDisplaySeeds, proBowlIsProvisional ? {} : proBowlScores),
     [proBowlDisplaySeeds, proBowlIsProvisional, proBowlScores]
   );
+  const proBowlDisplayGames = useMemo(
+    () => (proBowlIsProvisional ? proBowlBaseGames : withLiveScores(proBowlBaseGames, PRO_BOWL_GAME_WEEKS(), tourneyLive)),
+    [proBowlBaseGames, proBowlIsProvisional, tourneyLive]
+  );
   const proBowlDisplayCP = useMemo(() => proBowlCPTable(proBowlDisplayGames), [proBowlDisplayGames]);
+
+  // ── Tournament live scores: poll the current week while the tab is open ──
+  // Depends on the BASE games (never the live overlay) so a score update
+  // can't retrigger its own fetch. Fetches only the leagues that have a
+  // team in this week's still-open games, straight from Sleeper -- not
+  // through getWeeklyResultCached, whose in-memory cache would freeze the
+  // first live read for the rest of the visit. Once the week rolls over,
+  // the existing final-score effects take those games over.
+  const tourneyLiveWeek = nflState && nflState.week >= 9 && nflState.week <= 12 ? nflState.week : null;
+  const tourneyLiveTeams = useMemo(() => {
+    if (!tourneyLiveWeek) return [];
+    const brackets = [];
+    if (!tourneyIsProvisional) brackets.push([tourneyBaseGames, TOURNEY_GAME_WEEKS()]);
+    if (!proBowlIsProvisional) brackets.push([proBowlBaseGames, PRO_BOWL_GAME_WEEKS()]);
+    return liveWeekTeams(tourneyLiveWeek, brackets);
+  }, [tourneyLiveWeek, tourneyBaseGames, proBowlBaseGames, tourneyIsProvisional, proBowlIsProvisional]);
+  const tourneyLiveTierSig = [...new Set(tourneyLiveTeams.map((t) => t.tierKey))].sort().join(",");
+  useEffect(() => {
+    if (view !== "tournament" || mode !== "live" || !tourneyLiveWeek || !tourneyLiveTierSig) {
+      setTourneyLive(null);
+      return;
+    }
+    const tiers = tourneyLiveTierSig.split(",");
+    let cancelled = false;
+    const poll = async () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      const scores = {};
+      await Promise.all(tiers.map(async (tierKey) => {
+        const leagueId = leagueMap[tierKey];
+        if (!leagueId) return;
+        try {
+          const m = await j(`${SLEEPER}/league/${leagueId}/matchups/${tourneyLiveWeek}`);
+          m.forEach((t) => { if (t.roster_id != null) scores[`${tierKey}:${t.roster_id}`] = t.points || 0; });
+        } catch (e) {}
+      }));
+      if (!cancelled) setTourneyLive({ week: tourneyLiveWeek, scores, at: Date.now() });
+    };
+    poll();
+    const id = setInterval(poll, 60000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [view, mode, tourneyLiveWeek, tourneyLiveTierSig, leagueMap]);
 
   // Weekly Awards week picker defaults to the current live week once it's
   // known — only set once (guarded by weeklyAwardsWeek == null) so it never
@@ -15264,7 +15390,7 @@ export default function App() {
       <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ background: C.panel, color: C.slate }}>
-            {["#", "Coach", "Team", "W–L", "PF", ...(mode === "live" ? ["Average Pts", "Max PF", "P/MaxP", "Streak"] : ["CP"])].map((h, i) => th(h, i))}
+            {["#", "Coach", "Team", "W–L", "PF", ...(mode === "live" ? ["Average Pts", "Max PF", "P/MaxP", "Streak"] : ["CP"])].map((h, i) => th(h, i, 3, "center"))}
           </tr>
         </thead>
         <tbody style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{renderStandingsRows(tableRows)}</tbody>
@@ -16416,10 +16542,10 @@ export default function App() {
     </button>
   );
 
-  const th = (h, i, right = 3) => (
+  const th = (h, i, right = 3, align = null) => (
     <th
       key={h}
-      className={`px-3 py-2 text-xs uppercase tracking-wider whitespace-nowrap ${i >= right ? "text-right" : "text-left"}`}
+      className={`px-3 py-2 text-xs uppercase tracking-wider whitespace-nowrap ${align === "center" ? "text-center" : i >= right ? "text-right" : "text-left"}`}
       style={{ fontWeight: 500 }}
     >
       {h}
@@ -18589,6 +18715,12 @@ export default function App() {
                         </div>
                       </div>
                     </div>
+                    {tourneyLive && Object.values(tourneyDisplayGames).some((x) => x && x.live) && (
+                      <div className="text-xs mb-2 flex items-center gap-2" style={{ color: C.slate }}>
+                        <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: 999, background: TOURNEY_LIVE_CLR }} />
+                        Week {tourneyLive.week} scores are live and update every minute. Winners advance once the week is final on Tuesday.
+                      </div>
+                    )}
                     <div className="rounded-sm overflow-hidden mb-6" style={{ background: "#041404", border: "1px solid #9a031e", padding: 16 }}>
                       <TournamentBracket data={{ seeds: tourneyDisplaySeeds, games: tourneyDisplayGames, cp: tourneyDisplayCP }} />
                     </div>
@@ -18658,6 +18790,12 @@ export default function App() {
                         </div>
                       </div>
                     </div>
+                    {tourneyLive && Object.values(proBowlDisplayGames).some((x) => x && x.live) && (
+                      <div className="text-xs mb-2 flex items-center gap-2" style={{ color: C.slate }}>
+                        <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: 999, background: TOURNEY_LIVE_CLR }} />
+                        Week {tourneyLive.week} scores are live and update every minute. Winners advance once the week is final on Tuesday.
+                      </div>
+                    )}
                     <div className="rounded-sm overflow-hidden mb-6" style={{ background: "#0C1A2E", border: `1px solid ${C.line}`, padding: 16 }}>
                       <ProBowlBracket data={{ seeds: proBowlDisplaySeeds, games: proBowlDisplayGames, cp: proBowlDisplayCP }} />
                     </div>
